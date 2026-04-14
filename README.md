@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# La Cueva — Dashboard SRXFit
 
-## Getting Started
+Dashboard operativo y plataforma propia de **La Cueva Fitness Center** y **La Cueva Xtreme**. Reemplaza el flujo actual (Google Sheets + HubSpot Free + WhatsApp + QuickBooks a mano) y sistematiza la metodología **SRXFit** (Scientifically Prescribed Fitness).
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, Turbopack) + **TypeScript**
+- **Tailwind CSS 4** + **shadcn/ui**
+- **Supabase** — Auth + Postgres + Storage
+- **Prisma 7** (driver adapter `@prisma/adapter-pg`)
+- **Stripe** (suscripciones recurrentes)
+- **QuickBooks Online** (conciliación contable)
+- Deploy: **Vercel** (subdominio `dashboard.lacueva.com`)
+
+## Fases del producto
+
+1. **Fase 1 — Dashboard Operativo** (MVP): socios, asistencia rápida + confirmación de coach antifraude, leads, pagos, conciliación, reportes.
+2. **Fase 2 — Portal SRXFit**: onboarding, batería de tests, bioimpedancia, ciclos de 9 semanas, comparativos.
+3. **Fase 3 — App de miembro**: rutina del día, progreso, pagos, plan nutricional (PWA → React Native).
+4. **Fase 4** — Reservas y control de acceso.
+5. **Fase 5** — Retención, predicción de churn, integración con chatbot de ventas.
+
+Plan completo: `/Users/santiagocarrillo/.claude/plans/vectorized-twirling-dusk.md`.
+
+## Arranque local
 
 ```bash
+# 1. Copiar variables de entorno
+cp .env.example .env
+# Rellenar Supabase URL/keys, DATABASE_URL, Stripe, QBO…
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Sincronizar schema con Postgres (primera vez)
+npx prisma migrate dev --name init
+
+# 4. Generar cliente Prisma
+npx prisma generate
+
+# 5. Correr dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estructura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/
+│   ├── page.tsx                # Landing pública
+│   ├── login/                  # Auth (Supabase)
+│   └── dashboard/              # Área autenticada
+│       ├── layout.tsx          # Sidebar nav
+│       ├── page.tsx            # Resumen / KPIs
+│       ├── asistencia/         # Registro + confirmación coach
+│       ├── socios/             # CRM
+│       ├── leads/              # Pipeline de ventas
+│       ├── pagos/              # Stripe + conciliación QBO
+│       ├── reportes/           # Analítica
+│       └── srxfit/             # Evaluaciones (Fase 2)
+├── components/ui/              # shadcn
+├── lib/
+│   ├── prisma.ts               # PrismaClient singleton con adapter-pg
+│   └── supabase/{server,client}.ts
+└── generated/prisma/           # Cliente Prisma generado
+prisma/schema.prisma            # Modelo completo (Fases 1-3)
+```
 
-## Learn More
+## Roles (enum `UserRole`)
 
-To learn more about Next.js, take a look at the following resources:
+- `OWNER` — Santiago. Vista completa, ambas sedes.
+- `ACCOUNTING` — Isabel. Pagos, conciliación, caja.
+- `ADMIN` — admin de sede. Su sede únicamente.
+- `COACH` — confirma conteo al cierre de clase.
+- `NUTRITIONIST` — composición corporal, planes nutricionales.
+- `MEMBER` — acceso a la app móvil (Fase 3).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts útiles
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev            # Next dev con Turbopack
+npm run build          # Build producción
+npm run lint           # ESLint
+npx prisma studio      # Explorar la DB en UI
+npx prisma format      # Formatear schema.prisma
+npx prisma validate    # Validar schema
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+© La Cueva · SRXFit — Scientifically Prescribed Fitness · Documento interno confidencial.

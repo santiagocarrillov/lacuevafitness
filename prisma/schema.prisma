@@ -1,0 +1,481 @@
+// La Cueva — Dashboard Operativo + SRXFit
+// Schema diseñado para cubrir Fases 1-3 sin migraciones disruptivas.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Organización
+// ─────────────────────────────────────────────────────────────
+
+enum Sede {
+  FITNESS_CENTER
+  XTREME
+}
+
+enum UserRole {
+  OWNER
+  ACCOUNTING
+  ADMIN
+  COACH
+  NUTRITIONIST
+  MEMBER
+}
+
+model User {
+  id             String   @id @default(cuid())
+  supabaseUserId String?  @unique
+  email          String   @unique
+  fullName       String
+  phone          String?
+  role           UserRole
+  sede           Sede?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  member             Member?
+  coachClassSessions ClassSession[]      @relation("CoachClassSessions")
+  attendanceRecords  Attendance[]        @relation("AttendanceRecordedBy")
+  coachConfirmations CoachConfirmation[]
+  leadsOwned         Lead[]              @relation("LeadOwner")
+  leadInteractions   LeadInteraction[]
+  dailyIndicators    DailyIndicators[]
+  evaluationsAsCoach Evaluation[]        @relation("EvaluationCoach")
+
+  @@index([sede, role])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Socios y membresías
+// ─────────────────────────────────────────────────────────────
+
+enum MemberStatus {
+  LEAD
+  TRIAL
+  ACTIVE
+  PAUSED
+  CHURNED
+}
+
+model Member {
+  id               String       @id @default(cuid())
+  userId           String?      @unique
+  user             User?        @relation(fields: [userId], references: [id])
+  firstName        String
+  lastName         String
+  email            String?      @unique
+  phone            String?
+  dateOfBirth      DateTime?
+  emergencyName    String?
+  emergencyPhone   String?
+  sede             Sede
+  status           MemberStatus @default(LEAD)
+  joinedAt         DateTime     @default(now())
+  churnedAt        DateTime?
+  churnReason      String?
+  leadId           String?      @unique
+  lead             Lead?        @relation(fields: [leadId], references: [id])
+  stripeCustomerId String?      @unique
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  memberships      Membership[]
+  payments         Payment[]
+  attendance       Attendance[]
+  evaluations      Evaluation[]
+  bodyCompositions BodyComposition[]
+  testResults      TestResult[]
+  trainingLevels   TrainingLevelAssignment[]
+  goals            MemberGoal[]
+
+  @@index([sede, status])
+  @@index([lastName, firstName])
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+  TRIAL
+  ONE_TIME
+}
+
+model MembershipPlan {
+  id            String       @id @default(cuid())
+  sede          Sede?
+  name          String
+  description   String?
+  priceCents    Int
+  currency      String       @default("USD")
+  billingCycle  BillingCycle
+  durationDays  Int
+  stripePriceId String?      @unique
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  memberships Membership[]
+}
+
+enum MembershipState {
+  PENDING_PAYMENT
+  ACTIVE
+  EXPIRED
+  CANCELED
+  PAUSED
+}
+
+model Membership {
+  id                   String          @id @default(cuid())
+  memberId             String
+  member               Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId               String
+  plan                 MembershipPlan  @relation(fields: [planId], references: [id])
+  state                MembershipState @default(PENDING_PAYMENT)
+  startsAt             DateTime
+  endsAt               DateTime
+  canceledAt           DateTime?
+  stripeSubscriptionId String?         @unique
+  autoRenew            Boolean         @default(false)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  payments Payment[]
+
+  @@index([memberId, state])
+  @@index([endsAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pagos y conciliación
+// ─────────────────────────────────────────────────────────────
+
+enum PaymentMethod {
+  STRIPE_CARD
+  STRIPE_LINK
+  BANK_TRANSFER
+  CASH
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  memberId              String
+  member                Member        @relation(fields: [memberId], references: [id])
+  membershipId          String?
+  membership            Membership?   @relation(fields: [membershipId], references: [id])
+  amountCents           Int
+  currency              String        @default("USD")
+  method                PaymentMethod
+  status                PaymentStatus @default(PENDING)
+  paidAt                DateTime?
+  stripePaymentIntentId String?       @unique
+  stripeChargeId        String?       @unique
+  qboTransactionId      String?       @unique
+  reconciledAt          DateTime?
+  sede                  Sede
+  recordedByUserId      String?
+  notes                 String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([sede, paidAt])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Clases, horarios y asistencia
+// ─────────────────────────────────────────────────────────────
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+model ClassSchedule {
+  id          String    @id @default(cuid())
+  sede        Sede
+  dayOfWeek   DayOfWeek
+  startTime   String    // "HH:MM"
+  durationMin Int       @default(60)
+  name        String
+  capacity    Int       @default(30)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sessions ClassSession[]
+
+  @@index([sede, dayOfWeek])
+}
+
+model ClassSession {
+  id          String         @id @default(cuid())
+  scheduleId  String?
+  schedule    ClassSchedule? @relation(fields: [scheduleId], references: [id])
+  sede        Sede
+  date        DateTime       @db.Date
+  startAt     DateTime
+  coachId     String?
+  coach       User?          @relation("CoachClassSessions", fields: [coachId], references: [id])
+  adminCount  Int?
+  coachCount  Int?
+  discrepancy Boolean        @default(false)
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  attendance        Attendance[]
+  coachConfirmation CoachConfirmation?
+
+  @@unique([scheduleId, date])
+  @@index([sede, date])
+}
+
+model Attendance {
+  id                     String       @id @default(cuid())
+  memberId               String
+  member                 Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  classSessionId         String
+  classSession           ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  recordedByUserId       String?
+  recordedBy             User?        @relation("AttendanceRecordedBy", fields: [recordedByUserId], references: [id])
+  recordedAt             DateTime     @default(now())
+  expiredMembershipAlert Boolean      @default(false)
+
+  @@unique([memberId, classSessionId])
+  @@index([classSessionId])
+}
+
+model CoachConfirmation {
+  id             String       @id @default(cuid())
+  classSessionId String       @unique
+  classSession   ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  coachUserId    String
+  coach          User         @relation(fields: [coachUserId], references: [id])
+  count          Int
+  confirmedAt    DateTime     @default(now())
+  notes          String?
+}
+
+// ─────────────────────────────────────────────────────────────
+// Leads y pipeline de ventas
+// ─────────────────────────────────────────────────────────────
+
+enum LeadSource {
+  INSTAGRAM
+  FACEBOOK
+  WHATSAPP
+  PHONE_CALL
+  WEB_FORM
+  WALK_IN
+  REFERRAL
+  TIKTOK
+  OTHER
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  SCHEDULED_TRIAL
+  TRIAL_ATTENDED
+  TRIAL_NO_SHOW
+  NEGOTIATING
+  CONVERTED
+  LOST
+}
+
+model Lead {
+  id               String     @id @default(cuid())
+  sede             Sede
+  firstName        String
+  lastName         String?
+  email            String?
+  phone            String?
+  source           LeadSource
+  stage            LeadStage  @default(NEW)
+  ownerUserId      String?
+  owner            User?      @relation("LeadOwner", fields: [ownerUserId], references: [id])
+  trialScheduledAt DateTime?
+  trialAttended    Boolean?
+  lostReason       String?
+  convertedAt      DateTime?
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  interactions LeadInteraction[]
+  member       Member?
+
+  @@index([sede, stage])
+  @@index([source])
+}
+
+model LeadInteraction {
+  id         String     @id @default(cuid())
+  leadId     String
+  lead       Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id])
+  channel    LeadSource
+  summary    String
+  occurredAt DateTime   @default(now())
+
+  @@index([leadId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Indicadores diarios por sede
+// ─────────────────────────────────────────────────────────────
+
+model DailyIndicators {
+  id                String   @id @default(cuid())
+  sede              Sede
+  date              DateTime @db.Date
+  leadsNew          Int      @default(0)
+  leadsScheduled    Int      @default(0)
+  trialsAttended    Int      @default(0)
+  trialsNoShow      Int      @default(0)
+  signups           Int      @default(0)
+  renewals          Int      @default(0)
+  churns            Int      @default(0)
+  revenueCents      Int      @default(0)
+  cashCloseCents    Int      @default(0)
+  totalAttendance   Int      @default(0)
+  submittedByUserId String?
+  submittedBy       User?    @relation(fields: [submittedByUserId], references: [id])
+  submittedAt       DateTime @default(now())
+  notes             String?
+
+  @@unique([sede, date])
+}
+
+// ─────────────────────────────────────────────────────────────
+// SRXFit — evaluación y progreso (Fase 2)
+// ─────────────────────────────────────────────────────────────
+
+enum TrainingLevel {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+}
+
+model TrainingLevelAssignment {
+  id               String        @id @default(cuid())
+  memberId         String
+  member           Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  level            TrainingLevel
+  assignedAt       DateTime      @default(now())
+  assignedByUserId String?
+  rationale        String?
+
+  @@index([memberId])
+}
+
+enum EvaluationType {
+  ONBOARDING
+  CYCLE_9_WEEK
+  AD_HOC
+}
+
+model Evaluation {
+  id          String         @id @default(cuid())
+  memberId    String
+  member      Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  coachId     String?
+  coach       User?          @relation("EvaluationCoach", fields: [coachId], references: [id])
+  type        EvaluationType
+  cycleNumber Int?
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+  summary     String?
+
+  testResults      TestResult[]
+  bodyCompositions BodyComposition[]
+
+  @@index([memberId, startedAt])
+}
+
+enum TestKey {
+  BACK_SQUAT_3RM
+  DEADLIFT_3RM
+  BENCH_PRESS_3RM
+  PUSH_PRESS_3RM
+  DEAD_HANG_SECONDS
+  PULL_UPS_MAX
+  RING_ROW_ANGLE
+  PLANK_SECONDS
+  CHRISTINE_TIME_SECONDS
+  COOPER_METERS
+  CLEAN_JERK_1RM
+  SNATCH_1RM
+  ROW_500M_SPRINT_SECONDS
+}
+
+model TestResult {
+  id               String      @id @default(cuid())
+  memberId         String
+  member           Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  evaluationId     String?
+  evaluation       Evaluation? @relation(fields: [evaluationId], references: [id])
+  test             TestKey
+  valueNumeric     Float
+  unit             String
+  recordedAt       DateTime    @default(now())
+  recordedByUserId String?
+  notes            String?
+
+  @@index([memberId, test, recordedAt])
+}
+
+model BodyComposition {
+  id              String      @id @default(cuid())
+  memberId        String
+  member          Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  evaluationId    String?
+  evaluation      Evaluation? @relation(fields: [evaluationId], references: [id])
+  measuredAt      DateTime    @default(now())
+  weightKg        Float?
+  heightCm        Float?
+  bodyFatPct      Float?
+  muscleMassKg    Float?
+  waterPct        Float?
+  basalMetabolism Int?
+  notes           String?
+
+  @@index([memberId, measuredAt])
+}
+
+model MemberGoal {
+  id         String    @id @default(cuid())
+  memberId   String
+  member     Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  goal       String
+  targetDate DateTime?
+  achieved   Boolean   @default(false)
+  achievedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([memberId])
+}
