@@ -1,21 +1,24 @@
-import { Sede, UserRole } from "@/generated/prisma/client";
+import { Sede } from "@/generated/prisma/client";
 import { getTodaySchedules, getActiveMembers } from "@/lib/actions/attendance";
+import { requireAuth, getSedeScope } from "@/lib/auth";
 import { ScheduleList } from "./schedule-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function AsistenciaPage() {
-  // TODO: derive role and sede from logged-in user via Supabase Auth.
-  // For now, default to ADMIN (full panel). Coaches will see the simplified view.
-  // Will be dynamic once auth is wired. For now hardcoded.
-  const userRole: string = "ADMIN";
-  const isCoach = userRole === "COACH";
+  const user = await requireAuth();
+  const scopedSede = getSedeScope(user);
+  const isCoach = user.role === "COACH";
+
+  // Which sedes to show: if user is scoped, only their sede; otherwise both.
+  const showFC = !scopedSede || scopedSede === "FITNESS_CENTER";
+  const showXT = !scopedSede || scopedSede === "XTREME";
 
   const [schedulesFC, schedulesXT, membersFC, membersXT] = await Promise.all([
-    getTodaySchedules(Sede.FITNESS_CENTER),
-    getTodaySchedules(Sede.XTREME),
-    getActiveMembers(Sede.FITNESS_CENTER),
-    getActiveMembers(Sede.XTREME),
+    showFC ? getTodaySchedules(Sede.FITNESS_CENTER) : Promise.resolve([]),
+    showXT ? getTodaySchedules(Sede.XTREME) : Promise.resolve([]),
+    showFC ? getActiveMembers(Sede.FITNESS_CENTER) : Promise.resolve([]),
+    showXT ? getActiveMembers(Sede.XTREME) : Promise.resolve([]),
   ]);
 
   return (
@@ -30,29 +33,29 @@ export default async function AsistenciaPage() {
       </header>
 
       <div className="space-y-8">
-        <section>
-          <h2 className="text-lg font-medium mb-3">
-            La Cueva Fitness Center
-          </h2>
-          <ScheduleList
-            schedules={schedulesFC}
-            members={membersFC}
-            sede="FITNESS_CENTER"
-            userRole={userRole}
-          />
-        </section>
+        {showFC && (
+          <section>
+            <h2 className="text-lg font-medium mb-3">La Cueva Fitness Center</h2>
+            <ScheduleList
+              schedules={schedulesFC}
+              members={membersFC}
+              sede="FITNESS_CENTER"
+              userRole={user.role}
+            />
+          </section>
+        )}
 
-        <section>
-          <h2 className="text-lg font-medium mb-3">
-            La Cueva Xtreme
-          </h2>
-          <ScheduleList
-            schedules={schedulesXT}
-            members={membersXT}
-            sede="XTREME"
-            userRole={userRole}
-          />
-        </section>
+        {showXT && (
+          <section>
+            <h2 className="text-lg font-medium mb-3">La Cueva Xtreme</h2>
+            <ScheduleList
+              schedules={schedulesXT}
+              members={membersXT}
+              sede="XTREME"
+              userRole={user.role}
+            />
+          </section>
+        )}
       </div>
     </div>
   );

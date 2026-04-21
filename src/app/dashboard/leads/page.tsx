@@ -1,6 +1,8 @@
 import { Sede } from "@/generated/prisma/client";
 import { getLeads, getLeadStats } from "@/lib/actions/leads";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireAuth, getSedeScope, can } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { LeadTable } from "./lead-table";
 import { LeadFilters } from "./lead-filters";
 import { NewLeadButton } from "./new-lead-button";
@@ -23,8 +25,12 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<{ sede?: string; stage?: string; source?: string; q?: string; page?: string }>;
 }) {
+  const user = await requireAuth();
+  if (!can.manageLeads(user)) redirect("/dashboard?forbidden=1");
+  const scopedSede = getSedeScope(user);
+
   const params = await searchParams;
-  const sede = params.sede as Sede | undefined;
+  const sede = (scopedSede ?? (params.sede as Sede | undefined)) || undefined;
   const stage = params.stage as any;
   const source = params.source as any;
   const search = params.q;

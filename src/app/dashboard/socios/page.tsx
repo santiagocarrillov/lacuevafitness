@@ -4,6 +4,7 @@ import { getMembers, getMemberStats } from "@/lib/actions/members";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { requireAuth, getSedeScope } from "@/lib/auth";
 import { MemberTable } from "./member-table";
 import { MemberFilters } from "./member-filters";
 
@@ -14,8 +15,12 @@ export default async function SociosPage({
 }: {
   searchParams: Promise<{ sede?: string; status?: string; q?: string; page?: string }>;
 }) {
+  const user = await requireAuth();
+  const scopedSede = getSedeScope(user);
+
   const params = await searchParams;
-  const sede = params.sede as Sede | undefined;
+  // Scoped users can only see their own sede — force the filter
+  const sede = (scopedSede ?? (params.sede as Sede | undefined)) || undefined;
   const status = params.status as any;
   const search = params.q;
   const page = parseInt(params.page ?? "1", 10);

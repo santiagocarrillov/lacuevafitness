@@ -7,11 +7,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/actions/attendance";
+import { requireAuth, getSedeScope } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardHome() {
-  const stats = await getDashboardStats();
+  const user = await requireAuth();
+  const scopedSede = getSedeScope(user);
+  const stats = await getDashboardStats(scopedSede ?? undefined);
 
   const kpis = [
     {

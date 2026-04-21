@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
+import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { GestionTab } from "./gestion-tab";
 import { ComercialTab } from "./comercial-tab";
 import { ContableTab } from "./contable-tab";
@@ -23,9 +25,16 @@ export default async function ReportesPage({
 }: {
   searchParams: Promise<{ tab?: string; sede?: string; year?: string; month?: string }>;
 }) {
+  const user = await requireAuth();
+  if (!can.viewReports(user)) redirect("/dashboard?forbidden=1");
+  const scopedSede = getSedeScope(user);
+  const canContable = can.viewFinancials(user);
+
   const params = await searchParams;
-  const tab = params.tab ?? "gestion";
-  const sede = (params.sede ?? "") as "" | Sede;
+  let tab = params.tab ?? "gestion";
+  if (tab === "contable" && !canContable) tab = "gestion";
+  // Scoped users are locked to their sede
+  const sede = (scopedSede ?? params.sede ?? "") as "" | Sede;
   const now = new Date();
   const year = parseInt(params.year ?? now.getFullYear().toString());
   const month = parseInt(params.month ?? (now.getMonth() + 1).toString());
@@ -48,36 +57,40 @@ export default async function ReportesPage({
 
       <div className="flex flex-wrap items-center gap-3 justify-between border-b pb-3">
         <div className="flex gap-1">
-          {tabs.map((t) => (
-            <Link
-              key={t.key}
-              href={buildUrl({ tab: t.key })}
-              className={`px-4 py-2 text-sm rounded-md transition ${
-                tab === t.key
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent text-muted-foreground"
-              }`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex gap-1">
-            {sedes.map((s) => (
+          {tabs
+            .filter((t) => t.key !== "contable" || canContable)
+            .map((t) => (
               <Link
-                key={s.key}
-                href={buildUrl({ sede: s.key })}
-                className={`px-2.5 py-1 text-xs rounded-md border transition ${
-                  sede === s.key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "hover:bg-accent"
+                key={t.key}
+                href={buildUrl({ tab: t.key })}
+                className={`px-4 py-2 text-sm rounded-md transition ${
+                  tab === t.key
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-accent text-muted-foreground"
                 }`}
               >
-                {s.label}
+                {t.label}
               </Link>
             ))}
-          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          {!scopedSede && (
+            <div className="flex gap-1">
+              {sedes.map((s) => (
+                <Link
+                  key={s.key}
+                  href={buildUrl({ sede: s.key })}
+                  className={`px-2.5 py-1 text-xs rounded-md border transition ${
+                    sede === s.key
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "hover:bg-accent"
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+          )}
           <form action="/dashboard/reportes" className="flex gap-1 items-center">
             <input type="hidden" name="tab" value={tab} />
             <input type="hidden" name="sede" value={sede} />

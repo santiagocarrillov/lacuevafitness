@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Sede, MembershipState } from "@/generated/prisma/client";
 import { updateChallengeProgress } from "./challenges";
+import { requireAuth, can } from "@/lib/auth";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -126,6 +127,11 @@ export async function recordAttendance(
   scheduleId: string,
   memberIds: string[],
 ) {
+  const user = await requireAuth();
+  if (!can.recordAttendance(user)) {
+    throw new Error("No tienes permiso para registrar asistencia.");
+  }
+
   const session = await getOrCreateTodaySession(scheduleId);
 
   // Check for expired memberships
@@ -209,6 +215,11 @@ export async function removeAttendance(
   classSessionId: string,
   memberId: string,
 ) {
+  const user = await requireAuth();
+  if (!can.recordAttendance(user)) {
+    throw new Error("No tienes permiso para modificar asistencia.");
+  }
+
   await prisma.attendance.deleteMany({
     where: { classSessionId, memberId },
   });
@@ -244,10 +255,26 @@ export async function removeAttendance(
 
 export async function confirmCoachCount(
   classSessionId: string,
-  coachUserId: string,
+  _unusedCoachId: string, // kept for client-side compatibility, ignored
   count: number,
   notes?: string,
 ) {
+  const user = await requireAuth();
+  if (!can.confirmCoach(user)) {
+    throw new Error("No tienes permiso para confirmar conteo de coach.");
+  }
+
+  // Check existing confirmation — only coach who made it or OWNER can edit
+  const existing = await prisma.coachConfirmation.findUnique({
+    where: { classSessionId },
+  });
+  if (existing && existing.coachUserId !== user.id && user.role !== "OWNER") {
+    throw new Error("Solo el coach que confirmó puede modificarlo.");
+  }
+
+  // Use logged-in user as coach
+  const coachUserId = user.id;
+
   await prisma.coachConfirmation.upsert({
     where: { classSessionId },
     update: { count, notes, coachUserId },
