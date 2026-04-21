@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Sede, MembershipState } from "@/generated/prisma/client";
+import { updateChallengeProgress } from "./challenges";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -186,6 +187,11 @@ export async function recordAttendance(
         : false,
     },
   });
+
+  // Update challenge progress for each member
+  for (const memberId of memberIds) {
+    await updateChallengeProgress(memberId).catch(() => {});
+  }
 
   revalidatePath("/dashboard/asistencia");
   revalidatePath("/dashboard");

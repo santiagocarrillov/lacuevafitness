@@ -114,21 +114,24 @@ async function main() {
   const totalSchedules = await prisma.classSchedule.count();
   console.log(`  Class schedules: ${totalSchedules} total`);
 
-  // ── Membership Plans ──────────────────────────────────────────────
+  // ── Membership Plans (precios reales La Cueva 2026) ────────────────
   const plans = [
-    { name: "Trial 2 semanas", priceCents: 900, billingCycle: BillingCycle.TRIAL, durationDays: 14 },
-    { name: "Mensual", priceCents: 7500, billingCycle: BillingCycle.MONTHLY, durationDays: 30 },
-    { name: "Trimestral", priceCents: 19500, billingCycle: BillingCycle.QUARTERLY, durationDays: 90 },
-    { name: "Semestral", priceCents: 36000, billingCycle: BillingCycle.SEMIANNUAL, durationDays: 180 },
-    { name: "Anual", priceCents: 60000, billingCycle: BillingCycle.ANNUAL, durationDays: 365 },
+    { id: "plan-TRIAL", name: "Trial 2 semanas ($9)", priceCents: 900, billingCycle: BillingCycle.TRIAL, durationDays: 14, description: "2 semanas de prueba" },
+    { id: "plan-ONE_TIME", name: "Pase diario ($4)", priceCents: 400, billingCycle: BillingCycle.ONE_TIME, durationDays: 1, description: "Clase individual" },
+    { id: "plan-MONTHLY", name: "Mensual ($60)", priceCents: 6000, billingCycle: BillingCycle.MONTHLY, durationDays: 30, description: "Membresía mensual estándar" },
+    { id: "plan-MONTHLY-DESC", name: "Mensual con descuento ($50)", priceCents: 5000, billingCycle: BillingCycle.MONTHLY, durationDays: 30, description: "Mensual con descuento especial" },
+    { id: "plan-QUARTERLY", name: "Trimestral ($150 transferencia)", priceCents: 15000, billingCycle: BillingCycle.QUARTERLY, durationDays: 90, description: "Trimestral — 15% descuento si es transferencia" },
+    { id: "plan-QUARTERLY-TC", name: "Trimestral TC ($50/mes x3)", priceCents: 15000, billingCycle: BillingCycle.QUARTERLY, durationDays: 90, description: "Trimestral cobrado $50/mes con tarjeta de crédito" },
+    { id: "plan-ANNUAL", name: "Anual ($40/mes x12 TC)", priceCents: 48000, billingCycle: BillingCycle.ANNUAL, durationDays: 365, description: "Contrato anual — $40/mes descontados con tarjeta" },
   ];
   for (const plan of plans) {
     await prisma.membershipPlan.upsert({
-      where: { id: `plan-${plan.billingCycle}` },
-      update: {},
+      where: { id: plan.id },
+      update: { name: plan.name, priceCents: plan.priceCents, description: plan.description },
       create: {
-        id: `plan-${plan.billingCycle}`,
+        id: plan.id,
         name: plan.name,
+        description: plan.description,
         priceCents: plan.priceCents,
         billingCycle: plan.billingCycle,
         durationDays: plan.durationDays,
@@ -136,7 +139,7 @@ async function main() {
       },
     });
   }
-  console.log("  Membership plans: 5");
+  console.log(`  Membership plans: ${plans.length}`);
 
   // No sample members — members will come from CRM import.
   console.log("  Members: none (will import from CRM)");

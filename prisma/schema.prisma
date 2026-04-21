@@ -48,6 +48,7 @@ model User {
   leadInteractions   LeadInteraction[]
   dailyIndicators    DailyIndicators[]
   evaluationsAsCoach Evaluation[]        @relation("EvaluationCoach")
+  memberNotes        MemberNote[]
 
   @@index([sede, role])
 }
@@ -87,14 +88,16 @@ model Member {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  memberships      Membership[]
-  payments         Payment[]
-  attendance       Attendance[]
-  evaluations      Evaluation[]
-  bodyCompositions BodyComposition[]
-  testResults      TestResult[]
-  trainingLevels   TrainingLevelAssignment[]
-  goals            MemberGoal[]
+  memberships          Membership[]
+  payments             Payment[]
+  attendance           Attendance[]
+  evaluations          Evaluation[]
+  bodyCompositions     BodyComposition[]
+  testResults          TestResult[]
+  trainingLevels       TrainingLevelAssignment[]
+  goals                MemberGoal[]
+  memberNotes          MemberNote[]
+  challengeProgress    ChallengeProgress[]
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -141,6 +144,9 @@ model Membership {
   planId               String
   plan                 MembershipPlan  @relation(fields: [planId], references: [id])
   state                MembershipState @default(PENDING_PAYMENT)
+  customPriceCents     Int?            // override plan price (discounts, special deals)
+  paymentMethod        String?         // "TC", "Transferencia", "Efectivo", etc.
+  billingNote          String?         // "Cobrado $50/mes con TC", "15% desc transferencia"
   startsAt             DateTime
   endsAt               DateTime
   canceledAt           DateTime?
@@ -477,5 +483,64 @@ model MemberGoal {
   achievedAt DateTime?
   createdAt  DateTime  @default(now())
 
+  @@index([memberId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Notas de comunicación (timeline del socio)
+// ─────────────────────────────────────────────────────────────
+
+model MemberNote {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([memberId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Retos y gamificación
+// ─────────────────────────────────────────────────────────────
+
+enum ChallengeRuleType {
+  TOTAL_CLASSES         // X clases totales durante el reto
+  CONSECUTIVE_CLASSES   // X clases seguidas (sin faltar)
+  CLASSES_IN_DAYS       // X clases en Y días
+}
+
+model Challenge {
+  id          String            @id @default(cuid())
+  name        String            // "Reto 30 clases"
+  description String?           // "Asiste a 30 clases en 60 días"
+  reward      String?           // "Camiseta La Cueva"
+  ruleType    ChallengeRuleType
+  ruleTarget  Int               // X clases requeridas
+  ruleDays    Int?              // Y días (para CLASSES_IN_DAYS)
+  sede        Sede?             // null = ambas sedes
+  startsAt    DateTime
+  endsAt      DateTime
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  progress ChallengeProgress[]
+}
+
+model ChallengeProgress {
+  id           String    @id @default(cuid())
+  challengeId  String
+  challenge    Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  currentCount Int       @default(0)
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([challengeId, memberId])
   @@index([memberId])
 }
