@@ -5,17 +5,45 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { getDashboardStats } from "@/lib/actions/attendance";
 
-const kpis = [
-  { label: "Socios activos", value: "—", hint: "Ambas sedes" },
-  { label: "Asistencias hoy", value: "—", hint: "Admin + coach confirmado" },
-  { label: "Leads nuevos", value: "—", hint: "Hoy por todos los canales" },
-  { label: "Ingresos del mes", value: "—", hint: "Stripe + transferencia + efectivo" },
-  { label: "Morosidad", value: "—", hint: "Membresías vencidas sin renovar" },
-  { label: "Proyección renovaciones 7d", value: "—", hint: "Membresías que vencen" },
-];
+export const dynamic = "force-dynamic";
 
-export default function DashboardHome() {
+export default async function DashboardHome() {
+  const stats = await getDashboardStats();
+
+  const kpis = [
+    {
+      label: "Socios activos",
+      value: stats.activeMembers.toString(),
+      hint: "Ambas sedes (ACTIVE + TRIAL)",
+    },
+    {
+      label: "Asistencias hoy",
+      value: stats.todayAttendance.toString(),
+      hint: "Registros confirmados por admin",
+    },
+    {
+      label: "Membresías vencidas",
+      value: stats.expiredMemberships.toString(),
+      hint: "Activas con fecha de fin pasada",
+      alert: stats.expiredMemberships > 0,
+    },
+    {
+      label: "Renovaciones próximos 7d",
+      value: stats.upcomingRenewals.toString(),
+      hint: "Membresías que vencen esta semana",
+      alert: stats.upcomingRenewals > 0,
+    },
+    {
+      label: "Discrepancias hoy",
+      value: stats.todayDiscrepancies.toString(),
+      hint: "Admin vs coach — conteo diferente",
+      alert: stats.todayDiscrepancies > 0,
+    },
+  ];
+
   return (
     <div className="p-8 space-y-8">
       <header className="space-y-1">
@@ -29,7 +57,14 @@ export default function DashboardHome() {
         {kpis.map((k) => (
           <Card key={k.label} className="bg-zinc-900 border-zinc-800 text-zinc-50">
             <CardHeader className="pb-2">
-              <CardDescription className="text-zinc-400">{k.label}</CardDescription>
+              <CardDescription className="text-zinc-400 flex items-center gap-2">
+                {k.label}
+                {"alert" in k && k.alert && (
+                  <Badge variant="destructive" className="text-xs">
+                    Atención
+                  </Badge>
+                )}
+              </CardDescription>
               <CardTitle className="text-3xl">{k.value}</CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-zinc-500">{k.hint}</CardContent>
@@ -46,18 +81,20 @@ export default function DashboardHome() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-zinc-400">
-            (pendiente de wiring con datos reales)
+            {stats.todayDiscrepancies === 0
+              ? "✅ Sin discrepancias hoy."
+              : `🚨 ${stats.todayDiscrepancies} clase(s) con conteo distinto.`}
           </CardContent>
         </Card>
         <Card className="bg-zinc-900 border-zinc-800 text-zinc-50">
           <CardHeader>
-            <CardTitle>Próximo ciclo SRXFit</CardTitle>
+            <CardTitle>SRXFit — Próximo ciclo</CardTitle>
             <CardDescription className="text-zinc-400">
               Semana 9 de re-evaluación y benchmarks.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-zinc-400">
-            (pendiente de implementar módulo SRXFit)
+            (Pendiente: módulo SRXFit — Fase 2)
           </CardContent>
         </Card>
       </section>
