@@ -487,6 +487,57 @@ model MemberGoal {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Metas mensuales y gastos (para reportes)
+// ─────────────────────────────────────────────────────────────
+
+model MonthlyTarget {
+  id                    String   @id @default(cuid())
+  sede                  Sede
+  year                  Int
+  month                 Int      // 1-12
+  revenueTargetCents    Int      @default(0)  // Meta Facturación
+  salesTarget           Int      @default(0)  // Meta de ventas (# inscripciones)
+  visitorsTarget        Int      @default(0)  // Meta visitantes (clases de prueba)
+  leadsTarget           Int      @default(0)  // Meta averiguadores
+  attendanceTarget      Int      @default(0)  // Meta asistencias totales
+  workingDays           Int      @default(21) // Días hábiles del mes
+  projectedICVPct       Float    @default(50) // ICV proyectado %
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([sede, year, month])
+}
+
+enum ExpenseCategory {
+  PAYROLL         // Sueldos
+  RENT            // Arriendo
+  UTILITIES       // Servicios (luz, agua, internet)
+  EQUIPMENT       // Equipamiento y mantenimiento
+  MARKETING       // Publicidad y marketing
+  SUPPLIES        // Insumos (limpieza, oficina)
+  SOFTWARE        // Software (Stripe fees, HubSpot, etc)
+  TAXES           // Impuestos
+  PROFESSIONAL    // Servicios profesionales
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  sede        Sede?           // null = gasto compartido
+  category    ExpenseCategory
+  description String
+  amountCents Int
+  date        DateTime        @db.Date
+  recurring   Boolean         @default(false) // Gasto fijo mensual
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([sede, date])
+  @@index([category])
+}
+
+// ─────────────────────────────────────────────────────────────
 // Notas de comunicación (timeline del socio)
 // ─────────────────────────────────────────────────────────────
 
