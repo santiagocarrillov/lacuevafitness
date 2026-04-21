@@ -48,16 +48,16 @@ export default async function DashboardHome() {
     <div className="p-8 space-y-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Resumen</h1>
-        <p className="text-sm text-zinc-400">
-          Indicadores en vivo de La Cueva Fitness Center y La Cueva Xtreme.
+        <p className="text-sm text-muted-foreground">
+          Indicadores en vivo de La Cueva Fitness Center.
         </p>
       </header>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((k) => (
-          <Card key={k.label} className="bg-zinc-900 border-zinc-800 text-zinc-50">
+          <Card key={k.label}>
             <CardHeader className="pb-2">
-              <CardDescription className="text-zinc-400 flex items-center gap-2">
+              <CardDescription className="flex items-center gap-2">
                 {k.label}
                 {"alert" in k && k.alert && (
                   <Badge variant="destructive" className="text-xs">
@@ -67,33 +67,33 @@ export default async function DashboardHome() {
               </CardDescription>
               <CardTitle className="text-3xl">{k.value}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-zinc-500">{k.hint}</CardContent>
+            <CardContent className="text-xs text-muted-foreground">{k.hint}</CardContent>
           </Card>
         ))}
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="bg-zinc-900 border-zinc-800 text-zinc-50">
+        <Card>
           <CardHeader>
             <CardTitle>Discrepancias del día</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardDescription>
               Admin vs. coach — antifraude de conteo de clases.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-400">
+          <CardContent className="text-sm text-muted-foreground">
             {stats.todayDiscrepancies === 0
-              ? "✅ Sin discrepancias hoy."
-              : `🚨 ${stats.todayDiscrepancies} clase(s) con conteo distinto.`}
+              ? "Sin discrepancias hoy."
+              : `${stats.todayDiscrepancies} clase(s) con conteo distinto.`}
           </CardContent>
         </Card>
-        <Card className="bg-zinc-900 border-zinc-800 text-zinc-50">
+        <Card>
           <CardHeader>
             <CardTitle>SRXFit — Próximo ciclo</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardDescription>
               Semana 9 de re-evaluación y benchmarks.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-400">
+          <CardContent className="text-sm text-muted-foreground">
             (Pendiente: módulo SRXFit — Fase 2)
           </CardContent>
         </Card>
