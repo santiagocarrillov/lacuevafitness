@@ -41,11 +41,28 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
 /**
  * Redirect to /login if not authenticated.
  * Use at the top of server components that require auth.
+ *
+ * If a Supabase auth session exists but no matching User row was found,
+ * we sign the user out before redirecting so we don't end up in a loop
+ * (proxy thinks user is logged in, app thinks they're not).
  */
 export async function requireAuth(): Promise<User> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  if (!user.active) redirect("/login?disabled=1");
+  if (!user) {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    if (supabaseUser) {
+      // orphaned auth session — sign out
+      await supabase.auth.signOut();
+      redirect("/login?unlinked=1");
+    }
+    redirect("/login");
+  }
+  if (!user.active) {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut();
+    redirect("/login?disabled=1");
+  }
   return user;
 }
 

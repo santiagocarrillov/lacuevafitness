@@ -18,6 +18,8 @@ export default function NuevoSocioPage() {
     email: "",
     phone: "",
     dateOfBirth: "",
+    address: "",
+    occupation: "",
     emergencyName: "",
     emergencyPhone: "",
     sede: "FITNESS_CENTER",
@@ -116,6 +118,26 @@ export default function NuevoSocioPage() {
                   <option value="FITNESS_CENTER">La Cueva Fitness Center</option>
                   <option value="XTREME">La Cueva Xtreme</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">Dirección</Label>
+                <Input
+                  id="address"
+                  value={form.address}
+                  onChange={(e) => update("address", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="occupation">Ocupación</Label>
+                <Input
+                  id="occupation"
+                  value={form.occupation}
+                  onChange={(e) => update("occupation", e.target.value)}
+                  placeholder="ej: Ingeniero, Médico..."
+                />
               </div>
             </div>
 

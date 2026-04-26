@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { updateLeadStage } from "@/lib/actions/leads";
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { updateLeadStage, convertLeadToMember } from "@/lib/actions/leads";
+import { getMembershipPlans } from "@/lib/actions/members";
 
 type LeadRow = {
   id: string;
@@ -26,6 +28,13 @@ type LeadRow = {
   owner: { fullName: string } | null;
   interactions: { summary: string; occurredAt: Date }[];
   member: { id: string; status: string } | null;
+};
+
+type Plan = {
+  id: string;
+  name: string;
+  priceCents: number;
+  durationDays: number;
 };
 
 const stageColors: Record<string, string> = {
@@ -81,6 +90,8 @@ export function LeadTable({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [convertingLead, setConvertingLead] = useState<LeadRow | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
 
   function goToPage(p: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -88,11 +99,29 @@ export function LeadTable({
     router.push(`/dashboard/leads?${params.toString()}`);
   }
 
-  function handleStageChange(leadId: string, newStage: string) {
+  async function handleStageChange(lead: LeadRow, newStage: string) {
+    // If marking as CONVERTED and no member yet → open dialog to pick plan
+    if (newStage === "CONVERTED" && !lead.member) {
+      const fetched = await getMembershipPlans();
+      setPlans(fetched);
+      setConvertingLead(lead);
+      return;
+    }
+
     startTransition(async () => {
-      await updateLeadStage(leadId, newStage as any);
+      await updateLeadStage(lead.id, newStage as any);
       toast.success(`Etapa actualizada a ${stageLabels[newStage] ?? newStage}`);
       router.refresh();
+    });
+  }
+
+  function handleConvert(planId: string) {
+    if (!convertingLead) return;
+    startTransition(async () => {
+      const member = await convertLeadToMember(convertingLead.id, planId);
+      toast.success(`Convertido a socio: ${member.firstName} ${member.lastName}`);
+      setConvertingLead(null);
+      router.push(`/dashboard/socios/${member.id}`);
     });
   }
 
@@ -121,7 +150,16 @@ export function LeadTable({
               leads.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">
-                    {l.firstName} {l.lastName ?? ""}
+                    {l.member ? (
+                      <Link
+                        href={`/dashboard/socios/${l.member.id}`}
+                        className="hover:underline"
+                      >
+                        {l.firstName} {l.lastName ?? ""}
+                      </Link>
+                    ) : (
+                      <span>{l.firstName} {l.lastName ?? ""}</span>
+                    )}
                     {l.member && (
                       <Badge variant="outline" className="ml-2 text-xs text-emerald-600 border-emerald-200">
                         Socio
@@ -136,7 +174,7 @@ export function LeadTable({
                   <TableCell>
                     <select
                       value={l.stage}
-                      onChange={(e) => handleStageChange(l.id, e.target.value)}
+                      onChange={(e) => handleStageChange(l, e.target.value)}
                       disabled={isPending}
                       className={`text-xs rounded-md border px-2 py-1 ${stageColors[l.stage] ?? ""}`}
                     >
@@ -177,6 +215,42 @@ export function LeadTable({
           </div>
         )}
       </div>
+
+      {/* Convert lead dialog */}
+      <Dialog open={!!convertingLead} onOpenChange={(o) => !o && setConvertingLead(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convertir a socio</DialogTitle>
+            <DialogDescription>
+              {convertingLead && (
+                <>
+                  Selecciona el plan que contrató{" "}
+                  <strong>{convertingLead.firstName} {convertingLead.lastName ?? ""}</strong>.
+                  Se creará el socio con el lead vinculado para mantener el origen.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {plans.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => handleConvert(p.id)}
+                disabled={isPending}
+                className="w-full flex items-center justify-between p-3 rounded-md border hover:bg-accent transition text-sm text-left"
+              >
+                <span className="font-medium">{p.name}</span>
+                <span className="text-muted-foreground">
+                  ${(p.priceCents / 100).toFixed(2)} · {p.durationDays}d
+                </span>
+              </button>
+            ))}
+            {plans.length === 0 && (
+              <p className="text-sm text-muted-foreground">Cargando planes…</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

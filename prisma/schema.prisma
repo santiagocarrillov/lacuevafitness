@@ -74,8 +74,11 @@ model Member {
   email            String?      @unique
   phone            String?
   dateOfBirth      DateTime?
+  address          String?
+  occupation       String?
   emergencyName    String?
   emergencyPhone   String?
+  preferredHour    String?       // "morning", "evening", "afternoon" — derived from attendance
   sede             Sede
   status           MemberStatus @default(LEAD)
   joinedAt         DateTime     @default(now())

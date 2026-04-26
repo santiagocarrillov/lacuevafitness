@@ -65,7 +65,12 @@ export async function getMember(id: string) {
     include: {
       memberships: {
         orderBy: { startsAt: "desc" },
-        include: { plan: true, payments: { orderBy: { paidAt: "desc" } } },
+        include: { plan: true },
+      },
+      payments: {
+        orderBy: { paidAt: "desc" },
+        take: 30,
+        include: { membership: { include: { plan: true } } },
       },
       attendance: {
         orderBy: { recordedAt: "desc" },
@@ -77,7 +82,7 @@ export async function getMember(id: string) {
       testResults: { orderBy: { recordedAt: "desc" }, take: 20 },
       trainingLevels: { orderBy: { assignedAt: "desc" }, take: 1 },
       goals: { orderBy: { createdAt: "desc" } },
-      lead: true,
+      lead: { include: { interactions: { orderBy: { occurredAt: "desc" }, take: 5 } } },
     },
   });
 }
@@ -90,6 +95,8 @@ export async function createMember(data: {
   email?: string;
   phone?: string;
   dateOfBirth?: string;
+  address?: string;
+  occupation?: string;
   emergencyName?: string;
   emergencyPhone?: string;
   sede: Sede;
@@ -103,6 +110,8 @@ export async function createMember(data: {
       email: data.email || undefined,
       phone: data.phone || undefined,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      address: data.address || undefined,
+      occupation: data.occupation || undefined,
       emergencyName: data.emergencyName || undefined,
       emergencyPhone: data.emergencyPhone || undefined,
       sede: data.sede,
@@ -125,6 +134,8 @@ export async function updateMember(
     email?: string;
     phone?: string;
     dateOfBirth?: string;
+    address?: string;
+    occupation?: string;
     emergencyName?: string;
     emergencyPhone?: string;
     sede?: Sede;

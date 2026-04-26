@@ -24,6 +24,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard", label: "Resumen", show: true },
     { href: "/dashboard/asistencia", label: "Asistencia", show: true },
     { href: "/dashboard/socios", label: "Socios", show: can.viewMembers(user) },
+    { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewMembers(user) },
     { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
     { href: "/dashboard/retos", label: "Retos", show: can.manageChallenges(user) || user.role === "COACH" },
     { href: "/dashboard/pagos", label: "Pagos", show: can.viewFinancials(user) },
