@@ -12,6 +12,12 @@ function monthBounds(year: number, month: number) {
   return { start, end };
 }
 
+function rangeBounds(from: string, to: string) {
+  const start = new Date(from + "T00:00:00");
+  const end = new Date(to + "T23:59:59");
+  return { start, end };
+}
+
 function prevMonth(year: number, month: number) {
   if (month === 1) return { year: year - 1, month: 12 };
   return { year, month: month - 1 };
@@ -92,11 +98,13 @@ export async function getManagementKPIs(
     prisma.member.count({
       where: { ...sedeFilter, status: "CHURNED", churnedAt: { gte: start, lte: end } },
     }),
-    // Facturación del mes (sum of payments)
+    // Facturación del mes (sum of payments, exclude pool entries)
     prisma.payment.aggregate({
       where: {
         ...sedeFilter,
         status: "SUCCEEDED",
+        isPoolEntry: false,
+        memberId: { not: null },
         paidAt: { gte: start, lte: end },
       },
       _sum: { amountCents: true },
@@ -229,7 +237,13 @@ export async function getMonthlyFinancials(
         payrollAgg,
       ] = await Promise.all([
         prisma.payment.aggregate({
-          where: { ...sedeFilter, status: "SUCCEEDED", paidAt: { gte: start, lte: end } },
+          where: {
+            ...sedeFilter,
+            status: "SUCCEEDED",
+            isPoolEntry: false,
+            memberId: { not: null },
+            paidAt: { gte: start, lte: end },
+          },
           _sum: { amountCents: true },
         }),
         prisma.member.count({
@@ -311,10 +325,10 @@ export async function getMonthlyFinancials(
 
 export async function getCommercialReport(
   sede: Sede | undefined,
-  year: number,
-  month: number,
+  from: string,
+  to: string,
 ) {
-  const { start, end } = monthBounds(year, month);
+  const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
   const [sourceBreakdown, stageBreakdown, dailyLeads] = await Promise.all([
@@ -449,7 +463,139 @@ export async function getExpenses(sede: Sede | undefined, year: number, month: n
   });
 }
 
+export async function getExpensesByRange(sede: Sede | undefined, from: string, to: string) {
+  const { start, end } = rangeBounds(from, to);
+  return prisma.expense.findMany({
+    where: {
+      ...(sede ? { sede } : {}),
+      date: { gte: start, lte: end },
+    },
+    orderBy: { date: "desc" },
+  });
+}
+
 export async function deleteExpense(id: string) {
   await prisma.expense.delete({ where: { id } });
   revalidatePath("/dashboard/reportes");
+}
+
+// ── Commercial pipeline (Comercial) ────────────────────────────────
+
+export async function getCommercialPipeline(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+
+  const [totalLeads, evaluaciones, convertidos] = await Promise.all([
+    prisma.lead.count({
+      where: { ...sedeFilter, createdAt: { gte: start, lte: end } },
+    }),
+    prisma.lead.count({
+      where: {
+        ...sedeFilter,
+        createdAt: { gte: start, lte: end },
+        stage: { in: ["TRIAL_ATTENDED", "NEGOTIATING", "CONVERTED"] },
+      },
+    }),
+    prisma.lead.count({
+      where: {
+        ...sedeFilter,
+        createdAt: { gte: start, lte: end },
+        stage: "CONVERTED",
+      },
+    }),
+  ]);
+
+  const leadsToEvaluacionesPct = totalLeads > 0 ? Math.round((evaluaciones / totalLeads) * 100) : 0;
+  const leadsToConvertidosPct = totalLeads > 0 ? Math.round((convertidos / totalLeads) * 100) : 0;
+  const evaluacionesToConvertidosPct = evaluaciones > 0 ? Math.round((convertidos / evaluaciones) * 100) : 0;
+
+  return {
+    totalLeads,
+    evaluaciones,
+    convertidos,
+    leadsToEvaluacionesPct,
+    leadsToConvertidosPct,
+    evaluacionesToConvertidosPct,
+  };
+}
+
+// ── Detail queries for drill-down ───────────────────────────────────
+
+export async function getRevenueDetail(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+
+  return prisma.payment.findMany({
+    where: {
+      ...sedeFilter,
+      status: "SUCCEEDED",
+      isPoolEntry: false,
+      memberId: { not: null },
+      paidAt: { gte: start, lte: end },
+    },
+    include: {
+      member: true,
+      membership: {
+        include: { plan: true },
+      },
+    },
+    orderBy: { paidAt: "desc" },
+  });
+}
+
+export async function getLeadsDetail(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+  stage?: string[],
+) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+
+  return prisma.lead.findMany({
+    where: {
+      ...sedeFilter,
+      createdAt: { gte: start, lte: end },
+      ...(stage ? { stage: { in: stage as any[] } } : {}),
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      source: true,
+      stage: true,
+      createdAt: true,
+      convertedAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getSalesDetail(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  const memberSedeFilter = sede ? { member: { sede } } : {};
+
+  return prisma.membership.findMany({
+    where: {
+      ...memberSedeFilter,
+      createdAt: { gte: start, lte: end },
+    },
+    include: {
+      member: true,
+      plan: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
 }

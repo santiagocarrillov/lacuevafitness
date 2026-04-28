@@ -5,6 +5,8 @@ import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { GestionTab } from "./gestion-tab";
 import { ComercialTab } from "./comercial-tab";
 import { ContableTab } from "./contable-tab";
+import { DateRangePicker } from "./date-range-picker";
+import { DetailPanel } from "./detail-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +22,23 @@ const sedes = [
   { key: "XTREME", label: "Xtreme" },
 ];
 
+function isoDate(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
 export default async function ReportesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; sede?: string; year?: string; month?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    sede?: string;
+    from?: string;
+    to?: string;
+    detail?: string;
+    // backward compat
+    year?: string;
+    month?: string;
+  }>;
 }) {
   const user = await requireAuth();
   if (!can.viewReports(user)) redirect("/dashboard?forbidden=1");
@@ -33,18 +48,52 @@ export default async function ReportesPage({
   const params = await searchParams;
   let tab = params.tab ?? "gestion";
   if (tab === "contable" && !canContable) tab = "gestion";
-  // Scoped users are locked to their sede
+
   const sede = (scopedSede ?? params.sede ?? "") as "" | Sede;
+
   const now = new Date();
-  const year = parseInt(params.year ?? now.getFullYear().toString());
-  const month = parseInt(params.month ?? (now.getMonth() + 1).toString());
+
+  // Compute from/to with backward compat for year/month params
+  let from: string;
+  let to: string;
+
+  if (params.from && params.to) {
+    from = params.from;
+    to = params.to;
+  } else if (params.year && params.month) {
+    // Backward compat: derive from year+month
+    const y = parseInt(params.year);
+    const m = parseInt(params.month);
+    const firstDay = new Date(y, m - 1, 1);
+    const lastDay = new Date(y, m, 0);
+    from = isoDate(firstDay);
+    to = isoDate(lastDay);
+  } else {
+    // Default: first day of current month to today
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    from = isoDate(firstDay);
+    to = isoDate(now);
+  }
+
+  const detail = params.detail;
+
+  // Derive year/month from "from" for GestionTab (needs monthly targets)
+  const fromDate = new Date(from + "T00:00:00");
+  const gestionYear = fromDate.getFullYear();
+  const gestionMonth = fromDate.getMonth() + 1;
 
   function buildUrl(updates: Record<string, string>) {
-    const p = new URLSearchParams({
-      tab, sede, year: year.toString(), month: month.toString(), ...updates,
-    });
+    const base: Record<string, string> = { tab, sede, from, to };
+    if (detail && !("detail" in updates)) {
+      // keep existing detail unless overridden or explicitly cleared
+    }
+    const merged = { ...base, ...updates };
+    const p = new URLSearchParams(merged);
     return `/dashboard/reportes?${p.toString()}`;
   }
+
+  // Close URL removes detail param
+  const closeHref = buildUrl({ detail: "" }).replace("detail=&", "").replace("&detail=", "").replace("detail=", "");
 
   return (
     <div className="p-8 space-y-6">
@@ -91,32 +140,35 @@ export default async function ReportesPage({
               ))}
             </div>
           )}
-          <form action="/dashboard/reportes" className="flex gap-1 items-center">
-            <input type="hidden" name="tab" value={tab} />
-            <input type="hidden" name="sede" value={sede} />
-            <select name="month" defaultValue={month}
-              className="h-7 rounded-md border border-input bg-background px-2 text-xs">
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={m}>
-                  {new Date(2000, m - 1).toLocaleDateString("es-EC", { month: "long" })}
-                </option>
-              ))}
-            </select>
-            <select name="year" defaultValue={year}
-              className="h-7 rounded-md border border-input bg-background px-2 text-xs">
-              {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <button type="submit"
-              className="h-7 px-2 text-xs rounded-md bg-primary text-primary-foreground">
-              Ver
-            </button>
-          </form>
+          <DateRangePicker
+            from={from}
+            to={to}
+            sede={sede}
+            tab={tab}
+            detail={detail}
+          />
         </div>
       </div>
 
-      {tab === "gestion" && <GestionTab sede={sede || undefined} year={year} month={month} />}
-      {tab === "comercial" && <ComercialTab sede={sede || undefined} year={year} month={month} />}
-      {tab === "contable" && <ContableTab sede={sede || undefined} year={year} month={month} />}
+      {tab === "gestion" && (
+        <GestionTab sede={sede || undefined} year={gestionYear} month={gestionMonth} />
+      )}
+      {tab === "comercial" && (
+        <ComercialTab sede={sede || undefined} from={from} to={to} buildUrl={buildUrl} />
+      )}
+      {tab === "contable" && (
+        <ContableTab sede={sede || undefined} from={from} to={to} buildUrl={buildUrl} />
+      )}
+
+      {detail && (
+        <DetailPanel
+          detail={detail}
+          from={from}
+          to={to}
+          sede={sede || undefined}
+          closeHref={closeHref}
+        />
+      )}
     </div>
   );
 }

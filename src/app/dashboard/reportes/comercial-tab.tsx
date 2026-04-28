@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
-import { getCommercialReport } from "@/lib/actions/reports";
+import { getCommercialReport, getCommercialPipeline } from "@/lib/actions/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DailyLeadsChart } from "./daily-leads-chart";
@@ -29,41 +30,108 @@ const stageLabels: Record<string, string> = {
 
 export async function ComercialTab({
   sede,
-  year,
-  month,
+  from,
+  to,
+  buildUrl,
 }: {
   sede?: Sede;
-  year: number;
-  month: number;
+  from: string;
+  to: string;
+  buildUrl: (updates: Record<string, string>) => string;
 }) {
-  const data = await getCommercialReport(sede, year, month);
+  const [data, pipeline] = await Promise.all([
+    getCommercialReport(sede, from, to),
+    getCommercialPipeline(sede, from, to),
+  ]);
 
-  const totalLeads = data.sources.reduce((s, x) => s + x.count, 0);
-  const totalConverted = data.sources.reduce((s, x) => s + x.converted, 0);
+  const { totalLeads, evaluaciones, convertidos, leadsToEvaluacionesPct, leadsToConvertidosPct, evaluacionesToConvertidosPct } = pipeline;
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total leads</CardDescription>
-            <CardTitle className="text-3xl">{totalLeads}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Convertidos</CardDescription>
-            <CardTitle className="text-3xl">{totalConverted}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Tasa conversión global</CardDescription>
-            <CardTitle className="text-3xl">
-              {totalLeads > 0 ? Math.round((totalConverted / totalLeads) * 100) : 0}%
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      {/* Pipeline funnel */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium bg-purple-50 text-purple-900 px-3 py-1.5 rounded">
+          Pipeline comercial
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Link href={buildUrl({ detail: "leads" })} className="block hover:opacity-80 transition">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Leads</CardDescription>
+                <CardTitle className="text-3xl">{totalLeads}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                leads del período
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href={buildUrl({ detail: "evaluaciones" })} className="block hover:opacity-80 transition">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Evaluaciones</CardDescription>
+                <CardTitle className="text-3xl">
+                  {evaluaciones}
+                  <span className="text-base font-normal text-muted-foreground ml-2">
+                    ({leadsToEvaluacionesPct}%)
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                de leads
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href={buildUrl({ detail: "convertidos" })} className="block hover:opacity-80 transition">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Convertidos</CardDescription>
+                <CardTitle className="text-3xl">
+                  {convertidos}
+                  <span className="text-base font-normal text-muted-foreground ml-2">
+                    ({leadsToConvertidosPct}%)
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                de leads · {evaluacionesToConvertidosPct}% de evaluaciones
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Conversion funnel bars */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-32 text-muted-foreground">Leads → Evalúan</span>
+            <div className="flex-1 bg-muted rounded-full h-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full"
+                style={{ width: `${leadsToEvaluacionesPct}%` }}
+              />
+            </div>
+            <span className="w-10 text-right font-medium">{leadsToEvaluacionesPct}%</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-32 text-muted-foreground">Evalúan → Cierran</span>
+            <div className="flex-1 bg-muted rounded-full h-2">
+              <div
+                className="bg-emerald-500 h-2 rounded-full"
+                style={{ width: `${evaluacionesToConvertidosPct}%` }}
+              />
+            </div>
+            <span className="w-10 text-right font-medium">{evaluacionesToConvertidosPct}%</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-32 text-muted-foreground">Leads → Cierran</span>
+            <div className="flex-1 bg-muted rounded-full h-2">
+              <div
+                className="bg-amber-500 h-2 rounded-full"
+                style={{ width: `${leadsToConvertidosPct}%` }}
+              />
+            </div>
+            <span className="w-10 text-right font-medium">{leadsToConvertidosPct}%</span>
+          </div>
+        </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -74,7 +142,7 @@ export async function ComercialTab({
           </CardHeader>
           <CardContent>
             {data.sources.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin leads este mes.</p>
+              <p className="text-sm text-muted-foreground">Sin leads en el período.</p>
             ) : (
               <div className="space-y-2 text-sm">
                 {data.sources
@@ -102,7 +170,7 @@ export async function ComercialTab({
         <Card>
           <CardHeader>
             <CardTitle>Estado del pipeline</CardTitle>
-            <CardDescription>Leads del mes por etapa</CardDescription>
+            <CardDescription>Leads del período por etapa</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
