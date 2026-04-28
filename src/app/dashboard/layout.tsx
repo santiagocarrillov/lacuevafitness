@@ -27,7 +27,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewMembers(user) },
     { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
     { href: "/dashboard/retos", label: "Retos", show: can.manageChallenges(user) || user.role === "COACH" },
-    { href: "/dashboard/pagos", label: "Pagos", show: can.viewFinancials(user) },
+    { href: "/dashboard/pagos", label: "Pagos", show: can.viewFinancials(user) || user.role === "ADMIN" },
     { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
     { href: "/dashboard/srxfit", label: "SRXFit", show: true },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },

@@ -185,8 +185,8 @@ enum PaymentStatus {
 
 model Payment {
   id                    String        @id @default(cuid())
-  memberId              String
-  member                Member        @relation(fields: [memberId], references: [id])
+  memberId              String?       // null for Isabel's bank pool entries (isPoolEntry = true)
+  member                Member?       @relation(fields: [memberId], references: [id])
   membershipId          String?
   membership            Membership?   @relation(fields: [membershipId], references: [id])
   amountCents           Int
@@ -194,6 +194,12 @@ model Payment {
   method                PaymentMethod
   status                PaymentStatus @default(PENDING)
   paidAt                DateTime?
+  // ── Detalle bancario ─────────────────────────────────────────────────
+  depositorName         String?       // Nombre del depositante / tarjetahabiente
+  bankReference         String?       // # referencia / transacción
+  bankEntity            String?       // Entidad bancaria (Pichincha, Stripe…)
+  isPoolEntry           Boolean       @default(false) // true → entrada de banco sin asignar (Isabel)
+  // ── Stripe / QBO (postergado) ────────────────────────────────────────
   stripePaymentIntentId String?       @unique
   stripeChargeId        String?       @unique
   qboTransactionId      String?       @unique
@@ -206,6 +212,7 @@ model Payment {
 
   @@index([sede, paidAt])
   @@index([status])
+  @@index([isPoolEntry, status])
 }
 
 // ─────────────────────────────────────────────────────────────
