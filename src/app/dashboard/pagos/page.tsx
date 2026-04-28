@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { PoolEntryForm } from "./pool-form";
 import { RegisterPaymentDialog } from "./register-payment-dialog";
 import { ConfirmPaymentDialog } from "./confirm-payment-dialog";
+import { DeleteButton } from "./delete-button";
 import { deletePoolEntry, deletePendingPayment } from "@/lib/actions/payments";
 
 export const dynamic = "force-dynamic";
@@ -427,20 +428,3 @@ export default async function PagosPage({
   );
 }
 
-// ── Inline server-action delete button ───────────────────────────────────────
-
-function DeleteButton({ action, label }: { action: () => Promise<void>; label: string }) {
-  return (
-    <form action={action}>
-      <button
-        type="submit"
-        className="text-xs text-muted-foreground hover:text-destructive transition"
-        onClick={(e) => {
-          if (!confirm("¿Eliminar este registro?")) e.preventDefault();
-        }}
-      >
-        {label}
-      </button>
-    </form>
-  );
-}
