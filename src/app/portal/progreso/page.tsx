@@ -83,6 +83,17 @@ export default async function ProgresoPage() {
               <div className="interp">{imcInterp.text}</div>
             </div>
           )}
+          {latest.waistCm != null && (
+            <div className="portal-metric">
+              <span className="dot orange" />
+              <div className="label">Cintura</div>
+              <div className="value">
+                {latest.waistCm.toFixed(1)}
+                <span className="u">cm</span>
+              </div>
+              <div className="interp">Medida abdominal.</div>
+            </div>
+          )}
           {latest.bodyFatPct != null && (
             <div className="portal-metric">
               <span className="dot gray" />
@@ -94,15 +105,25 @@ export default async function ProgresoPage() {
               <div className="interp">Composición corporal.</div>
             </div>
           )}
-          {latest.muscleMassKg != null && (
+          {latest.muscleMassPct != null && (
             <div className="portal-metric">
               <span className="dot green" />
-              <div className="label">Músculo</div>
+              <div className="label">% Músculo</div>
               <div className="value">
-                {latest.muscleMassKg.toFixed(1)}
-                <span className="u">kg</span>
+                {latest.muscleMassPct.toFixed(1)}
+                <span className="u">%</span>
               </div>
               <div className="interp">Masa muscular.</div>
+            </div>
+          )}
+          {latest.waistCm != null && latest.heightCm != null && (
+            <div className="portal-metric">
+              <span className="dot orange" />
+              <div className="label">C/A ratio</div>
+              <div className="value">
+                {(latest.waistCm / latest.heightCm).toFixed(2)}
+              </div>
+              <div className="interp">Cintura / altura.</div>
             </div>
           )}
           {latest.weightKg != null && (
