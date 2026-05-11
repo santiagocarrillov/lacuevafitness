@@ -83,17 +83,6 @@ export default async function ProgresoPage() {
               <div className="interp">{imcInterp.text}</div>
             </div>
           )}
-          {latest.waistCm != null && (
-            <div className="portal-metric">
-              <span className="dot orange" />
-              <div className="label">Cintura</div>
-              <div className="value">
-                {latest.waistCm.toFixed(1)}
-                <span className="u">cm</span>
-              </div>
-              <div className="interp">Medida abdominal.</div>
-            </div>
-          )}
           {latest.bodyFatPct != null && (
             <div className="portal-metric">
               <span className="dot gray" />
@@ -105,15 +94,26 @@ export default async function ProgresoPage() {
               <div className="interp">Composición corporal.</div>
             </div>
           )}
-          {latest.muscleMassPct != null && (
+          {latest.muscleMassKg != null && (
             <div className="portal-metric">
               <span className="dot green" />
-              <div className="label">% Músculo</div>
+              <div className="label">Músculo</div>
               <div className="value">
-                {latest.muscleMassPct.toFixed(1)}
-                <span className="u">%</span>
+                {latest.muscleMassKg.toFixed(1)}
+                <span className="u">kg</span>
               </div>
               <div className="interp">Masa muscular.</div>
+            </div>
+          )}
+          {latest.weightKg != null && (
+            <div className="portal-metric">
+              <span className="dot gray" />
+              <div className="label">Peso</div>
+              <div className="value">
+                {latest.weightKg.toFixed(1)}
+                <span className="u">kg</span>
+              </div>
+              <div className="interp">Última medición.</div>
             </div>
           )}
         </div>
