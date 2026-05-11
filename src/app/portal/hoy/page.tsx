@@ -1,14 +1,16 @@
 import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
+import { CapsuleCard } from "@/components/portal/capsule-card";
 import {
   HITOS,
+  computeAttendanceStats,
   computeStreak,
   daysToNextEvaluation,
   greetingForHour,
 } from "@/lib/portal/metrics";
 import { ecuadorHour, ecuadorParts, todayDayOfWeekEcuador } from "@/lib/portal/tz";
-import { longDate } from "@/lib/portal/format";
+import { longDate, shortDate } from "@/lib/portal/format";
 
 export const dynamic = "force-dynamic";
 
@@ -18,28 +20,35 @@ export default async function HoyPage() {
   const today = new Date();
   const todayWeekday = todayDayOfWeekEcuador();
 
-  const [attendanceDates, attendanceCount, lastEval, todaySchedules] = await Promise.all([
-    prisma.attendance
-      .findMany({
+  const [attendanceDates, attendanceCount, lastEval, todaySchedules, latestNote] =
+    await Promise.all([
+      prisma.attendance
+        .findMany({
+          where: { memberId: member.id },
+          orderBy: { recordedAt: "desc" },
+          select: { recordedAt: true },
+          take: 200,
+        })
+        .then((rows) => rows.map((r) => r.recordedAt)),
+      prisma.attendance.count({ where: { memberId: member.id } }),
+      prisma.evaluation.findFirst({
+        where: { memberId: member.id, completedAt: { not: null } },
+        orderBy: { completedAt: "desc" },
+        select: { completedAt: true },
+      }),
+      prisma.classSchedule.findMany({
+        where: { sede: member.sede, dayOfWeek: todayWeekday, active: true },
+        orderBy: { startTime: "asc" },
+      }),
+      prisma.memberNote.findFirst({
         where: { memberId: member.id },
-        orderBy: { recordedAt: "desc" },
-        select: { recordedAt: true },
-        take: 200,
-      })
-      .then((rows) => rows.map((r) => r.recordedAt)),
-    prisma.attendance.count({ where: { memberId: member.id } }),
-    prisma.evaluation.findFirst({
-      where: { memberId: member.id, completedAt: { not: null } },
-      orderBy: { completedAt: "desc" },
-      select: { completedAt: true },
-    }),
-    prisma.classSchedule.findMany({
-      where: { sede: member.sede, dayOfWeek: todayWeekday, active: true },
-      orderBy: { startTime: "asc" },
-    }),
-  ]);
+        orderBy: { createdAt: "desc" },
+        include: { author: true },
+      }),
+    ]);
 
   const streak = computeStreak(attendanceDates, today);
+  const attStats = computeAttendanceStats(attendanceDates, today);
   const daysLeft = daysToNextEvaluation(lastEval?.completedAt ?? null, today);
   const greeting = greetingForHour(ecuadorHour(today));
   const initial = member.firstName.charAt(0).toUpperCase();
@@ -110,6 +119,60 @@ export default async function HoyPage() {
         </div>
       )}
 
+      <section className="portal-attendance">
+        <div className="head">
+          <div className="t">Tu asistencia</div>
+          <div className="sub">
+            {attStats.lastVisit ? `Última: ${shortDate(attStats.lastVisit)}` : "Sin visitas"}
+          </div>
+        </div>
+        <div className="grid">
+          <div className="stat">
+            <div className="k">Frecuencia</div>
+            <div className="v">
+              {attStats.weeklyFrequency.toFixed(1)}
+              <span className="u">/sem</span>
+            </div>
+          </div>
+          <div className="stat">
+            <div className="k">Este mes</div>
+            <div className="v">
+              {attStats.thisMonth}
+              <span className="u">visitas</span>
+            </div>
+          </div>
+          <div className="stat">
+            <div className="k">Total</div>
+            <div className="v">
+              {attendanceCount}
+              <span className="u">desde inicio</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {latestNote && (
+        <section className="portal-note-preview">
+          <div className="head">
+            <div className="av">
+              {(latestNote.author?.fullName ?? "L").charAt(0).toUpperCase()}
+            </div>
+            <div className="who">
+              <div className="name">{latestNote.author?.fullName ?? "La Cueva"}</div>
+              <div className="role">
+                {latestNote.author?.role === "NUTRITIONIST"
+                  ? "Nutricionista"
+                  : latestNote.author?.role === "COACH"
+                    ? "Coach"
+                    : "Equipo La Cueva"}
+              </div>
+            </div>
+            <div className="when">{shortDate(latestNote.createdAt)}</div>
+          </div>
+          <div className="body">{latestNote.content}</div>
+        </section>
+      )}
+
       {daysLeft !== null && (
         <div className="portal-countdown">
           <div className="days">{Math.max(daysLeft, 0)}</div>
@@ -154,11 +217,7 @@ export default async function HoyPage() {
       <div className="portal-section-title">
         <h4>Sabías que…</h4>
       </div>
-      <div className="portal-capsule">
-        <div className="label">SRXFit · Cápsula</div>
-        <h5>Por qué medimos cintura, no solo peso</h5>
-        <div className="read">2 min · próximamente</div>
-      </div>
+      <CapsuleCard now={today} />
     </PortalShell>
   );
 }
