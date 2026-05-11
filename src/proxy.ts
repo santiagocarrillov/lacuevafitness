@@ -26,19 +26,38 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isProtected = path.startsWith("/dashboard") || path.startsWith("/api/");
-  const isAuthPage = path === "/login";
+  const isStaffProtected = path.startsWith("/dashboard") || path.startsWith("/api/");
+  const isPortalProtected =
+    path.startsWith("/portal") &&
+    path !== "/portal/login" &&
+    path !== "/portal/signup";
+  const isStaffAuthPage = path === "/login";
+  const isPortalAuthPage = path === "/portal/login" || path === "/portal/signup";
 
-  if (isProtected && !user) {
+  if (isStaffProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
   }
 
-  if (isAuthPage && user) {
+  if (isPortalProtected && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal/login";
+    url.searchParams.set("next", path);
+    return NextResponse.redirect(url);
+  }
+
+  if (isStaffAuthPage && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
+    url.searchParams.delete("next");
+    return NextResponse.redirect(url);
+  }
+
+  if (isPortalAuthPage && user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal/hoy";
     url.searchParams.delete("next");
     return NextResponse.redirect(url);
   }
