@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,18 +17,43 @@ export function TestResultsSection({
   testResults,
   memberId,
   testLabels,
+  canRegister = true,
+  memberIsActive = true,
 }: {
   testResults: TestResult[];
   memberId: string;
   testLabels: Record<string, string>;
+  canRegister?: boolean;
+  memberIsActive?: boolean;
 }) {
+  const addUrl = `/dashboard/srxfit/evaluaciones/${memberId}`;
+
+  const AddButton = () =>
+    canRegister && memberIsActive ? (
+      <Link
+        href={addUrl}
+        className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:opacity-90 transition"
+      >
+        + Agregar resultados
+      </Link>
+    ) : null;
+
   if (testResults.length === 0) {
     return (
       <Card>
-        <CardHeader><CardTitle>Tests físicos SRXFit</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Tests físicos SRXFit</CardTitle>
+          <AddButton />
+        </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
             Sin resultados de tests. Se registran en las evaluaciones de la Semana 9 y durante el onboarding.
+            {canRegister && memberIsActive && " Click en \"+ Agregar resultados\" para empezar."}
+            {!memberIsActive && (
+              <span className="block mt-1 text-amber-700">
+                ⚠️ Socio inactivo: no se pueden registrar tests hasta reactivar la membresía.
+              </span>
+            )}
           </p>
         </CardContent>
       </Card>
@@ -44,7 +70,10 @@ export function TestResultsSection({
 
   return (
     <Card>
-      <CardHeader><CardTitle>Tests físicos SRXFit</CardTitle></CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Tests físicos SRXFit</CardTitle>
+        <AddButton />
+      </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from(byTest.entries()).map(([test, results]) => {

@@ -57,12 +57,13 @@ export async function getManagementKPIs(
     prisma.member.count({
       where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
     }),
-    // Ventas del mes = nuevas membresías activas
+    // Ventas del mes = nuevas membresías activas (excluye pases diarios)
     prisma.membership.count({
       where: {
         ...memberSedeFilter,
         createdAt: { gte: start, lte: end },
         state: { in: ["ACTIVE", "PENDING_PAYMENT"] },
+        plan: { billingCycle: { not: "ONE_TIME" } },
       },
     }),
     // Leads nuevos
@@ -85,13 +86,14 @@ export async function getManagementKPIs(
         stage: { in: ["TRIAL_ATTENDED", "NEGOTIATING", "CONVERTED"] },
       },
     }),
-    // Renovaciones
+    // Renovaciones (excluye pases diarios)
     prisma.membership.count({
       where: {
         ...memberSedeFilter,
         createdAt: { gte: start, lte: end },
         state: "ACTIVE",
         member: sede ? { sede, status: "ACTIVE" } : { status: "ACTIVE" },
+        plan: { billingCycle: { not: "ONE_TIME" } },
       },
     }),
     // Bajas del mes
@@ -123,12 +125,13 @@ export async function getManagementKPIs(
         joinedAt: { lt: start },
       },
     }),
-    // Distribución de ventas por tipo de plan
+    // Distribución de ventas por tipo de plan (excluye pases diarios)
     prisma.membership.groupBy({
       by: ["planId"],
       where: {
         ...memberSedeFilter,
         createdAt: { gte: start, lte: end },
+        plan: { billingCycle: { not: "ONE_TIME" } },
       },
       _count: true,
     }),
@@ -256,8 +259,13 @@ export async function getMonthlyFinancials(
             ],
           },
         }),
+        // Ventas del mes (excluye pases diarios)
         prisma.membership.count({
-          where: { ...memberSedeFilter, createdAt: { gte: start, lte: end } },
+          where: {
+            ...memberSedeFilter,
+            createdAt: { gte: start, lte: end },
+            plan: { billingCycle: { not: "ONE_TIME" } },
+          },
         }),
         prisma.lead.count({
           where: { ...sedeFilter, createdAt: { gte: start, lte: end } },
@@ -272,11 +280,13 @@ export async function getMonthlyFinancials(
         prisma.member.count({
           where: { ...sedeFilter, churnedAt: { gte: start, lte: end } },
         }),
+        // Activas mensuales (excluye pases diarios)
         prisma.membership.count({
           where: {
             ...memberSedeFilter,
             createdAt: { gte: start, lte: end },
             state: "ACTIVE",
+            plan: { billingCycle: { not: "ONE_TIME" } },
           },
         }),
         prisma.expense.aggregate({
@@ -591,11 +601,129 @@ export async function getSalesDetail(
     where: {
       ...memberSedeFilter,
       createdAt: { gte: start, lte: end },
+      plan: { billingCycle: { not: "ONE_TIME" } },
     },
     include: {
       member: true,
       plan: true,
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+// ── Drill-down: socios activos / vencidos / por vencer / bajas ────────
+
+export async function getActiveMembersDetail(sede: Sede | undefined) {
+  const sedeFilter = sede ? { sede } : {};
+  return prisma.member.findMany({
+    where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
+    include: {
+      memberships: {
+        // Exclude one-time daily passes — those don't represent an active member plan
+        where: { state: "ACTIVE", plan: { billingCycle: { not: "ONE_TIME" } } },
+        orderBy: { endsAt: "desc" },
+        take: 1,
+        include: { plan: true },
+      },
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+}
+
+export async function getExpiredMembershipsDetail(sede: Sede | undefined) {
+  const memberSedeFilter = sede ? { member: { sede } } : {};
+  return prisma.membership.findMany({
+    where: {
+      ...memberSedeFilter,
+      state: "ACTIVE",
+      endsAt: { lt: new Date() },
+      plan: { billingCycle: { not: "ONE_TIME" } },
+    },
+    include: { member: true, plan: true },
+    orderBy: { endsAt: "desc" },
+  });
+}
+
+export async function getUpcomingRenewalsDetail(sede: Sede | undefined, days = 7) {
+  const memberSedeFilter = sede ? { member: { sede } } : {};
+  const now = new Date();
+  return prisma.membership.findMany({
+    where: {
+      ...memberSedeFilter,
+      state: "ACTIVE",
+      endsAt: { gte: now, lte: new Date(now.getTime() + days * 86400000) },
+      plan: { billingCycle: { not: "ONE_TIME" } },
+    },
+    include: { member: true, plan: true },
+    orderBy: { endsAt: "asc" },
+  });
+}
+
+export async function getChurnsDetail(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+  return prisma.member.findMany({
+    where: {
+      ...sedeFilter,
+      status: "CHURNED",
+      churnedAt: { gte: start, lte: end },
+    },
+    orderBy: { churnedAt: "desc" },
+  });
+}
+
+export async function getRenewalsDetail(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  return prisma.membership.findMany({
+    where: {
+      member: sede ? { sede, status: "ACTIVE" } : { status: "ACTIVE" },
+      createdAt: { gte: start, lte: end },
+      state: "ACTIVE",
+      plan: { billingCycle: { not: "ONE_TIME" } },
+    },
+    include: { member: true, plan: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getAttendanceDetail(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+  return prisma.attendance.findMany({
+    where: {
+      classSession: { ...sedeFilter, date: { gte: start, lte: end } },
+    },
+    include: {
+      member: { select: { id: true, firstName: true, lastName: true, sede: true } },
+      classSession: { include: { schedule: true } },
+    },
+    orderBy: { recordedAt: "desc" },
+    take: 500,
+  });
+}
+
+export async function getDiscrepanciesDetail(sede: Sede | undefined, from: string, to: string) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+  return prisma.classSession.findMany({
+    where: {
+      ...sedeFilter,
+      date: { gte: start, lte: end },
+      discrepancy: true,
+    },
+    include: { schedule: true },
+    orderBy: { date: "desc" },
   });
 }

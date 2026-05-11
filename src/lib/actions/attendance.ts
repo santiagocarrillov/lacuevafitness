@@ -5,17 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { Sede, MembershipState } from "@/generated/prisma/client";
 import { updateChallengeProgress } from "./challenges";
 import { requireAuth, can } from "@/lib/auth";
+import {
+  todayDateUtc, todayDayOfWeekEcuador, ecuadorDateAt as ecuadorDateAtTz,
+  isAttendanceWindowOpen,
+} from "@/lib/timezone";
 
-// ── Helpers ─────────────────────────────────────────────────────────
-
-function todayDate() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-const DAY_MAP: Record<number, string> = {
-  0: "SUN", 1: "MON", 2: "TUE", 3: "WED", 4: "THU", 5: "FRI", 6: "SAT",
-};
+const todayDate = todayDateUtc;
+const todayDayOfWeek = todayDayOfWeekEcuador;
+const ecuadorDateAt = ecuadorDateAtTz;
 
 // ── Get or create today's class session ─────────────────────────────
 
@@ -26,8 +23,7 @@ export async function getOrCreateTodaySession(scheduleId: string) {
 
   const today = todayDate();
   const [hours, minutes] = schedule.startTime.split(":").map(Number);
-  const startAt = new Date(today);
-  startAt.setHours(hours, minutes, 0, 0);
+  const startAt = ecuadorDateAt(today, hours, minutes);
 
   let session = await prisma.classSession.findUnique({
     where: { scheduleId_date: { scheduleId, date: today } },
@@ -60,8 +56,7 @@ export async function getOrCreateTodaySession(scheduleId: string) {
 // ── List today's schedules for a sede ───────────────────────────────
 
 export async function getTodaySchedules(sede: Sede) {
-  const dayOfWeek = DAY_MAP[new Date().getDay()];
-  if (!dayOfWeek) return [];
+  const dayOfWeek = todayDayOfWeek();
 
   const schedules = await prisma.classSchedule.findMany({
     where: {
@@ -130,6 +125,9 @@ export async function recordAttendance(
   const user = await requireAuth();
   if (!can.recordAttendance(user)) {
     throw new Error("No tienes permiso para registrar asistencia.");
+  }
+  if (!isAttendanceWindowOpen()) {
+    throw new Error("La ventana de registro está cerrada (cierra a las 9:30pm Ecuador). El siguiente día empieza a las 12:00 AM.");
   }
 
   const session = await getOrCreateTodaySession(scheduleId);
@@ -331,12 +329,16 @@ export async function getDashboardStats(sede?: Sede) {
   const today = todayDate();
   const sedeFilter = sede ? { sede } : {};
 
+  // Build a "today in Ecuador" range for paidAt filtering (paidAt is a real timestamp).
+  const todayEndUtc = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
   const [
     activeMembers,
     todayAttendance,
     expiredMemberships,
     upcomingRenewals,
     todayDiscrepancies,
+    todayRevenueAgg,
   ] = await Promise.all([
     prisma.member.count({
       where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
@@ -346,11 +348,13 @@ export async function getDashboardStats(sede?: Sede) {
         classSession: { ...sedeFilter, date: today },
       },
     }),
+    // Exclude one-time daily passes from the membership "vencidas / por vencer" alerts
     prisma.membership.count({
       where: {
         member: sedeFilter,
         state: MembershipState.ACTIVE,
         endsAt: { lt: new Date() },
+        plan: { billingCycle: { not: "ONE_TIME" } },
       },
     }),
     prisma.membership.count({
@@ -361,10 +365,20 @@ export async function getDashboardStats(sede?: Sede) {
           gte: new Date(),
           lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
+        plan: { billingCycle: { not: "ONE_TIME" } },
       },
     }),
     prisma.classSession.count({
       where: { ...sedeFilter, date: today, discrepancy: true },
+    }),
+    prisma.payment.aggregate({
+      where: {
+        ...sedeFilter,
+        status: "SUCCEEDED",
+        isPoolEntry: false,
+        paidAt: { gte: today, lt: todayEndUtc },
+      },
+      _sum: { amountCents: true },
     }),
   ]);
 
@@ -374,5 +388,6 @@ export async function getDashboardStats(sede?: Sede) {
     expiredMemberships,
     upcomingRenewals,
     todayDiscrepancies,
+    todayRevenueCents: todayRevenueAgg._sum.amountCents ?? 0,
   };
 }

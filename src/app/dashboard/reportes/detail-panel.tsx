@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
-import { getRevenueDetail, getLeadsDetail } from "@/lib/actions/reports";
+import {
+  getRevenueDetail, getLeadsDetail, getSalesDetail,
+  getActiveMembersDetail, getExpiredMembershipsDetail, getUpcomingRenewalsDetail,
+  getChurnsDetail, getRenewalsDetail, getAttendanceDetail, getDiscrepanciesDetail,
+} from "@/lib/actions/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -40,9 +44,18 @@ const methodLabels: Record<string, string> = {
 
 const detailTitles: Record<string, string> = {
   revenue: "Facturación",
-  leads: "Leads",
-  evaluaciones: "Evaluaciones",
+  leads: "Visitantes / Leads",
+  evaluaciones: "Asistencia a invitación",
   convertidos: "Convertidos",
+  sales: "Ventas (membresías creadas)",
+  activos: "Socios activos",
+  vencidas: "Membresías vencidas",
+  por_vencer: "Renovaciones próximas",
+  bajas: "Bajas del periodo",
+  renovaciones: "Renovaciones del periodo",
+  agendados: "Leads agendados (C.P.)",
+  asistencia: "Asistencias",
+  discrepancias: "Discrepancias",
 };
 
 interface DetailPanelProps {
@@ -75,23 +88,25 @@ export async function DetailPanel({ detail, from, to, sede, closeHref }: DetailP
         {detail === "revenue" && <RevenueTable from={from} to={to} sede={sede} />}
         {detail === "leads" && <LeadsTable from={from} to={to} sede={sede} label="Leads" />}
         {detail === "evaluaciones" && (
-          <LeadsTable
-            from={from}
-            to={to}
-            sede={sede}
-            stages={["TRIAL_ATTENDED", "NEGOTIATING", "CONVERTED"]}
-            label="Evaluaciones"
-          />
+          <LeadsTable from={from} to={to} sede={sede}
+            stages={["TRIAL_ATTENDED", "NEGOTIATING", "CONVERTED"]} label="Evaluaciones" />
         )}
         {detail === "convertidos" && (
-          <LeadsTable
-            from={from}
-            to={to}
-            sede={sede}
-            stages={["CONVERTED"]}
-            label="Convertidos"
-          />
+          <LeadsTable from={from} to={to} sede={sede} stages={["CONVERTED"]} label="Convertidos" />
         )}
+        {detail === "agendados" && (
+          <LeadsTable from={from} to={to} sede={sede}
+            stages={["SCHEDULED_TRIAL", "TRIAL_ATTENDED", "TRIAL_NO_SHOW", "NEGOTIATING", "CONVERTED"]}
+            label="Agendados" />
+        )}
+        {detail === "sales" && <SalesTable from={from} to={to} sede={sede} />}
+        {detail === "renovaciones" && <SalesTable from={from} to={to} sede={sede} renewalsOnly />}
+        {detail === "activos" && <ActiveMembersTable sede={sede} />}
+        {detail === "vencidas" && <ExpiredMembershipsTable sede={sede} />}
+        {detail === "por_vencer" && <UpcomingRenewalsTable sede={sede} />}
+        {detail === "bajas" && <ChurnsTable from={from} to={to} sede={sede} />}
+        {detail === "asistencia" && <AttendanceTable from={from} to={to} sede={sede} />}
+        {detail === "discrepancias" && <DiscrepanciesTable from={from} to={to} sede={sede} />}
       </CardContent>
     </Card>
   );
@@ -197,6 +212,299 @@ async function LeadsTable({
                   <Badge variant="outline" className="text-xs">
                     {stageLabels[l.stage] ?? l.stage}
                   </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sales / memberships tables ─────────────────────────────────────
+
+function fmt$(cents: number) {
+  return `$${(cents / 100).toLocaleString("es-EC", { minimumFractionDigits: 2 })}`;
+}
+
+async function SalesTable({
+  from, to, sede, renewalsOnly,
+}: { from: string; to: string; sede?: Sede; renewalsOnly?: boolean }) {
+  const rows = renewalsOnly
+    ? await getRenewalsDetail(sede, from, to)
+    : await getSalesDetail(sede, from, to);
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">Sin {renewalsOnly ? "renovaciones" : "ventas"} en este período.</p>;
+  }
+
+  const total = rows.reduce((s, r) => s + (r.customPriceCents ?? r.plan.priceCents), 0);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        {rows.length} {renewalsOnly ? "renovaciones" : "ventas"} — Total facturado: <strong>{fmt$(total)}</strong>
+      </p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Socio</TableHead>
+              <TableHead>Plan</TableHead>
+              <TableHead className="text-right">Precio</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Vence</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell className="text-xs">{new Date(r.createdAt).toLocaleDateString("es-EC")}</TableCell>
+                <TableCell>
+                  {r.member ? (
+                    <Link href={`/dashboard/socios/${r.member.id}`} className="hover:underline text-primary">
+                      {r.member.firstName} {r.member.lastName}
+                    </Link>
+                  ) : "—"}
+                </TableCell>
+                <TableCell className="text-xs">{r.plan?.name ?? "—"}</TableCell>
+                <TableCell className="text-right font-medium">{fmt$(r.customPriceCents ?? r.plan.priceCents)}</TableCell>
+                <TableCell><Badge variant="outline" className="text-xs">{r.state}</Badge></TableCell>
+                <TableCell className="text-xs">{new Date(r.endsAt).toLocaleDateString("es-EC")}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+async function ActiveMembersTable({ sede }: { sede?: Sede }) {
+  const rows = await getActiveMembersDetail(sede);
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">Sin socios activos.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{rows.length} socios activos (ACTIVE + TRIAL)</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Socio</TableHead>
+              <TableHead>Plan</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Vence</TableHead>
+              <TableHead>Sede</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((m) => {
+              const mem = m.memberships[0];
+              return (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <Link href={`/dashboard/socios/${m.id}`} className="hover:underline text-primary">
+                      {m.firstName} {m.lastName}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-xs">{mem?.plan?.name ?? "—"}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{m.status}</Badge></TableCell>
+                  <TableCell className="text-xs">{mem ? new Date(mem.endsAt).toLocaleDateString("es-EC") : "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{m.sede === "FITNESS_CENTER" ? "Fitness" : "Xtreme"}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+async function ExpiredMembershipsTable({ sede }: { sede?: Sede }) {
+  const rows = await getExpiredMembershipsDetail(sede);
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Sin membresías vencidas.</p>;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{rows.length} membresías activas con fecha vencida</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Socio</TableHead>
+              <TableHead>Plan</TableHead>
+              <TableHead>Venció</TableHead>
+              <TableHead className="text-right">Días vencido</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((m) => {
+              const days = Math.floor((Date.now() - new Date(m.endsAt).getTime()) / 86400000);
+              return (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <Link href={`/dashboard/socios/${m.member.id}`} className="hover:underline text-primary">
+                      {m.member.firstName} {m.member.lastName}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-xs">{m.plan.name}</TableCell>
+                  <TableCell className="text-xs">{new Date(m.endsAt).toLocaleDateString("es-EC")}</TableCell>
+                  <TableCell className="text-right text-red-600 font-medium">{days}d</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+async function UpcomingRenewalsTable({ sede }: { sede?: Sede }) {
+  const rows = await getUpcomingRenewalsDetail(sede, 7);
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Sin renovaciones próximas en 7 días.</p>;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{rows.length} membresías vencen en los próximos 7 días</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Socio</TableHead>
+              <TableHead>Plan</TableHead>
+              <TableHead>Vence</TableHead>
+              <TableHead className="text-right">En</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((m) => {
+              const days = Math.ceil((new Date(m.endsAt).getTime() - Date.now()) / 86400000);
+              return (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <Link href={`/dashboard/socios/${m.member.id}`} className="hover:underline text-primary">
+                      {m.member.firstName} {m.member.lastName}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-xs">{m.plan.name}</TableCell>
+                  <TableCell className="text-xs">{new Date(m.endsAt).toLocaleDateString("es-EC")}</TableCell>
+                  <TableCell className="text-right text-amber-700 font-medium">{days}d</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+async function ChurnsTable({ from, to, sede }: { from: string; to: string; sede?: Sede }) {
+  const rows = await getChurnsDetail(sede, from, to);
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Sin bajas en este período.</p>;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{rows.length} bajas</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Socio</TableHead>
+              <TableHead>Baja</TableHead>
+              <TableHead>Motivo</TableHead>
+              <TableHead>Sede</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((m) => (
+              <TableRow key={m.id}>
+                <TableCell>
+                  <Link href={`/dashboard/socios/${m.id}`} className="hover:underline text-primary">
+                    {m.firstName} {m.lastName}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-xs">{m.churnedAt ? new Date(m.churnedAt).toLocaleDateString("es-EC") : "—"}</TableCell>
+                <TableCell className="text-xs italic">{m.churnReason ?? "—"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{m.sede === "FITNESS_CENTER" ? "Fitness" : "Xtreme"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+async function AttendanceTable({ from, to, sede }: { from: string; to: string; sede?: Sede }) {
+  const rows = await getAttendanceDetail(sede, from, to);
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Sin asistencias en este período.</p>;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{rows.length} registros (máx 500)</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Socio</TableHead>
+              <TableHead>Clase</TableHead>
+              <TableHead>Hora</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="text-xs">{new Date(a.classSession.date).toLocaleDateString("es-EC")}</TableCell>
+                <TableCell>
+                  <Link href={`/dashboard/socios/${a.member.id}`} className="hover:underline text-primary">
+                    {a.member.firstName} {a.member.lastName}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-xs">{a.classSession.schedule?.name ?? "—"}</TableCell>
+                <TableCell className="text-xs">{a.classSession.schedule?.startTime ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+async function DiscrepanciesTable({ from, to, sede }: { from: string; to: string; sede?: Sede }) {
+  const rows = await getDiscrepanciesDetail(sede, from, to);
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Sin discrepancias en este período.</p>;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">{rows.length} clases con discrepancia admin vs coach</p>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Clase</TableHead>
+              <TableHead className="text-right">Admin</TableHead>
+              <TableHead className="text-right">Coach</TableHead>
+              <TableHead className="text-right">Δ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell className="text-xs">{new Date(c.date).toLocaleDateString("es-EC")}</TableCell>
+                <TableCell className="text-xs">{c.schedule?.name ?? "—"} ({c.schedule?.startTime})</TableCell>
+                <TableCell className="text-right">{c.adminCount ?? "—"}</TableCell>
+                <TableCell className="text-right">{c.coachCount ?? "—"}</TableCell>
+                <TableCell className="text-right font-medium text-red-600">
+                  {c.adminCount != null && c.coachCount != null ? (c.adminCount - c.coachCount) : "—"}
                 </TableCell>
               </TableRow>
             ))}

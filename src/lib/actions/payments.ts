@@ -288,12 +288,188 @@ export async function deletePoolEntry(id: string) {
 
 export async function deletePendingPayment(id: string) {
   const user = await requireAuth();
-  if (!can.editFinancials(user)) throw new Error("No autorizado");
+  if (!canManagePayments(user)) throw new Error("No autorizado");
 
   const p = await prisma.payment.findUniqueOrThrow({ where: { id } });
   if (p.isPoolEntry || p.status !== "PENDING") throw new Error("No se puede eliminar este pago.");
+
+  const scopedSede = getSedeScope(user);
+  if (scopedSede && p.sede !== scopedSede) throw new Error("No autorizado");
+
   await prisma.payment.delete({ where: { id } });
   revalidatePath("/dashboard/pagos");
+  if (p.memberId) revalidatePath(`/dashboard/socios/${p.memberId}`);
+}
+
+// ─── Match pool entries against a member (suggest bank deposits) ──────────────
+
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip accents
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Returns unassigned bank pool entries whose depositorName looks like the given
+ * member's name. Used in the "registrar pago" flow to surface possible matches.
+ */
+export async function findMatchingPoolEntries(memberId: string) {
+  const user = await requireAuth();
+  if (!canManagePayments(user)) throw new Error("No autorizado");
+
+  const member = await prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+    select: { firstName: true, lastName: true, sede: true },
+  });
+
+  const candidates = await prisma.payment.findMany({
+    where: {
+      isPoolEntry: true,
+      status: "PENDING",
+      sede: member.sede,
+      depositorName: { not: null },
+    },
+    orderBy: { paidAt: "desc" },
+    take: 200,
+  });
+
+  const memberTokens = new Set(
+    normalize(`${member.firstName} ${member.lastName}`).split(" ").filter((t) => t.length >= 3),
+  );
+
+  type Scored = {
+    id: string;
+    amountCents: number;
+    method: string;
+    paidAt: Date | null;
+    depositorName: string | null;
+    bankReference: string | null;
+    bankEntity: string | null;
+    score: number;
+    matchedTokens: string[];
+  };
+
+  const scored: Scored[] = [];
+  for (const c of candidates) {
+    if (!c.depositorName) continue;
+    const tokens = normalize(c.depositorName).split(" ").filter((t) => t.length >= 3);
+    const matched = tokens.filter((t) => memberTokens.has(t));
+    if (matched.length === 0) continue;
+    scored.push({
+      id: c.id,
+      amountCents: c.amountCents,
+      method: c.method,
+      paidAt: c.paidAt,
+      depositorName: c.depositorName,
+      bankReference: c.bankReference,
+      bankEntity: c.bankEntity,
+      score: matched.length,
+      matchedTokens: matched,
+    });
+  }
+
+  scored.sort((a, b) => b.score - a.score || (b.paidAt?.getTime() ?? 0) - (a.paidAt?.getTime() ?? 0));
+  return scored.slice(0, 5);
+}
+
+/**
+ * Converts a pool entry into a confirmed payment for the given member+membership.
+ * Same row, just retagged — keeps the bank reference and paidAt intact.
+ */
+export async function assignPoolEntryToMembership(
+  poolEntryId: string,
+  memberId: string,
+  membershipId: string,
+) {
+  const user = await requireAuth();
+  if (!canManagePayments(user)) throw new Error("No autorizado");
+
+  const pool = await prisma.payment.findUniqueOrThrow({ where: { id: poolEntryId } });
+  if (!pool.isPoolEntry) throw new Error("Ese pago ya fue asignado.");
+
+  const scopedSede = getSedeScope(user);
+  if (scopedSede && pool.sede !== scopedSede) throw new Error("No autorizado");
+
+  const member = await prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+    select: { sede: true },
+  });
+  if (pool.sede !== member.sede) throw new Error("El pago bancario es de otra sede.");
+
+  const updated = await prisma.payment.update({
+    where: { id: poolEntryId },
+    data: {
+      isPoolEntry: false,
+      memberId,
+      membershipId,
+      status: "SUCCEEDED",
+    },
+  });
+
+  revalidatePath("/dashboard/pagos");
+  revalidatePath(`/dashboard/socios/${memberId}`);
+  return updated;
+}
+
+// ─── Update / delete any payment (admin can fix mistakes) ─────────────────────
+
+export async function updatePayment(
+  id: string,
+  data: {
+    amountCents?: number;
+    method?: PaymentMethod;
+    status?: PaymentStatus;
+    paidAt?: string | null;
+    depositorName?: string | null;
+    bankReference?: string | null;
+    bankEntity?: string | null;
+    notes?: string | null;
+  },
+) {
+  const user = await requireAuth();
+  if (!canManagePayments(user)) throw new Error("No autorizado");
+
+  const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
+  const scopedSede = getSedeScope(user);
+  if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
+
+  const updated = await prisma.payment.update({
+    where: { id },
+    data: {
+      ...(data.amountCents !== undefined ? { amountCents: data.amountCents } : {}),
+      ...(data.method !== undefined ? { method: data.method } : {}),
+      ...(data.status !== undefined ? { status: data.status } : {}),
+      ...(data.paidAt !== undefined
+        ? { paidAt: data.paidAt ? new Date(data.paidAt) : null }
+        : {}),
+      ...(data.depositorName !== undefined ? { depositorName: data.depositorName } : {}),
+      ...(data.bankReference !== undefined ? { bankReference: data.bankReference } : {}),
+      ...(data.bankEntity !== undefined ? { bankEntity: data.bankEntity } : {}),
+      ...(data.notes !== undefined ? { notes: data.notes } : {}),
+    },
+  });
+
+  revalidatePath("/dashboard/pagos");
+  if (updated.memberId) revalidatePath(`/dashboard/socios/${updated.memberId}`);
+  return updated;
+}
+
+export async function deletePayment(id: string) {
+  const user = await requireAuth();
+  if (!canManagePayments(user)) throw new Error("No autorizado");
+
+  const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
+  const scopedSede = getSedeScope(user);
+  if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
+
+  await prisma.payment.delete({ where: { id } });
+
+  revalidatePath("/dashboard/pagos");
+  if (existing.memberId) revalidatePath(`/dashboard/socios/${existing.memberId}`);
 }
 
 // ─── Summary totals ───────────────────────────────────────────────────────────

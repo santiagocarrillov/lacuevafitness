@@ -76,11 +76,17 @@ export async function requireRole(...allowed: UserRole[]): Promise<User> {
 }
 
 /**
- * Super users (OWNER + ACCOUNTING) see everything. Others are scoped to their sede.
+ * Super users (OWNER + ACCOUNTING) see everything. COACH and NUTRITIONIST also see
+ * all sedes but have no access to financial data. Others are scoped to their sede.
  * Returns the sede to filter by, or null if the user can see all sedes.
  */
 export function getSedeScope(user: User): Sede | null {
-  if (user.role === "OWNER" || user.role === "ACCOUNTING") return null;
+  if (
+    user.role === "OWNER" ||
+    user.role === "ACCOUNTING" ||
+    user.role === "COACH" ||
+    user.role === "NUTRITIONIST"
+  ) return null;
   return user.sede;
 }
 
@@ -89,17 +95,24 @@ export function getSedeScope(user: User): Sede | null {
  */
 export const can = {
   viewAllSedes: (user: User) =>
-    user.role === "OWNER" || user.role === "ACCOUNTING",
+    user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "COACH" || user.role === "NUTRITIONIST",
   viewFinancials: (user: User) =>
     user.role === "OWNER" || user.role === "ACCOUNTING",
   editFinancials: (user: User) =>
     user.role === "OWNER" || user.role === "ACCOUNTING",
+  // Pagos section: OWNER, ACCOUNTING, ADMIN only
+  viewPayments: (user: User) =>
+    user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN",
+  // Reportes comerciales/ventas: OWNER, ACCOUNTING, ADMIN only
   viewReports: (user: User) =>
+    user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN",
+  // Segmentos: management tool, not for coaches/nutritionists
+  viewSegments: (user: User) =>
     user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN",
   manageMembers: (user: User) =>
     user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN",
   viewMembers: (user: User) =>
-    user.role !== "MEMBER", // staff can all see members
+    user.role !== "MEMBER",
   manageLeads: (user: User) =>
     user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN",
   recordAttendance: (user: User) =>

@@ -31,11 +31,13 @@ export function ScheduleList({
   members,
   sede,
   userRole,
+  windowOpen,
 }: {
   schedules: Schedule[];
   members: Member[];
   sede: string;
   userRole: string;
+  windowOpen: boolean;
 }) {
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
@@ -94,6 +96,7 @@ export function ScheduleList({
             scheduleId={selectedScheduleId}
             members={members}
             sede={sede}
+            windowOpen={windowOpen}
           />
         )
       )}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
 import { getManagementKPIs } from "@/lib/actions/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,11 +18,13 @@ function KPI({
   value,
   targetPct,
   hint,
+  href,
 }: {
   label: string;
   value: string | number;
   targetPct?: number;
   hint?: string;
+  href?: string;
 }) {
   const colorClass =
     targetPct === undefined
@@ -32,10 +35,13 @@ function KPI({
       ? "bg-amber-50 text-amber-700 border-amber-200"
       : "bg-red-50 text-red-700 border-red-200";
 
-  return (
-    <div className="flex items-center justify-between p-3 rounded-md border">
+  const inner = (
+    <div className="flex items-center justify-between p-3 rounded-md border h-full">
       <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">
+          {label}
+          {href && <span className="ml-1 text-primary text-[10px]">↗</span>}
+        </p>
         <p className="text-lg font-bold">{value}</p>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       </div>
@@ -46,6 +52,22 @@ function KPI({
       )}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block hover:bg-accent/40 rounded-md transition">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
+}
+
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export async function GestionTab({
@@ -66,6 +88,17 @@ export async function GestionTab({
     ? kpis.targets.visitorsTarget / kpis.targets.workingDays
     : 0;
 
+  // Detail URLs → new dedicated page
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const from = isoDate(firstDay);
+  const to = isoDate(lastDay);
+  const url = (type: string) => {
+    const p = new URLSearchParams({ type, from, to });
+    if (sede) p.set("sede", sede);
+    return `/dashboard/reportes/detalle?${p.toString()}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Indicadores de lectura diaria */}
@@ -74,18 +107,18 @@ export async function GestionTab({
           Indicadores de lectura diaria
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <KPI label="Ventas" value={kpis.sales} targetPct={kpis.pctMetaVentas} />
-          <KPI label="ACTIVOS Totales" value={kpis.activeMembers} />
+          <KPI label="Ventas" value={kpis.sales} targetPct={kpis.pctMetaVentas} href={url("sales")} />
+          <KPI label="ACTIVOS Totales" value={kpis.activeMembers} href={url("activos")} />
           <KPI label="Ticket Promedio" value={fmtMoney(Math.round(kpis.ticketPromedio * 100))} hint="Referencial al cierre del periodo" />
           <KPI label="Efectividad de ventas" value={fmtPct(kpis.efectividadVentas)} targetPct={kpis.efectividadVentas} hint="Ventas / Visitantes" />
-          <KPI label="Índice Renovación" value={fmtPct(kpis.indiceRenovacion)} targetPct={kpis.indiceRenovacion} />
-          <KPI label="Tasa de uso" value={kpis.activeMembers > 0 ? (kpis.totalAttendance / kpis.activeMembers / 4.3).toFixed(2) : "0.00"} hint="Veces/semana promedio" />
-          <KPI label="Índice de Agendamiento" value={fmtPct(kpis.indiceAgendamiento)} targetPct={kpis.indiceAgendamiento} hint="Agendados / Leads" />
-          <KPI label="% Rotación" value={fmtPct(kpis.rotacionPct)} hint="Bajas del mes" />
-          <KPI label="Índice de Invitación" value={fmtPct(kpis.indiceInvitacion)} targetPct={kpis.indiceInvitacion} hint="Asistieron C.P. / Agendados" />
-          <KPI label="% Meta Facturación" value={fmtPct(kpis.pctMetaFacturacion)} targetPct={kpis.pctMetaFacturacion} />
-          <KPI label="% Meta Averiguadores" value={fmtPct(kpis.pctMetaAveriguadores)} targetPct={kpis.pctMetaAveriguadores} />
-          <KPI label="% Meta Asistencia" value={fmtPct(kpis.pctMetaAsistencia)} targetPct={kpis.pctMetaAsistencia} />
+          <KPI label="Índice Renovación" value={fmtPct(kpis.indiceRenovacion)} targetPct={kpis.indiceRenovacion} href={url("renovaciones")} />
+          <KPI label="Tasa de uso" value={kpis.activeMembers > 0 ? (kpis.totalAttendance / kpis.activeMembers / 4.3).toFixed(2) : "0.00"} hint="Veces/semana promedio" href={url("asistencia")} />
+          <KPI label="Índice de Agendamiento" value={fmtPct(kpis.indiceAgendamiento)} targetPct={kpis.indiceAgendamiento} hint="Agendados / Leads" href={url("agendados")} />
+          <KPI label="% Rotación" value={fmtPct(kpis.rotacionPct)} hint="Bajas del mes" href={url("bajas")} />
+          <KPI label="Índice de Invitación" value={fmtPct(kpis.indiceInvitacion)} targetPct={kpis.indiceInvitacion} hint="Asistieron C.P. / Agendados" href={url("evaluaciones")} />
+          <KPI label="% Meta Facturación" value={fmtPct(kpis.pctMetaFacturacion)} targetPct={kpis.pctMetaFacturacion} href={url("revenue")} />
+          <KPI label="% Meta Averiguadores" value={fmtPct(kpis.pctMetaAveriguadores)} targetPct={kpis.pctMetaAveriguadores} href={url("leads")} />
+          <KPI label="% Meta Asistencia" value={fmtPct(kpis.pctMetaAsistencia)} targetPct={kpis.pctMetaAsistencia} href={url("asistencia")} />
         </div>
       </section>
 
@@ -102,8 +135,8 @@ export async function GestionTab({
           <KPI label="Meta facturación" value={fmtMoney((kpis.targets?.revenueTargetCents ?? 0))} />
           <KPI label="Días hábiles" value={kpis.targets?.workingDays ?? 21} />
           <KPI label="ICV % proyectado" value={fmtPct(kpis.targets?.projectedICVPct ?? 50)} />
-          <KPI label="Facturación real" value={fmtMoney(kpis.revenueCents)} />
-          <KPI label="Meta asistencia" value={kpis.targets?.attendanceTarget ?? 0} hint={`Actual: ${kpis.totalAttendance}`} />
+          <KPI label="Facturación real" value={fmtMoney(kpis.revenueCents)} href={url("revenue")} />
+          <KPI label="Meta asistencia" value={kpis.targets?.attendanceTarget ?? 0} hint={`Actual: ${kpis.totalAttendance}`} href={url("asistencia")} />
         </div>
       </section>
 
@@ -113,30 +146,18 @@ export async function GestionTab({
           Embudo del mes
         </h2>
         <div className="grid grid-cols-4 gap-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Visitantes</CardDescription>
-              <CardTitle className="text-3xl">{kpis.leads}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Agendados</CardDescription>
-              <CardTitle className="text-3xl">{kpis.leadsScheduled}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Asistencia a invitación</CardDescription>
-              <CardTitle className="text-3xl">{kpis.trialsAttended}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Ventas</CardDescription>
-              <CardTitle className="text-3xl">{kpis.sales}</CardTitle>
-            </CardHeader>
-          </Card>
+          <Link href={url("leads")} className="block hover:bg-accent/40 rounded-md transition">
+            <Card><CardHeader className="pb-2"><CardDescription>Visitantes ↗</CardDescription><CardTitle className="text-3xl">{kpis.leads}</CardTitle></CardHeader></Card>
+          </Link>
+          <Link href={url("agendados")} className="block hover:bg-accent/40 rounded-md transition">
+            <Card><CardHeader className="pb-2"><CardDescription>Agendados ↗</CardDescription><CardTitle className="text-3xl">{kpis.leadsScheduled}</CardTitle></CardHeader></Card>
+          </Link>
+          <Link href={url("evaluaciones")} className="block hover:bg-accent/40 rounded-md transition">
+            <Card><CardHeader className="pb-2"><CardDescription>Asistencia a invitación ↗</CardDescription><CardTitle className="text-3xl">{kpis.trialsAttended}</CardTitle></CardHeader></Card>
+          </Link>
+          <Link href={url("sales")} className="block hover:bg-accent/40 rounded-md transition">
+            <Card><CardHeader className="pb-2"><CardDescription>Ventas ↗</CardDescription><CardTitle className="text-3xl">{kpis.sales}</CardTitle></CardHeader></Card>
+          </Link>
         </div>
       </section>
 
