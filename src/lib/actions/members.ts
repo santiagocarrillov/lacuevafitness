@@ -78,7 +78,14 @@ export async function getMember(id: string) {
         include: { classSession: { include: { schedule: true } } },
       },
       evaluations: { orderBy: { startedAt: "desc" }, take: 5 },
-      bodyCompositions: { orderBy: { measuredAt: "desc" }, take: 5 },
+      bodyCompositions: {
+        orderBy: { measuredAt: "desc" },
+        include: { recordedBy: { select: { fullName: true } } },
+      },
+      clinicalMarkers: {
+        orderBy: { measuredAt: "desc" },
+        include: { recordedBy: { select: { fullName: true } } },
+      },
       testResults: { orderBy: { recordedAt: "desc" }, take: 20 },
       trainingLevels: { orderBy: { assignedAt: "desc" }, take: 1 },
       goals: { orderBy: { createdAt: "desc" } },
@@ -103,25 +110,41 @@ export async function createMember(data: {
   status?: MemberStatus;
   notes?: string;
 }) {
-  const member = await prisma.member.create({
-    data: {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-      address: data.address || undefined,
-      occupation: data.occupation || undefined,
-      emergencyName: data.emergencyName || undefined,
-      emergencyPhone: data.emergencyPhone || undefined,
-      sede: data.sede,
-      status: data.status ?? MemberStatus.ACTIVE,
-      notes: data.notes || undefined,
-    },
-  });
+  // Pre-check email uniqueness for a friendly error
+  if (data.email) {
+    const existing = await prisma.member.findUnique({ where: { email: data.email } });
+    if (existing) {
+      throw new Error(`Ya existe un socio con el email ${data.email} (${existing.firstName} ${existing.lastName}).`);
+    }
+  }
 
-  revalidatePath("/dashboard/socios");
-  return member;
+  try {
+    const member = await prisma.member.create({
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+        address: data.address || undefined,
+        occupation: data.occupation || undefined,
+        emergencyName: data.emergencyName || undefined,
+        emergencyPhone: data.emergencyPhone || undefined,
+        sede: data.sede,
+        status: data.status ?? MemberStatus.ACTIVE,
+        notes: data.notes || undefined,
+      },
+    });
+
+    revalidatePath("/dashboard/socios");
+    return member;
+  } catch (err: unknown) {
+    // Surface unique constraint as a clean message
+    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
+      throw new Error("Ya existe un socio con ese email o teléfono.");
+    }
+    throw err;
+  }
 }
 
 // ── Update ──────────────────────────────────────────────────────────

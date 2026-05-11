@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { InviteUserButton } from "./invite-user-button";
+import { EditUserButton, ResetPasswordButton, DeleteUserButton } from "./user-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function UsuariosPage() {
   if (!can.manageUsers(user)) redirect("/dashboard?forbidden=1");
 
   const users = await prisma.user.findMany({
+    where: { active: true },
     orderBy: [{ role: "asc" }, { fullName: "asc" }],
   });
 
@@ -66,6 +68,7 @@ export default async function UsuariosPage() {
                 <TableHead>Sede</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Auth</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -96,6 +99,13 @@ export default async function UsuariosPage() {
                         Sin acceso
                       </Badge>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <EditUserButton user={u} currentUserId={user.id} />
+                      {u.supabaseUserId && <ResetPasswordButton user={u} />}
+                      <DeleteUserButton user={u} currentUserId={user.id} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

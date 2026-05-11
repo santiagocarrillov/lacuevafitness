@@ -37,12 +37,16 @@ export default function NuevoSocioPage() {
       return;
     }
     startTransition(async () => {
-      const member = await createMember({
-        ...form,
-        sede: form.sede as any,
-      });
-      toast.success(`${member.firstName} ${member.lastName} registrado.`);
-      router.push(`/dashboard/socios/${member.id}`);
+      try {
+        const member = await createMember({
+          ...form,
+          sede: form.sede as any,
+        });
+        toast.success(`${member.firstName} ${member.lastName} registrado.`);
+        router.push(`/dashboard/socios/${member.id}`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "No se pudo crear el socio.");
+      }
     });
   }
 

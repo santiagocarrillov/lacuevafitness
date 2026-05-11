@@ -49,6 +49,9 @@ model User {
   dailyIndicators    DailyIndicators[]
   evaluationsAsCoach Evaluation[]        @relation("EvaluationCoach")
   memberNotes        MemberNote[]
+  srxfitOverrides    SrxfitSessionOverride[] @relation("SrxfitSessionOverrideUpdatedBy")
+  bodyCompsRecorded  BodyComposition[]   @relation("BodyCompositionRecordedBy")
+  clinicalMarkersRecorded ClinicalMarker[] @relation("ClinicalMarkerRecordedBy")
 
   @@index([sede, role])
 }
@@ -74,6 +77,7 @@ model Member {
   email            String?      @unique
   phone            String?
   dateOfBirth      DateTime?
+  sex              Sex?
   address          String?
   occupation       String?
   emergencyName    String?
@@ -96,6 +100,7 @@ model Member {
   attendance           Attendance[]
   evaluations          Evaluation[]
   bodyCompositions     BodyComposition[]
+  clinicalMarkers      ClinicalMarker[]
   testResults          TestResult[]
   trainingLevels       TrainingLevelAssignment[]
   goals                MemberGoal[]
@@ -343,6 +348,7 @@ model Lead {
 
   interactions LeadInteraction[]
   member       Member?
+  conversation Conversation?
 
   @@index([sede, stage])
   @@index([source])
@@ -475,10 +481,46 @@ model BodyComposition {
   weightKg        Float?
   heightCm        Float?
   bodyFatPct      Float?
-  muscleMassKg    Float?
-  waterPct        Float?
+  muscleMassKg    Float?  // legacy — superseded by muscleMassPct
+  muscleMassPct   Float?
+  waistCm         Float?
+  waterPct        Float?      // legacy, no longer captured
   basalMetabolism Int?
   notes           String?
+  recordedById    String?
+  recordedBy      User?       @relation("BodyCompositionRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([memberId, measuredAt])
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MenopausalStatus {
+  PRE
+  PERI
+  POST
+}
+
+model ClinicalMarker {
+  id                String            @id @default(cuid())
+  memberId          String
+  member            Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  measuredAt        DateTime          @default(now())
+  glucoseFasting    Float?            // mg/dL
+  triglycerides     Float?            // mg/dL
+  hdlCholesterol    Float?            // mg/dL
+  hsCRP             Float?            // mg/L
+  testosteroneFree  Float?            // ng/dL
+  estradiolE2       Float?            // pg/mL
+  cycleDay          Int?
+  menopausalStatus  MenopausalStatus?
+  notes             String?
+  recordedById      String?
+  recordedBy        User?             @relation("ClinicalMarkerRecordedBy", fields: [recordedById], references: [id])
 
   @@index([memberId, measuredAt])
 }
@@ -604,4 +646,131 @@ model ChallengeProgress {
 
   @@unique([challengeId, memberId])
   @@index([memberId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Chatbot — conversaciones, mensajes y secuencias
+// ─────────────────────────────────────────────────────────────
+
+enum ConversationChannel {
+  WHATSAPP
+  INSTAGRAM
+  MESSENGER
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model Conversation {
+  id             String              @id @default(cuid())
+  leadId         String              @unique
+  lead           Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sede           Sede
+  channel        ConversationChannel @default(WHATSAPP)
+  externalId     String              // wa user id (phone wa_id) / IG user id
+  botPaused      Boolean             @default(false)
+  lastInboundAt  DateTime?
+  lastOutboundAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  messages          Message[]
+  scheduledFollowups ScheduledFollowup[]
+
+  @@unique([channel, externalId])
+  @@index([sede])
+}
+
+model Message {
+  id             String              @id @default(cuid())
+  conversationId String
+  conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      MessageDirection
+  channel        ConversationChannel @default(WHATSAPP)
+  externalId     String?             @unique // WA msg id — idempotency for inbound; null for outbound bot messages with no upstream id
+  body           String
+  mediaUrl       String?
+  sentByUserId   String?             // null when bot or customer
+  llmGenerated   Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+enum FollowupKind {
+  NO_REPLY_2H
+  NO_REPLY_1D
+  NO_REPLY_3D
+  TRIAL_CONFIRM
+  TRIAL_REMINDER_24H
+  TRIAL_REMINDER_2H
+  ADMIN_ATTENDANCE_PING
+  NOSHOW_RECOVERY_1D
+  NOSHOW_RECOVERY_3D
+}
+
+enum FollowupStatus {
+  PENDING
+  SENT
+  CANCELED
+  FAILED
+}
+
+model ScheduledFollowup {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  kind           FollowupKind
+  fireAt         DateTime
+  status         FollowupStatus @default(PENDING)
+  payload        Json?
+  sentAt         DateTime?
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status, fireAt])
+  @@index([conversationId, kind])
+}
+
+model BotConfig {
+  id             String   @id @default(cuid())
+  sede           Sede     @unique
+  systemPrompt   String   @db.Text
+  businessHours  Json?    // { "mon": ["06:00", "22:00"], ... }
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MessageTemplate {
+  id               String              @id @default(cuid())
+  name             String              @unique // internal key, e.g. "trial_reminder_24h"
+  channel          ConversationChannel @default(WHATSAPP)
+  metaTemplateName String              // name registered in Meta Business Manager
+  language         String              @default("es")
+  body             String              @db.Text // human-readable preview, with {{var}} placeholders
+  variables        Json?               // ["leadName", "sede", "datetime"]
+  active           Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model SrxfitSessionOverride {
+  id                  String   @id @default(cuid())
+  weekNumber          Int
+  dayIndex            Int      // 1=Mon ... 6=Sat
+  activacionMd        String?  @db.Text
+  fuerzaMd            String?  @db.Text
+  acondicionamientoMd String?  @db.Text
+  regulacionMd        String?  @db.Text
+  coachNotesMd        String?  @db.Text
+  updatedById         String?
+  updatedBy           User?    @relation("SrxfitSessionOverrideUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+
+  @@unique([weekNumber, dayIndex])
 }

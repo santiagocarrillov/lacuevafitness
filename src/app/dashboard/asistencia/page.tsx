@@ -1,5 +1,6 @@
 import { Sede } from "@/generated/prisma/client";
 import { getTodaySchedules, getActiveMembers } from "@/lib/actions/attendance";
+import { isAttendanceWindowOpen } from "@/lib/timezone";
 import { requireAuth, getSedeScope } from "@/lib/auth";
 import { ScheduleList } from "./schedule-list";
 
@@ -9,6 +10,7 @@ export default async function AsistenciaPage() {
   const user = await requireAuth();
   const scopedSede = getSedeScope(user);
   const isCoach = user.role === "COACH";
+  const windowOpen = isAttendanceWindowOpen();
 
   // Which sedes to show: if user is scoped, only their sede; otherwise both.
   const showFC = !scopedSede || scopedSede === "FITNESS_CENTER";
@@ -32,6 +34,12 @@ export default async function AsistenciaPage() {
         </p>
       </header>
 
+      {!windowOpen && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          🔒 <strong>Ventana de registro cerrada.</strong> No se pueden ingresar nuevas asistencias después de las 9:30pm. El siguiente día empieza a las 12:00 AM.
+        </div>
+      )}
+
       <div className="space-y-8">
         {showFC && (
           <section>
@@ -41,6 +49,7 @@ export default async function AsistenciaPage() {
               members={membersFC}
               sede="FITNESS_CENTER"
               userRole={user.role}
+              windowOpen={windowOpen}
             />
           </section>
         )}
@@ -53,6 +62,7 @@ export default async function AsistenciaPage() {
               members={membersXT}
               sede="XTREME"
               userRole={user.role}
+              windowOpen={windowOpen}
             />
           </section>
         )}

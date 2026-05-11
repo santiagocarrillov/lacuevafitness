@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
-import { requireAuth, getSedeScope } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { getSegmentMembers, getSegmentCounts, type SegmentKey } from "@/lib/actions/analytics";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +88,7 @@ export default async function SegmentosPage({
   searchParams: Promise<{ segment?: string }>;
 }) {
   const user = await requireAuth();
+  if (!can.viewSegments(user)) redirect("/dashboard?forbidden=1");
   const scopedSede = getSedeScope(user);
   const params = await searchParams;
   const activeSegment = params.segment as SegmentKey | undefined;

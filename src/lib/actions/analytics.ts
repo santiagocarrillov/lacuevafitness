@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Sede } from "@/generated/prisma/client";
+import { Sede, Prisma } from "@/generated/prisma/client";
 
 // ─────────────────────────────────────────────────────────────
 // Member analytics — computed stats per member
@@ -266,7 +266,7 @@ export async function getSegmentMembers(
         LEFT JOIN "Attendance" a ON a."memberId" = m.id
           AND a."recordedAt" >= ${new Date(now.getTime() - 28 * 86400000)}
         WHERE m.status IN ('ACTIVE', 'TRIAL')
-          ${sede ? prisma.$queryRaw`AND m.sede = ${sede}::"Sede"` : prisma.$queryRaw``}
+          ${sede ? Prisma.sql`AND m.sede = ${sede}::"Sede"` : Prisma.empty}
         GROUP BY m.id
         HAVING COUNT(a.id) <= 2
         ORDER BY recent_attendance ASC, m."lastName"
@@ -291,7 +291,7 @@ export async function getSegmentMembers(
           AND EXTRACT(HOUR FROM cs."startAt") >= ${lowerHour}
           AND EXTRACT(HOUR FROM cs."startAt") < ${upperHour}
           AND a."recordedAt" >= ${new Date(now.getTime() - 60 * 86400000)}
-          ${sede ? prisma.$queryRaw`AND m.sede = ${sede}::"Sede"` : prisma.$queryRaw``}
+          ${sede ? Prisma.sql`AND m.sede = ${sede}::"Sede"` : Prisma.empty}
         GROUP BY m.id
         HAVING COUNT(*) >= 5
         ORDER BY count_in_bucket DESC, m."lastName"
@@ -356,7 +356,7 @@ export async function getSegmentMembers(
         FROM "Member" m
         LEFT JOIN "Attendance" a ON a."memberId" = m.id
         WHERE m.status IN ('ACTIVE', 'TRIAL')
-          ${sede ? prisma.$queryRaw`AND m.sede = ${sede}::"Sede"` : prisma.$queryRaw``}
+          ${sede ? Prisma.sql`AND m.sede = ${sede}::"Sede"` : Prisma.empty}
         GROUP BY m.id
         HAVING MAX(a."recordedAt") IS NOT NULL
           AND MAX(a."recordedAt") <= ${maxDate}
@@ -377,7 +377,7 @@ export async function getSegmentMembers(
         WHERE m.status IN ('ACTIVE', 'TRIAL')
           AND a."recordedAt" >= ${past90}
           AND m."joinedAt" <= ${past90}
-          ${sede ? prisma.$queryRaw`AND m.sede = ${sede}::"Sede"` : prisma.$queryRaw``}
+          ${sede ? Prisma.sql`AND m.sede = ${sede}::"Sede"` : Prisma.empty}
         GROUP BY m.id
         HAVING COUNT(a.id) >= 48
         ORDER BY total_attendance DESC

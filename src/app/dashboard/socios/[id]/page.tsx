@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { requireAuth } from "@/lib/auth";
 import { getMember, getMembershipPlans } from "@/lib/actions/members";
 import { getMemberNotes } from "@/lib/actions/notes";
 import { getMemberChallenges } from "@/lib/actions/challenges";
@@ -9,10 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { MemberActions } from "./member-actions";
 import { NotesTimeline } from "./notes-timeline";
-import { BodyCompSection } from "./body-comp-section";
+import { HealthSection } from "./health-section";
 import { TestResultsSection } from "./test-results-section";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
+import { MembershipPaymentPanel } from "./membership-payment-panel";
 import { ChurnRiskBadge } from "./churn-risk-badge";
 import { MemberInfoEditor } from "./member-info-editor";
 
@@ -83,6 +85,7 @@ export default async function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const user = await requireAuth();
   const [member, plans, notes, challenges, analytics] = await Promise.all([
     getMember(id),
     getMembershipPlans(),
@@ -91,10 +94,16 @@ export default async function MemberDetailPage({
     getMemberAnalytics(id),
   ]);
   if (!member) return notFound();
+  const canEditHealth = user.role === "OWNER" || user.role === "NUTRITIONIST";
 
   const now = new Date();
+  // Active membership = state ACTIVE + not expired + not a one-time daily pass.
+  // Daily passes are billed as "facturación suelta" — not the socio's plan.
   const activeMembership = member.memberships.find(
-    (m) => m.state === "ACTIVE" && new Date(m.endsAt) >= now,
+    (m) =>
+      m.state === "ACTIVE" &&
+      new Date(m.endsAt) >= now &&
+      m.plan.billingCycle !== "ONE_TIME",
   );
   const latestLevel = member.trainingLevels[0];
 
@@ -247,18 +256,42 @@ export default async function MemberDetailPage({
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {activeMembership ? (
-              <MembershipEditor membership={{
-                id: activeMembership.id,
-                planName: activeMembership.plan.name,
-                priceCents: activeMembership.plan.priceCents,
-                customPriceCents: activeMembership.customPriceCents,
-                paymentMethod: activeMembership.paymentMethod,
-                billingNote: activeMembership.billingNote,
-                startsAt: activeMembership.startsAt.toISOString(),
-                endsAt: activeMembership.endsAt.toISOString(),
-                state: activeMembership.state,
-                autoRenew: activeMembership.autoRenew,
-              }} memberId={member.id} />
+              <>
+                <MembershipEditor membership={{
+                  id: activeMembership.id,
+                  planName: activeMembership.plan.name,
+                  priceCents: activeMembership.plan.priceCents,
+                  customPriceCents: activeMembership.customPriceCents,
+                  paymentMethod: activeMembership.paymentMethod,
+                  billingNote: activeMembership.billingNote,
+                  startsAt: activeMembership.startsAt.toISOString(),
+                  endsAt: activeMembership.endsAt.toISOString(),
+                  state: activeMembership.state,
+                  autoRenew: activeMembership.autoRenew,
+                }} memberId={member.id} />
+                <MembershipPaymentPanel
+                  memberId={member.id}
+                  membership={{
+                    id: activeMembership.id,
+                    priceCents: activeMembership.plan.priceCents,
+                    customPriceCents: activeMembership.customPriceCents,
+                    startsAt: activeMembership.startsAt,
+                    endsAt: activeMembership.endsAt,
+                    state: activeMembership.state,
+                    planName: activeMembership.plan.name,
+                  }}
+                  payments={member.payments.map((p) => ({
+                    id: p.id,
+                    amountCents: p.amountCents,
+                    method: p.method,
+                    status: p.status,
+                    paidAt: p.paidAt,
+                    membershipId: p.membershipId,
+                  }))}
+                  sede={member.sede}
+                  canEdit={user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN"}
+                />
+              </>
             ) : (
               <p className="text-muted-foreground">Asigna un plan desde las acciones de arriba.</p>
             )}
@@ -274,10 +307,15 @@ export default async function MemberDetailPage({
       {/* Notas de comunicación (timeline) */}
       <NotesTimeline notes={notes} memberId={member.id} />
 
-      {/* Composición corporal */}
-      <BodyCompSection
-        bodyComps={member.bodyCompositions}
+      {/* Salud — composición corporal + longevidad clínica */}
+      <HealthSection
         memberId={member.id}
+        memberName={`${member.firstName} ${member.lastName}`}
+        dateOfBirth={member.dateOfBirth}
+        sex={member.sex}
+        bodyComps={member.bodyCompositions}
+        clinicalMarkers={member.clinicalMarkers}
+        canEdit={canEditHealth}
       />
 
       {/* Resultados de tests SRXFit */}
@@ -285,6 +323,13 @@ export default async function MemberDetailPage({
         testResults={member.testResults}
         memberId={member.id}
         testLabels={testLabels}
+        canRegister={
+          user.role === "OWNER" ||
+          user.role === "ADMIN" ||
+          user.role === "COACH" ||
+          user.role === "NUTRITIONIST"
+        }
+        memberIsActive={member.status === "ACTIVE" || member.status === "TRIAL"}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import {
   getMemberPayments,
@@ -13,7 +14,8 @@ import { PoolEntryForm } from "./pool-form";
 import { RegisterPaymentDialog } from "./register-payment-dialog";
 import { ConfirmPaymentDialog } from "./confirm-payment-dialog";
 import { DeleteButton } from "./delete-button";
-import { deletePoolEntry, deletePendingPayment } from "@/lib/actions/payments";
+import { EditPaymentDialog } from "./edit-payment-dialog";
+import { deletePoolEntry, deletePendingPayment, deletePayment } from "@/lib/actions/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +62,7 @@ export default async function PagosPage({
   searchParams: Promise<{ tab?: string; page?: string }>;
 }) {
   const user = await requireAuth();
+  if (!can.viewPayments(user)) redirect("/dashboard?forbidden=1");
 
   // Access control: OWNER, ACCOUNTING, ADMIN
   const allowed = user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN";
@@ -195,6 +198,7 @@ export default async function PagosPage({
                       {isAccountingOrOwner && (
                         <th className="text-left font-medium px-3 py-2">Sede</th>
                       )}
+                      <th className="text-right font-medium px-3 py-2">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -246,6 +250,27 @@ export default async function PagosPage({
                             {SEDE_LABELS[p.sede] ?? p.sede}
                           </td>
                         )}
+                        <td className="px-3 py-2 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <EditPaymentDialog
+                              payment={{
+                                id: p.id,
+                                amountCents: p.amountCents,
+                                method: p.method,
+                                status: p.status,
+                                paidAt: p.paidAt,
+                                depositorName: p.depositorName ?? null,
+                                bankReference: p.bankReference ?? null,
+                                bankEntity: p.bankEntity ?? null,
+                                notes: p.notes ?? null,
+                              }}
+                            />
+                            <DeleteButton
+                              action={deletePayment.bind(null, p.id)}
+                              label="eliminar"
+                            />
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -336,12 +361,10 @@ export default async function PagosPage({
                             amountCents: pe.amountCents,
                           }))}
                         />
-                        {isAccountingOrOwner && (
-                          <DeleteButton
-                            action={deletePendingPayment.bind(null, p.id)}
-                            label="eliminar"
-                          />
-                        )}
+                        <DeleteButton
+                          action={deletePendingPayment.bind(null, p.id)}
+                          label="eliminar"
+                        />
                       </div>
                     </div>
                   ))}

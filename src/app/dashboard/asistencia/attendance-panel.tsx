@@ -29,10 +29,12 @@ export function AttendancePanel({
   scheduleId,
   members,
   sede,
+  windowOpen,
 }: {
   scheduleId: string;
   members: Member[];
   sede: string;
+  windowOpen: boolean;
 }) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [search, setSearch] = useState("");
@@ -146,8 +148,9 @@ export function AttendancePanel({
                     <button
                       key={m.id}
                       onClick={() => handleAddMember(m.id)}
-                      disabled={isPending}
-                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent transition text-left"
+                      disabled={isPending || !windowOpen}
+                      title={!windowOpen ? "Ventana de registro cerrada (después de las 9:30pm)" : undefined}
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span>
                         {m.lastName}, {m.firstName}
@@ -195,8 +198,9 @@ export function AttendancePanel({
                     )}
                     <button
                       onClick={() => handleRemoveMember(a.memberId)}
-                      disabled={isPending}
-                      className="text-muted-foreground hover:text-destructive transition text-xs"
+                      disabled={isPending || !windowOpen}
+                      title={!windowOpen ? "Ventana cerrada" : undefined}
+                      className="text-muted-foreground hover:text-destructive transition text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Quitar
                     </button>
