@@ -130,3 +130,5 @@ Los admins ven los mismos campos al registrar un pago.
 3. **Antes de modificar el schema** → discutir. Está diseñado holísticamente, modificar sin pensar rompe Fases 2-3.
 4. **Para módulos nuevos** → seguir el patrón de `asistencia/` (server actions en `lib/actions/`, panels separados, tipos derivados de Prisma).
 5. **Si la sesión se está alargando** → proponer un commit + `/clear` antes de saturar contexto.
+6. **Deploy a producción SOLO vía merge a `main`** → nunca `vercel deploy --prod` desde local. Eso bypassea git y deja la prod desincronizada del repo (lo arreglamos el 2026-05-10, ver PR #2). Si necesitas verificar algo antes de mergear, usa el Preview automático que Vercel genera por cada push a una rama.
+7. **Migraciones Prisma SOLO commiteadas** → nunca `prisma migrate dev` ni `prisma db push` contra `DIRECT_URL` sin commitear la migración generada. Workflow correcto: editar `schema.prisma` → `prisma migrate dev --name <descripcion>` → revisar `prisma/migrations/<timestamp>_*/migration.sql` → commitear schema + migración juntos → push.
