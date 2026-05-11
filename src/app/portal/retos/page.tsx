@@ -55,33 +55,58 @@ export default async function RetosPage() {
         </div>
       )}
 
-      {active.map((p, idx) => {
-        const pct = Math.min(
-          100,
-          Math.round((p.currentCount / Math.max(p.challenge.ruleTarget, 1)) * 100),
-        );
-        const featured = idx === 0;
-        return (
-          <div key={p.id} className={`portal-reto${featured ? " featured" : ""}`}>
-            <div className="tag">● {featured ? "Reto del mes" : "En curso"}</div>
-            <h4>{p.challenge.name}</h4>
-            {p.challenge.reward && (
-              <div className="prize">
-                Premio: <strong>{p.challenge.reward}</strong>
-              </div>
-            )}
-            <div className="bar">
-              <div className="fill" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="meta">
-              <span>
-                {p.currentCount} de {p.challenge.ruleTarget}
-              </span>
-              <span>Termina: {shortDate(p.challenge.endsAt)}</span>
-            </div>
+      {active.length > 0 && (
+        <>
+          <div className="portal-section-title">
+            <h4>Retos vigentes</h4>
           </div>
-        );
-      })}
+          {active.map((p, idx) => {
+            const pct = Math.min(
+              100,
+              Math.round((p.currentCount / Math.max(p.challenge.ruleTarget, 1)) * 100),
+            );
+            const featured = idx === 0;
+            const ruleHint =
+              p.challenge.ruleType === "CONSECUTIVE_CLASSES"
+                ? "Sin faltar"
+                : p.challenge.ruleType === "CLASSES_IN_DAYS"
+                  ? `En ${p.challenge.ruleDays} días`
+                  : "Asistencias acumuladas";
+            return (
+              <div key={p.id} className={`portal-reto${featured ? " featured" : ""}`}>
+                <div className="tag">● {featured ? "Reto del mes" : "En curso"}</div>
+                <h4>{p.challenge.name}</h4>
+                {p.challenge.description && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      color: featured ? "rgba(255,255,255,0.75)" : "var(--pt-ink-2)",
+                      marginBottom: 10,
+                    }}
+                  >
+                    {p.challenge.description}
+                  </p>
+                )}
+                {p.challenge.reward && (
+                  <div className="prize">
+                    Premio: <strong>{p.challenge.reward}</strong>
+                  </div>
+                )}
+                <div className="bar">
+                  <div className="fill" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="meta">
+                  <span>
+                    {p.currentCount} / {p.challenge.ruleTarget} · {ruleHint}
+                  </span>
+                  <span>Termina: {shortDate(p.challenge.endsAt)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
 
       {available.length > 0 && (
         <>
@@ -92,6 +117,18 @@ export default async function RetosPage() {
             <div key={c.id} className="portal-reto">
               <div className="tag">○ Inscribirme</div>
               <h4>{c.name}</h4>
+              {c.description && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    color: "var(--pt-ink-2)",
+                    marginBottom: 10,
+                  }}
+                >
+                  {c.description}
+                </p>
+              )}
               {c.reward && (
                 <div className="prize">
                   Premio: <strong>{c.reward}</strong>

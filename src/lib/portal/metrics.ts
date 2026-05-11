@@ -83,3 +83,33 @@ export function daysToNextEvaluation(
   const diff = target.getTime() - now.getTime();
   return Math.ceil(diff / 86400000);
 }
+
+/**
+ * Attendance stats for the Hoy card:
+ * - thisMonth: visits in the current calendar month
+ * - lastVisit: most recent attendance date (or null)
+ * - weeklyFrequency: average visits per week over the last 8 weeks
+ */
+export function computeAttendanceStats(
+  attendanceDates: Date[],
+  now: Date = new Date(),
+): {
+  thisMonth: number;
+  lastVisit: Date | null;
+  weeklyFrequency: number;
+} {
+  if (attendanceDates.length === 0) {
+    return { thisMonth: 0, lastVisit: null, weeklyFrequency: 0 };
+  }
+  const sorted = [...attendanceDates].sort((a, b) => b.getTime() - a.getTime());
+  const lastVisit = sorted[0];
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonth = sorted.filter((d) => d >= monthStart).length;
+
+  const eightWeeksAgo = new Date(now.getTime() - 8 * 7 * 86400000);
+  const recent = sorted.filter((d) => d >= eightWeeksAgo);
+  const weeklyFrequency = recent.length / 8;
+
+  return { thisMonth, lastVisit, weeklyFrequency };
+}

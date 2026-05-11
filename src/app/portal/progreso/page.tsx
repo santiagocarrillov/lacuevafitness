@@ -2,17 +2,41 @@ import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { WeightChart } from "@/components/portal/weight-chart";
-import { computeImc, interpretImc } from "@/lib/portal/metrics";
 import { FEATURED_PRS, TEST_LABELS } from "@/lib/portal/test-labels";
 import { shortDate } from "@/lib/portal/format";
+import {
+  bmi,
+  computeAge,
+  evaluateBMI,
+  evaluateBodyFat,
+  evaluateGlucose,
+  evaluateHsCRP,
+  evaluateMusclePct,
+  evaluateTrigHdl,
+  evaluateWHtR,
+  evaluateWaist,
+  longevityScore,
+  recommendations,
+  trend,
+  trigHdl,
+  whtr,
+  type RangeSpec,
+  type Status,
+  type TrendInfo,
+} from "@/lib/health-ranges";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgresoPage() {
   const { member } = await requireMember();
 
-  const [bodyComps, latestEval, nutriNote, prResults] = await Promise.all([
+  const [bodyComps, clinicalMarkers, latestEval, nutriNote, prResults] = await Promise.all([
     prisma.bodyComposition.findMany({
+      where: { memberId: member.id },
+      orderBy: { measuredAt: "desc" },
+      take: 12,
+    }),
+    prisma.clinicalMarker.findMany({
       where: { memberId: member.id },
       orderBy: { measuredAt: "desc" },
       take: 6,
@@ -41,18 +65,67 @@ export default async function ProgresoPage() {
     ),
   ]);
 
-  const latest = bodyComps[0] ?? null;
-  const imc = computeImc(latest?.weightKg ?? null, latest?.heightCm ?? null);
-  const imcInterp = imc ? interpretImc(imc) : null;
+  const age = computeAge(member.dateOfBirth);
+  const sex = member.sex;
+  const latestBC = bodyComps[0] ?? null;
+  const prevBC = bodyComps[1] ?? null;
+  const latestCM = clinicalMarkers[0] ?? null;
+  const prevCM = clinicalMarkers[1] ?? null;
 
-  // Chart points: oldest → newest, keep only entries with a weight.
+  const currBmi = latestBC?.weightKg && latestBC?.heightCm ? bmi(latestBC.weightKg, latestBC.heightCm) : null;
+  const prevBmi = prevBC?.weightKg && prevBC?.heightCm ? bmi(prevBC.weightKg, prevBC.heightCm) : null;
+  const currWHtR = latestBC?.waistCm && latestBC?.heightCm ? whtr(latestBC.waistCm, latestBC.heightCm) : null;
+  const prevWHtR = prevBC?.waistCm && prevBC?.heightCm ? whtr(prevBC.waistCm, prevBC.heightCm) : null;
+  const currMusclePct = latestBC?.muscleMassPct ?? (latestBC?.muscleMassKg && latestBC.weightKg ? (latestBC.muscleMassKg / latestBC.weightKg) * 100 : null);
+  const prevMusclePct = prevBC?.muscleMassPct ?? (prevBC?.muscleMassKg && prevBC.weightKg ? (prevBC.muscleMassKg / prevBC.weightKg) * 100 : null);
+
+  const currTrigHdl = latestCM?.triglycerides && latestCM?.hdlCholesterol
+    ? trigHdl(latestCM.triglycerides, latestCM.hdlCholesterol) : null;
+  const prevTrigHdl = prevCM?.triglycerides && prevCM?.hdlCholesterol
+    ? trigHdl(prevCM.triglycerides, prevCM.hdlCholesterol) : null;
+
+  const bfStatus = evaluateBodyFat(latestBC?.bodyFatPct, age, sex);
+  const mmStatus = evaluateMusclePct(currMusclePct, age, sex);
+  const waistStatus = evaluateWaist(latestBC?.waistCm, sex);
+  const whtrStatus = evaluateWHtR(currWHtR);
+  const bmiStatus = evaluateBMI(currBmi);
+  const glucStatus = evaluateGlucose(latestCM?.glucoseFasting);
+  const trigStatus = evaluateTrigHdl(currTrigHdl);
+  const crpStatus = evaluateHsCRP(latestCM?.hsCRP);
+
+  const score = longevityScore({
+    glucose: glucStatus.status,
+    trigHdl: trigStatus.status,
+    hsCRP: crpStatus.status,
+    testosterone: "unknown",
+    estradiol: "unknown",
+    waist: waistStatus.status,
+    whtr: whtrStatus.status,
+  });
+
+  const recs = recommendations({
+    glucose: glucStatus.status,
+    trigHdl: trigStatus.status,
+    hsCRP: crpStatus.status,
+    waist: waistStatus.status,
+    testosterone: "unknown",
+  });
+
+  const tWeight = trend(latestBC?.weightKg, prevBC?.weightKg, "neutral");
+  const tBF = trend(latestBC?.bodyFatPct, prevBC?.bodyFatPct, "down");
+  const tWaist = trend(latestBC?.waistCm, prevBC?.waistCm, "down");
+  const tWHtR = trend(currWHtR, prevWHtR, "down");
+  const tGluc = trend(latestCM?.glucoseFasting, prevCM?.glucoseFasting, "down");
+  const tMM = trend(currMusclePct, prevMusclePct, "up");
+  const tBMI = trend(currBmi, prevBmi, "neutral");
+  const tTrigHdl = trend(currTrigHdl, prevTrigHdl, "down");
+  const tCRP = trend(latestCM?.hsCRP, prevCM?.hsCRP, "down");
+
   const chartData = [...bodyComps]
+    .slice(0, 6)
     .reverse()
     .filter((b) => b.weightKg != null)
-    .map((b) => ({
-      date: shortDate(b.measuredAt),
-      weight: b.weightKg!,
-    }));
+    .map((b) => ({ date: shortDate(b.measuredAt), weight: b.weightKg! }));
   const weightDelta =
     chartData.length >= 2
       ? chartData[chartData.length - 1].weight - chartData[0].weight
@@ -73,80 +146,52 @@ export default async function ProgresoPage() {
         </h2>
       </div>
 
-      {latest ? (
-        <div className="portal-metric-grid">
-          {imc != null && imcInterp && (
-            <div className="portal-metric">
-              <span className={`dot ${imcInterp.dot}`} />
-              <div className="label">IMC</div>
-              <div className="value">{imc.toFixed(1)}</div>
-              <div className="interp">{imcInterp.text}</div>
-            </div>
-          )}
-          {latest.waistCm != null && (
-            <div className="portal-metric">
-              <span className="dot orange" />
-              <div className="label">Cintura</div>
-              <div className="value">
-                {latest.waistCm.toFixed(1)}
-                <span className="u">cm</span>
-              </div>
-              <div className="interp">Medida abdominal.</div>
-            </div>
-          )}
-          {latest.bodyFatPct != null && (
-            <div className="portal-metric">
-              <span className="dot gray" />
-              <div className="label">% Grasa</div>
-              <div className="value">
-                {latest.bodyFatPct.toFixed(1)}
-                <span className="u">%</span>
-              </div>
-              <div className="interp">Composición corporal.</div>
-            </div>
-          )}
-          {latest.muscleMassPct != null && (
-            <div className="portal-metric">
-              <span className="dot green" />
-              <div className="label">% Músculo</div>
-              <div className="value">
-                {latest.muscleMassPct.toFixed(1)}
-                <span className="u">%</span>
-              </div>
-              <div className="interp">Masa muscular.</div>
-            </div>
-          )}
-          {latest.waistCm != null && latest.heightCm != null && (
-            <div className="portal-metric">
-              <span className="dot orange" />
-              <div className="label">C/A ratio</div>
-              <div className="value">
-                {(latest.waistCm / latest.heightCm).toFixed(2)}
-              </div>
-              <div className="interp">Cintura / altura.</div>
-            </div>
-          )}
-          {latest.weightKg != null && (
-            <div className="portal-metric">
-              <span className="dot gray" />
-              <div className="label">Peso</div>
-              <div className="value">
-                {latest.weightKg.toFixed(1)}
-                <span className="u">kg</span>
-              </div>
-              <div className="interp">Última medición.</div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="portal-card" style={{ marginBottom: 14 }}>
-          <p style={{ fontSize: 13, color: "var(--pt-ink-2)" }}>
-            Aún no tienes una evaluación de composición corporal. Pide a tu nutricionista que
-            te programe una.
-          </p>
+      {(!age || !sex) && (
+        <div className="portal-callout warn">
+          <strong>Faltan datos para calcular rangos:</strong>{" "}
+          {!age && "fecha de nacimiento"}
+          {!age && !sex && " y "}
+          {!sex && "sexo biológico"}. Pide a tu admin que los actualice.
         </div>
       )}
 
+      {/* Hero: 6-metric snapshot */}
+      {(latestBC || latestCM) && (
+        <section style={{ marginBottom: 14 }}>
+          <div className="portal-section-title" style={{ marginTop: 0 }}>
+            <h4>Salud — Resumen</h4>
+            <span className="portal-section-link" style={{ textDecoration: "none" }}>
+              {bodyComps.length} mediciones · {clinicalMarkers.length} laboratorios
+            </span>
+          </div>
+          <div className="portal-metric-grid">
+            <MetricMini label="Peso" value={latestBC?.weightKg ?? null} unit="kg" trendInfo={tWeight} />
+            <MetricMini label="% Grasa" value={latestBC?.bodyFatPct ?? null} unit="%" status={bfStatus.status} trendInfo={tBF} range={bfStatus.range} />
+            <MetricMini label="Cintura" value={latestBC?.waistCm ?? null} unit="cm" status={waistStatus.status} trendInfo={tWaist} range={waistStatus.range} />
+            <MetricMini label="C/A" value={currWHtR != null ? currWHtR.toFixed(2) : null} status={whtrStatus.status} trendInfo={tWHtR} range={whtrStatus.range} />
+            <MetricMini label="Glucosa" value={latestCM?.glucoseFasting ?? null} unit="mg/dL" status={glucStatus.status} trendInfo={tGluc} range={glucStatus.range} />
+            <MetricMini label="IMC" value={currBmi != null ? currBmi.toFixed(1) : null} status={bmiStatus.status} trendInfo={tBMI} range={bmiStatus.range} />
+          </div>
+        </section>
+      )}
+
+      {/* Composición corporal extra */}
+      {latestBC && (
+        <>
+          <div className="portal-section-title">
+            <h4>Composición corporal</h4>
+          </div>
+          <div className="portal-callout warn">
+            <strong>IMC</strong> tiene limitaciones para deportistas. Músculo pesa más que grasa. Léelo junto con % grasa y cintura.
+          </div>
+          <div className="portal-metric-grid">
+            <MetricMini label="% Músculo" value={currMusclePct != null ? currMusclePct.toFixed(1) : null} unit="%" status={mmStatus.status} trendInfo={tMM} range={mmStatus.range} />
+            <MetricMini label="Met. basal" value={latestBC.basalMetabolism ?? null} unit="kcal" />
+          </div>
+        </>
+      )}
+
+      {/* Weight chart */}
       {chartData.length >= 2 && (
         <div className="portal-chart">
           <div className="head">
@@ -169,6 +214,58 @@ export default async function ProgresoPage() {
         </div>
       )}
 
+      {/* Longevidad clínica */}
+      {(latestCM || clinicalMarkers.length > 0) && (
+        <>
+          <div className="portal-section-title">
+            <h4>Longevidad clínica</h4>
+          </div>
+          <div className="portal-callout">
+            ⚕️ <strong>Importante:</strong> los marcadores clínicos son para seguimiento educativo. No reemplazan evaluación médica. Valores en zona amarilla o roja persistentes requieren consulta con tu médico.
+          </div>
+
+          <div className={`portal-score ${score.status}`}>
+            <div className="top">
+              <div className="t">
+                Score de longevidad: {score.greens} / {score.max} indicadores en verde
+              </div>
+              <span className={`portal-status-pill ${score.status}`}>
+                {score.status === "green"
+                  ? "Buen camino"
+                  : score.status === "yellow"
+                    ? "Zona de mejora"
+                    : score.status === "red"
+                      ? "Riesgo metabólico"
+                      : "Sin datos"}
+              </span>
+            </div>
+            <div className="desc">{score.interpretation}</div>
+          </div>
+
+          {recs.length > 0 && (
+            <div className="portal-recs">
+              <div className="label">Recomendaciones automáticas</div>
+              <ul>
+                {recs.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {latestCM && (
+            <div className="portal-metric-grid">
+              <MetricMini label="Glucosa" value={latestCM.glucoseFasting ?? null} unit="mg/dL" status={glucStatus.status} trendInfo={tGluc} range={glucStatus.range} />
+              <MetricMini label="Trig/HDL" value={currTrigHdl != null ? currTrigHdl.toFixed(2) : null} status={trigStatus.status} trendInfo={tTrigHdl} range={trigStatus.range} />
+              <MetricMini label="PCR-us" value={latestCM.hsCRP ?? null} unit="mg/L" status={crpStatus.status} trendInfo={tCRP} range={crpStatus.range} />
+              <MetricMini label="Triglicéridos" value={latestCM.triglycerides ?? null} unit="mg/dL" />
+              <MetricMini label="HDL" value={latestCM.hdlCholesterol ?? null} unit="mg/dL" />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* PRs */}
       <div className="portal-section-title">
         <h4>Mis PRs</h4>
       </div>
@@ -215,5 +312,63 @@ export default async function ProgresoPage() {
         </>
       )}
     </PortalShell>
+  );
+}
+
+// ─── helpers ───────────────────────────────────────────────────────────
+
+function MetricMini({
+  label,
+  value,
+  unit,
+  status,
+  range,
+  trendInfo,
+}: {
+  label: string;
+  value: string | number | null;
+  unit?: string;
+  status?: Status;
+  range?: RangeSpec | null;
+  trendInfo?: TrendInfo;
+}) {
+  const dotClass = !status || status === "unknown" ? "gray" : status;
+  const showTrend = trendInfo && trendInfo.dir !== "none";
+  const trendColor =
+    trendInfo?.isPositive === true
+      ? "var(--pt-green)"
+      : trendInfo?.isPositive === false
+        ? "var(--pt-red)"
+        : "var(--pt-ink-3)";
+  return (
+    <div className="portal-metric">
+      {status && status !== "unknown" && <span className={`dot ${dotClass}`} />}
+      <div className="label">{label}</div>
+      <div className="value">
+        {value ?? "—"}
+        {value != null && unit && <span className="u">{unit}</span>}
+      </div>
+      {showTrend && trendInfo && (
+        <div
+          className="interp"
+          style={{
+            fontFamily: "var(--pt-font-mono)",
+            color: trendColor,
+            fontSize: 10,
+            marginTop: 4,
+          }}
+        >
+          {trendInfo.arrow}
+          {trendInfo.pctChange != null && Math.abs(trendInfo.pctChange) >= 0.05
+            ? ` ${trendInfo.pctChange > 0 ? "+" : ""}${trendInfo.pctChange.toFixed(1)}%`
+            : ""}
+        </div>
+      )}
+      {range && (
+        <div className="interp" style={{ fontSize: 9 }}>
+          🟢 {range.bands.green} · 🟡 {range.bands.yellow} · 🔴 {range.bands.red}
+        </div>
+      )}
+    </div>
   );
 }

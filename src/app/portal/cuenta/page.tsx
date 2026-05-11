@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
+import { CapsuleCard } from "@/components/portal/capsule-card";
 import { portalSignOut } from "@/lib/actions/portal-auth";
 import { daysBetween, money, shortDate } from "@/lib/portal/format";
 
@@ -118,27 +119,7 @@ export default async function CuentaPage() {
       <div className="portal-section-title">
         <h4>Aprende SRXFit</h4>
       </div>
-      <div className="portal-capsule">
-        <div className="label">SRXFit · Cápsula 01</div>
-        <h5>¿Qué es Zona 2 y por qué empezamos así?</h5>
-        <div className="read">3 min · próximamente</div>
-      </div>
-      <div
-        className="portal-capsule"
-        style={{
-          background: "var(--pt-bg-card-alt)",
-          color: "var(--pt-ink)",
-          border: "1px solid var(--pt-line)",
-        }}
-      >
-        <div className="label" style={{ color: "var(--pt-orange)" }}>
-          SRXFit · Cápsula 02
-        </div>
-        <h5 style={{ color: "var(--pt-ink)" }}>RPE: cómo medir tu esfuerzo real</h5>
-        <div className="read" style={{ color: "var(--pt-ink-3)" }}>
-          2 min · próximamente
-        </div>
-      </div>
+      <CapsuleCard />
 
       <form action={portalSignOut} style={{ marginTop: 28 }}>
         <button
