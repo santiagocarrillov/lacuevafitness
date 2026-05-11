@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import type { User, UserRole, Sede } from "@/generated/prisma/client";
+import type { Member, User, UserRole, Sede } from "@/generated/prisma/client";
 
 /**
  * Returns the currently logged-in user (from Supabase Auth + our User table),
@@ -73,6 +73,23 @@ export async function requireRole(...allowed: UserRole[]): Promise<User> {
   const user = await requireAuth();
   if (!allowed.includes(user.role)) redirect("/dashboard?forbidden=1");
   return user;
+}
+
+/**
+ * Portal Socio: require an authenticated MEMBER whose User row is linked
+ * to a Member record. Non-members get bounced to /dashboard, members
+ * without a linked Member record are signed out.
+ */
+export async function requireMember(): Promise<{ user: User; member: Member }> {
+  const user = await requireAuth();
+  if (user.role !== "MEMBER") redirect("/dashboard?notmember=1");
+  const member = await prisma.member.findUnique({ where: { userId: user.id } });
+  if (!member) {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut();
+    redirect("/portal/login?unlinked=1");
+  }
+  return { user, member };
 }
 
 /**
