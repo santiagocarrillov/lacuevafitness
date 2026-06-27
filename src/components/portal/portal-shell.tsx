@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import Link from "next/link";
 import { AppHeader } from "./app-header";
 import { BottomNav } from "./bottom-nav";
 import { getCurrentUser } from "@/lib/auth";
@@ -16,25 +15,7 @@ export async function PortalShell({ avatarInitial, children }: Props) {
 
   return (
     <div className="portal-shell">
-      {isStaff && (
-        <Link
-          href="/dashboard"
-          style={{
-            display: "block",
-            textAlign: "center",
-            fontSize: 12,
-            padding: "7px 12px",
-            background: "var(--pt-ink-1)",
-            color: "var(--pt-bg-page)",
-            textDecoration: "none",
-            fontFamily: "var(--pt-font-mono)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          Vista de socio · ← Volver al panel
-        </Link>
-      )}
-      <AppHeader avatarInitial={avatarInitial} />
+      <AppHeader avatarInitial={avatarInitial} isStaff={isStaff} />
       <div className="portal-content">{children}</div>
       <BottomNav />
     </div>

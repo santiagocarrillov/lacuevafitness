@@ -75,6 +75,13 @@
   font-family: var(--pt-font-serif); font-size: 13px; font-weight: 500;
   text-decoration: none;
 }
+.portal-staff-back {
+  display: inline-flex; align-items: center;
+  padding: 5px 11px; border-radius: 999px;
+  background: var(--pt-bg-dark); color: white;
+  font-family: var(--pt-font-mono); font-size: 11px;
+  letter-spacing: 0.04em; text-decoration: none; white-space: nowrap;
+}
 
 .portal-content { padding: 20px 22px 110px; flex: 1; }
 
