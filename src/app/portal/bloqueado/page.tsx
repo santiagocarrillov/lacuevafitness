@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PortalBlockedPage() {
   // Opt out of the access gate here — this IS the wall, redirecting would loop.
-  const { member, access } = await requireMember({ enforceAccess: false });
+  const { member, access, isStaff } = await requireMember({ enforceAccess: false });
 
-  // If they're actually allowed, don't strand them on the wall.
-  if (access.state !== "blocked") redirect("/portal/hoy");
+  // If they're actually allowed (or staff previewing), don't strand them on the wall.
+  if (isStaff || access.state !== "blocked") redirect("/portal/hoy");
 
   const reason =
     member.status === "CHURNED"
