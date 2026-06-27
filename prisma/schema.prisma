@@ -90,7 +90,8 @@ model Member {
   emergencyName             String?
   emergencyPhone            String?
   preferredHour             String? // "morning", "evening", "afternoon" — derived from attendance
-  sede                      Sede
+  sede                      Sede // primary/billing sede — drives reports & payments (unchanged)
+  secondarySede             Sede? // optional 2nd sede the member also trains at (attendance only)
   status                    MemberStatus @default(LEAD)
   joinedAt                  DateTime     @default(now())
   churnedAt                 DateTime?

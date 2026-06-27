@@ -21,7 +21,10 @@ export default async function RetosPage() {
         active: true,
         startsAt: { lte: now },
         endsAt: { gte: now },
-        OR: [{ sede: null }, { sede: member.sede }],
+        OR: [
+          { sede: null },
+          { sede: { in: member.secondarySede ? [member.sede, member.secondarySede] : [member.sede] } },
+        ],
       },
       orderBy: { endsAt: "asc" },
     }),

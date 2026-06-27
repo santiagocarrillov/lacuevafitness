@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createMember } from "@/lib/actions/members";
+import type { Sede } from "@/generated/prisma/client";
 
 export default function NuevoSocioPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function NuevoSocioPage() {
     emergencyName: "",
     emergencyPhone: "",
     sede: "FITNESS_CENTER",
+    secondarySede: "",
     notes: "",
   });
 
@@ -40,7 +42,8 @@ export default function NuevoSocioPage() {
       try {
         const member = await createMember({
           ...form,
-          sede: form.sede as any,
+          sede: form.sede as Sede,
+          secondarySede: form.secondarySede ? (form.secondarySede as Sede) : null,
         });
         toast.success(`${member.firstName} ${member.lastName} registrado.`);
         router.push(`/dashboard/socios/${member.id}`);
@@ -112,7 +115,7 @@ export default function NuevoSocioPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sede">Sede *</Label>
+                <Label htmlFor="sede">Sede principal *</Label>
                 <select
                   id="sede"
                   value={form.sede}
@@ -121,6 +124,19 @@ export default function NuevoSocioPage() {
                 >
                   <option value="FITNESS_CENTER">La Cueva Fitness Center</option>
                   <option value="XTREME">La Cueva Xtreme</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="secondarySede">Sede secundaria (solo asistencia)</Label>
+                <select
+                  id="secondarySede"
+                  value={form.secondarySede}
+                  onChange={(e) => update("secondarySede", e.target.value)}
+                  className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-sm"
+                >
+                  <option value="">Ninguna</option>
+                  {form.sede !== "FITNESS_CENTER" && <option value="FITNESS_CENTER">La Cueva Fitness Center</option>}
+                  {form.sede !== "XTREME" && <option value="XTREME">La Cueva Xtreme</option>}
                 </select>
               </div>
             </div>

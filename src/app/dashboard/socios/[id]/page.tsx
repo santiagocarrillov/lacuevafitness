@@ -132,6 +132,11 @@ export default async function MemberDetailPage({
               Membresía: {membershipStatusLabels[analytics.membershipStatus]}
             </Badge>
             <span>{member.sede === "FITNESS_CENTER" ? "Fitness Center" : "Xtreme"}</span>
+            {member.secondarySede && (
+              <Badge variant="outline" title="También entrena en la otra sede">
+                + {member.secondarySede === "FITNESS_CENTER" ? "Fitness Center" : "Xtreme"}
+              </Badge>
+            )}
             {latestLevel && <Badge variant="outline">Nivel {latestLevel.level.replace("LEVEL_", "")}</Badge>}
             <ChurnRiskBadge risk={analytics.churnRisk} reasons={analytics.churnReasons} />
           </div>
@@ -207,6 +212,8 @@ export default async function MemberDetailPage({
                 occupation: member.occupation,
                 emergencyName: member.emergencyName,
                 emergencyPhone: member.emergencyPhone,
+                sede: member.sede,
+                secondarySede: member.secondarySede,
                 notes: member.notes,
               }}
             />

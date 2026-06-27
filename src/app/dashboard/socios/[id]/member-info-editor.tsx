@@ -10,6 +10,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { updateMember } from "@/lib/actions/members";
+import type { Sede } from "@/generated/prisma/client";
 
 type MemberData = {
   firstName: string;
@@ -21,6 +22,8 @@ type MemberData = {
   occupation: string | null;
   emergencyName: string | null;
   emergencyPhone: string | null;
+  sede: string;
+  secondarySede: string | null;
   notes: string | null;
 };
 
@@ -44,17 +47,29 @@ export function MemberInfoEditor({
     occupation: member.occupation ?? "",
     emergencyName: member.emergencyName ?? "",
     emergencyPhone: member.emergencyPhone ?? "",
+    sede: member.sede,
+    secondarySede: member.secondarySede ?? "",
     notes: member.notes ?? "",
   });
 
   function update(field: string, value: string) {
-    setForm((p) => ({ ...p, [field]: value }));
+    setForm((p) => {
+      const next = { ...p, [field]: value };
+      // Secondary can't equal primary — clear it if they collide.
+      if (next.secondarySede && next.secondarySede === next.sede) next.secondarySede = "";
+      return next;
+    });
   }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    const { sede, secondarySede, ...rest } = form;
     startTransition(async () => {
-      await updateMember(memberId, form);
+      await updateMember(memberId, {
+        ...rest,
+        sede: sede as Sede,
+        secondarySede: secondarySede ? (secondarySede as Sede) : null,
+      });
       toast.success("Información actualizada.");
       setOpen(false);
       router.refresh();
@@ -110,6 +125,29 @@ export function MemberInfoEditor({
             <div className="space-y-1">
               <Label className="text-xs">Teléfono emergencia</Label>
               <Input value={form.emergencyPhone} onChange={(e) => update("emergencyPhone", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Sede principal (cobro y reportes)</Label>
+              <select
+                value={form.sede}
+                onChange={(e) => update("sede", e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-sm"
+              >
+                <option value="FITNESS_CENTER">Fitness Center</option>
+                <option value="XTREME">Xtreme</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Sede secundaria (solo asistencia)</Label>
+              <select
+                value={form.secondarySede}
+                onChange={(e) => update("secondarySede", e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-sm"
+              >
+                <option value="">Ninguna</option>
+                {form.sede !== "FITNESS_CENTER" && <option value="FITNESS_CENTER">Fitness Center</option>}
+                {form.sede !== "XTREME" && <option value="XTREME">Xtreme</option>}
+              </select>
             </div>
             <div className="space-y-1 col-span-2">
               <Label className="text-xs">Notas</Label>
