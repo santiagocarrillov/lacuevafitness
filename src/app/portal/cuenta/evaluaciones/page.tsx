@@ -43,7 +43,7 @@ export default async function EvaluacionesPage() {
         </div>
       ) : (
         evals.map((e) => (
-          <div key={e.id} className="portal-list-item">
+          <Link key={e.id} href={`/portal/cuenta/evaluaciones/${e.id}`} className="portal-list-item">
             <div className="li-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M3 12h4l3-8 4 16 3-8h4" />
@@ -62,7 +62,8 @@ export default async function EvaluacionesPage() {
                   : ""}
               </div>
             </div>
-          </div>
+            <div className="arrow">→</div>
+          </Link>
         ))
       )}
     </PortalShell>

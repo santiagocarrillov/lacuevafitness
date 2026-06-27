@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { WeightChart } from "@/components/portal/weight-chart";
 import { FEATURED_PRS, TEST_LABELS } from "@/lib/portal/test-labels";
+import { compareEvaluations } from "@/lib/portal/eval-compare";
 import { shortDate } from "@/lib/portal/format";
 import {
   bmi,
@@ -30,7 +31,7 @@ export const dynamic = "force-dynamic";
 export default async function ProgresoPage() {
   const { member } = await requireMember();
 
-  const [bodyComps, clinicalMarkers, latestEval, nutriNote, prResults] = await Promise.all([
+  const [bodyComps, clinicalMarkers, recentEvals, nutriNote, prResults] = await Promise.all([
     prisma.bodyComposition.findMany({
       where: { memberId: member.id },
       orderBy: { measuredAt: "desc" },
@@ -41,10 +42,17 @@ export default async function ProgresoPage() {
       orderBy: { measuredAt: "desc" },
       take: 6,
     }),
-    prisma.evaluation.findFirst({
+    prisma.evaluation.findMany({
       where: { memberId: member.id, completedAt: { not: null } },
       orderBy: { completedAt: "desc" },
-      select: { completedAt: true },
+      take: 2,
+      select: {
+        completedAt: true,
+        cycleNumber: true,
+        summary: true,
+        coach: { select: { fullName: true } },
+        testResults: { select: { test: true, valueNumeric: true } },
+      },
     }),
     prisma.memberNote.findFirst({
       where: {
@@ -68,6 +76,14 @@ export default async function ProgresoPage() {
 
   const age = computeAge(member.dateOfBirth);
   const sex = member.sex;
+  const latestEval = recentEvals[0] ?? null;
+  const prevEval = recentEvals[1] ?? null;
+  const evalComparison =
+    latestEval && prevEval
+      ? compareEvaluations(latestEval.testResults, prevEval.testResults).filter(
+          (r) => r.previous != null,
+        )
+      : [];
   const latestBC = bodyComps[0] ?? null;
   const prevBC = bodyComps[1] ?? null;
   const latestCM = clinicalMarkers[0] ?? null;
@@ -290,6 +306,69 @@ export default async function ProgresoPage() {
             </div>
           ) : null,
         )
+      )}
+
+      {/* Comparativa de re-evaluación */}
+      {evalComparison.length > 0 && (
+        <>
+          <div className="portal-section-title">
+            <h4>Tu progreso vs. evaluación anterior</h4>
+          </div>
+          <div className="portal-card" style={{ display: "grid", gap: 12 }}>
+            {evalComparison.map((r) => {
+              const color =
+                r.trend.isPositive === true
+                  ? "var(--pt-green)"
+                  : r.trend.isPositive === false
+                    ? "var(--pt-red)"
+                    : "var(--pt-ink-3)";
+              return (
+                <div
+                  key={r.test}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500 }}>{r.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--pt-ink-3)" }}>
+                      {Math.round(r.previous as number)} → {Math.round(r.current)} {r.unit}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", color, flexShrink: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>
+                      {r.trend.arrow}{" "}
+                      {r.trend.pctChange != null ? `${Math.abs(r.trend.pctChange).toFixed(0)}%` : "—"}
+                    </div>
+                    <div style={{ fontSize: 11 }}>{r.reading}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Nota del coach (con sello humano) */}
+      {latestEval?.summary && (
+        <>
+          <div className="portal-section-title">
+            <h4>Nota de tu coach</h4>
+          </div>
+          <div className="portal-nutri">
+            <div className="who">
+              <div className="av">
+                {(latestEval.coach?.fullName ?? "C").charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="name">{latestEval.coach?.fullName ?? "Tu coach"}</div>
+                <div className="role">Tu coach revisó esto · La Cueva</div>
+              </div>
+              {latestEval.completedAt && (
+                <div className="when">{shortDate(latestEval.completedAt)}</div>
+              )}
+            </div>
+            <div className="body">{latestEval.summary}</div>
+          </div>
+        </>
       )}
 
       {nutriNote && (
