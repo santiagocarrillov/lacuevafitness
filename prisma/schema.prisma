@@ -40,18 +40,20 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  member             Member?
-  coachClassSessions ClassSession[]      @relation("CoachClassSessions")
-  attendanceRecords  Attendance[]        @relation("AttendanceRecordedBy")
-  coachConfirmations CoachConfirmation[]
-  leadsOwned         Lead[]              @relation("LeadOwner")
-  leadInteractions   LeadInteraction[]
-  dailyIndicators    DailyIndicators[]
-  evaluationsAsCoach Evaluation[]        @relation("EvaluationCoach")
-  memberNotes        MemberNote[]
-  srxfitOverrides    SrxfitSessionOverride[] @relation("SrxfitSessionOverrideUpdatedBy")
-  bodyCompsRecorded  BodyComposition[]   @relation("BodyCompositionRecordedBy")
-  clinicalMarkersRecorded ClinicalMarker[] @relation("ClinicalMarkerRecordedBy")
+  member                  Member?
+  coachClassSessions      ClassSession[]          @relation("CoachClassSessions")
+  attendanceRecords       Attendance[]            @relation("AttendanceRecordedBy")
+  coachConfirmations      CoachConfirmation[]
+  leadsOwned              Lead[]                  @relation("LeadOwner")
+  leadInteractions        LeadInteraction[]
+  dailyIndicators         DailyIndicators[]
+  evaluationsAsCoach      Evaluation[]            @relation("EvaluationCoach")
+  memberNotes             MemberNote[]
+  srxfitOverrides         SrxfitSessionOverride[] @relation("SrxfitSessionOverrideUpdatedBy")
+  bodyCompsRecorded       BodyComposition[]       @relation("BodyCompositionRecordedBy")
+  clinicalMarkersRecorded ClinicalMarker[]        @relation("ClinicalMarkerRecordedBy")
+  clinicalRecordsAuthored ClinicalRecord[]        @relation("ClinicalRecordAuthor")
+  mealPlansAuthored       MealPlan[]              @relation("MealPlanAuthor")
 
   @@index([sede, role])
 }
@@ -69,43 +71,51 @@ enum MemberStatus {
 }
 
 model Member {
-  id               String       @id @default(cuid())
-  userId           String?      @unique
-  user             User?        @relation(fields: [userId], references: [id])
-  firstName        String
-  lastName         String
-  email            String?      @unique
-  phone            String?
-  dateOfBirth      DateTime?
-  sex              Sex?
-  address          String?
-  occupation       String?
-  emergencyName    String?
-  emergencyPhone   String?
-  preferredHour    String?       // "morning", "evening", "afternoon" — derived from attendance
-  sede             Sede
-  status           MemberStatus @default(LEAD)
-  joinedAt         DateTime     @default(now())
-  churnedAt        DateTime?
-  churnReason      String?
-  leadId           String?      @unique
-  lead             Lead?        @relation(fields: [leadId], references: [id])
-  stripeCustomerId String?      @unique
-  notes            String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id                        String       @id @default(cuid())
+  userId                    String?      @unique
+  user                      User?        @relation(fields: [userId], references: [id])
+  // Portal access: one-time invite code an admin issues and sends (e.g. WhatsApp).
+  // The socio redeems it once at /portal/signup to claim their account and set a
+  // password. Nulled on redemption; expiresAt bounds the redemption window.
+  portalInviteCode          String?      @unique
+  portalInviteCodeExpiresAt DateTime?
+  firstName                 String
+  lastName                  String
+  email                     String?      @unique
+  phone                     String?
+  dateOfBirth               DateTime?
+  sex                       Sex?
+  address                   String?
+  occupation                String?
+  emergencyName             String?
+  emergencyPhone            String?
+  preferredHour             String? // "morning", "evening", "afternoon" — derived from attendance
+  sede                      Sede
+  status                    MemberStatus @default(LEAD)
+  joinedAt                  DateTime     @default(now())
+  churnedAt                 DateTime?
+  churnReason               String?
+  leadId                    String?      @unique
+  lead                      Lead?        @relation(fields: [leadId], references: [id])
+  stripeCustomerId          String?      @unique
+  notes                     String?
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
 
-  memberships          Membership[]
-  payments             Payment[]
-  attendance           Attendance[]
-  evaluations          Evaluation[]
-  bodyCompositions     BodyComposition[]
-  clinicalMarkers      ClinicalMarker[]
-  testResults          TestResult[]
-  trainingLevels       TrainingLevelAssignment[]
-  goals                MemberGoal[]
-  memberNotes          MemberNote[]
-  challengeProgress    ChallengeProgress[]
+  memberships       Membership[]
+  payments          Payment[]
+  attendance        Attendance[]
+  evaluations       Evaluation[]
+  bodyCompositions  BodyComposition[]
+  clinicalMarkers   ClinicalMarker[]
+  testResults       TestResult[]
+  trainingLevels    TrainingLevelAssignment[]
+  goals             MemberGoal[]
+  memberNotes       MemberNote[]
+  clinicalRecords   ClinicalRecord[]
+  mealPlans         MealPlan[]
+  mealLogs          MealLog[]
+  challengeProgress ChallengeProgress[]
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -152,9 +162,9 @@ model Membership {
   planId               String
   plan                 MembershipPlan  @relation(fields: [planId], references: [id])
   state                MembershipState @default(PENDING_PAYMENT)
-  customPriceCents     Int?            // override plan price (discounts, special deals)
-  paymentMethod        String?         // "TC", "Transferencia", "Efectivo", etc.
-  billingNote          String?         // "Cobrado $50/mes con TC", "15% desc transferencia"
+  customPriceCents     Int? // override plan price (discounts, special deals)
+  paymentMethod        String? // "TC", "Transferencia", "Efectivo", etc.
+  billingNote          String? // "Cobrado $50/mes con TC", "15% desc transferencia"
   startsAt             DateTime
   endsAt               DateTime
   canceledAt           DateTime?
@@ -190,7 +200,7 @@ enum PaymentStatus {
 
 model Payment {
   id                    String        @id @default(cuid())
-  memberId              String?       // null for Isabel's bank pool entries (isPoolEntry = true)
+  memberId              String? // null for Isabel's bank pool entries (isPoolEntry = true)
   member                Member?       @relation(fields: [memberId], references: [id])
   membershipId          String?
   membership            Membership?   @relation(fields: [membershipId], references: [id])
@@ -200,9 +210,9 @@ model Payment {
   status                PaymentStatus @default(PENDING)
   paidAt                DateTime?
   // ── Detalle bancario ─────────────────────────────────────────────────
-  depositorName         String?       // Nombre del depositante / tarjetahabiente
-  bankReference         String?       // # referencia / transacción
-  bankEntity            String?       // Entidad bancaria (Pichincha, Stripe…)
+  depositorName         String? // Nombre del depositante / tarjetahabiente
+  bankReference         String? // # referencia / transacción
+  bankEntity            String? // Entidad bancaria (Pichincha, Stripe…)
   isPoolEntry           Boolean       @default(false) // true → entrada de banco sin asignar (Isabel)
   // ── Stripe / QBO (postergado) ────────────────────────────────────────
   stripePaymentIntentId String?       @unique
@@ -238,7 +248,7 @@ model ClassSchedule {
   id          String    @id @default(cuid())
   sede        Sede
   dayOfWeek   DayOfWeek
-  startTime   String    // "HH:MM"
+  startTime   String // "HH:MM"
   durationMin Int       @default(60)
   name        String
   capacity    Int       @default(30)
@@ -481,10 +491,14 @@ model BodyComposition {
   weightKg        Float?
   heightCm        Float?
   bodyFatPct      Float?
-  muscleMassKg    Float?  // legacy — superseded by muscleMassPct
+  muscleMassKg    Float? // legacy — superseded by muscleMassPct
   muscleMassPct   Float?
   waistCm         Float?
-  waterPct        Float?      // legacy, no longer captured
+  hipCm           Float?
+  chestCm         Float?
+  armCm           Float?
+  thighCm         Float?
+  waterPct        Float? // legacy, no longer captured
   basalMetabolism Int?
   notes           String?
   recordedById    String?
@@ -506,21 +520,21 @@ enum MenopausalStatus {
 }
 
 model ClinicalMarker {
-  id                String            @id @default(cuid())
-  memberId          String
-  member            Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  measuredAt        DateTime          @default(now())
-  glucoseFasting    Float?            // mg/dL
-  triglycerides     Float?            // mg/dL
-  hdlCholesterol    Float?            // mg/dL
-  hsCRP             Float?            // mg/L
-  testosteroneFree  Float?            // ng/dL
-  estradiolE2       Float?            // pg/mL
-  cycleDay          Int?
-  menopausalStatus  MenopausalStatus?
-  notes             String?
-  recordedById      String?
-  recordedBy        User?             @relation("ClinicalMarkerRecordedBy", fields: [recordedById], references: [id])
+  id               String            @id @default(cuid())
+  memberId         String
+  member           Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  measuredAt       DateTime          @default(now())
+  glucoseFasting   Float? // mg/dL
+  triglycerides    Float? // mg/dL
+  hdlCholesterol   Float? // mg/dL
+  hsCRP            Float? // mg/L
+  testosteroneFree Float? // ng/dL
+  estradiolE2      Float? // pg/mL
+  cycleDay         Int?
+  menopausalStatus MenopausalStatus?
+  notes            String?
+  recordedById     String?
+  recordedBy       User?             @relation("ClinicalMarkerRecordedBy", fields: [recordedById], references: [id])
 
   @@index([memberId, measuredAt])
 }
@@ -543,39 +557,39 @@ model MemberGoal {
 // ─────────────────────────────────────────────────────────────
 
 model MonthlyTarget {
-  id                    String   @id @default(cuid())
-  sede                  Sede
-  year                  Int
-  month                 Int      // 1-12
-  revenueTargetCents    Int      @default(0)  // Meta Facturación
-  salesTarget           Int      @default(0)  // Meta de ventas (# inscripciones)
-  visitorsTarget        Int      @default(0)  // Meta visitantes (clases de prueba)
-  leadsTarget           Int      @default(0)  // Meta averiguadores
-  attendanceTarget      Int      @default(0)  // Meta asistencias totales
-  workingDays           Int      @default(21) // Días hábiles del mes
-  projectedICVPct       Float    @default(50) // ICV proyectado %
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  sede               Sede
+  year               Int
+  month              Int // 1-12
+  revenueTargetCents Int      @default(0) // Meta Facturación
+  salesTarget        Int      @default(0) // Meta de ventas (# inscripciones)
+  visitorsTarget     Int      @default(0) // Meta visitantes (clases de prueba)
+  leadsTarget        Int      @default(0) // Meta averiguadores
+  attendanceTarget   Int      @default(0) // Meta asistencias totales
+  workingDays        Int      @default(21) // Días hábiles del mes
+  projectedICVPct    Float    @default(50) // ICV proyectado %
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@unique([sede, year, month])
 }
 
 enum ExpenseCategory {
-  PAYROLL         // Sueldos
-  RENT            // Arriendo
-  UTILITIES       // Servicios (luz, agua, internet)
-  EQUIPMENT       // Equipamiento y mantenimiento
-  MARKETING       // Publicidad y marketing
-  SUPPLIES        // Insumos (limpieza, oficina)
-  SOFTWARE        // Software (Stripe fees, HubSpot, etc)
-  TAXES           // Impuestos
-  PROFESSIONAL    // Servicios profesionales
+  PAYROLL // Sueldos
+  RENT // Arriendo
+  UTILITIES // Servicios (luz, agua, internet)
+  EQUIPMENT // Equipamiento y mantenimiento
+  MARKETING // Publicidad y marketing
+  SUPPLIES // Insumos (limpieza, oficina)
+  SOFTWARE // Software (Stripe fees, HubSpot, etc)
+  TAXES // Impuestos
+  PROFESSIONAL // Servicios profesionales
   OTHER
 }
 
 model Expense {
   id          String          @id @default(cuid())
-  sede        Sede?           // null = gasto compartido
+  sede        Sede? // null = gasto compartido
   category    ExpenseCategory
   description String
   amountCents Int
@@ -594,13 +608,31 @@ model Expense {
 // ─────────────────────────────────────────────────────────────
 
 model MemberNote {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  authorId  String?
-  author    User?    @relation(fields: [authorId], references: [id])
-  content   String
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  authorId        String?
+  author          User?    @relation(fields: [authorId], references: [id])
+  content         String
+  // Private by default. The portal only ever surfaces notes explicitly shared.
+  visibleToMember Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([memberId, createdAt])
+}
+
+// Free-text clinical history / anamnesis. Staff-only by construction: no portal
+// page, server component, or action ever queries this model. Privacy is structural,
+// not flag-based — there is nothing to accidentally expose.
+model ClinicalRecord {
+  id           String   @id @default(cuid())
+  memberId     String
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  content      String   @db.Text
+  authoredById String?
+  authoredBy   User?    @relation("ClinicalRecordAuthor", fields: [authoredById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([memberId, createdAt])
 }
@@ -610,20 +642,20 @@ model MemberNote {
 // ─────────────────────────────────────────────────────────────
 
 enum ChallengeRuleType {
-  TOTAL_CLASSES         // X clases totales durante el reto
-  CONSECUTIVE_CLASSES   // X clases seguidas (sin faltar)
-  CLASSES_IN_DAYS       // X clases en Y días
+  TOTAL_CLASSES // X clases totales durante el reto
+  CONSECUTIVE_CLASSES // X clases seguidas (sin faltar)
+  CLASSES_IN_DAYS // X clases en Y días
 }
 
 model Challenge {
   id          String            @id @default(cuid())
-  name        String            // "Reto 30 clases"
-  description String?           // "Asiste a 30 clases en 60 días"
-  reward      String?           // "Camiseta La Cueva"
+  name        String // "Reto 30 clases"
+  description String? // "Asiste a 30 clases en 60 días"
+  reward      String? // "Camiseta La Cueva"
   ruleType    ChallengeRuleType
-  ruleTarget  Int               // X clases requeridas
-  ruleDays    Int?              // Y días (para CLASSES_IN_DAYS)
-  sede        Sede?             // null = ambas sedes
+  ruleTarget  Int // X clases requeridas
+  ruleDays    Int? // Y días (para CLASSES_IN_DAYS)
+  sede        Sede? // null = ambas sedes
   startsAt    DateTime
   endsAt      DateTime
   active      Boolean           @default(true)
@@ -669,14 +701,14 @@ model Conversation {
   lead           Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
   sede           Sede
   channel        ConversationChannel @default(WHATSAPP)
-  externalId     String              // wa user id (phone wa_id) / IG user id
+  externalId     String // wa user id (phone wa_id) / IG user id
   botPaused      Boolean             @default(false)
   lastInboundAt  DateTime?
   lastOutboundAt DateTime?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
-  messages          Message[]
+  messages           Message[]
   scheduledFollowups ScheduledFollowup[]
 
   @@unique([channel, externalId])
@@ -692,7 +724,7 @@ model Message {
   externalId     String?             @unique // WA msg id — idempotency for inbound; null for outbound bot messages with no upstream id
   body           String
   mediaUrl       String?
-  sentByUserId   String?             // null when bot or customer
+  sentByUserId   String? // null when bot or customer
   llmGenerated   Boolean             @default(false)
   createdAt      DateTime            @default(now())
 
@@ -736,23 +768,23 @@ model ScheduledFollowup {
 }
 
 model BotConfig {
-  id             String   @id @default(cuid())
-  sede           Sede     @unique
-  systemPrompt   String   @db.Text
-  businessHours  Json?    // { "mon": ["06:00", "22:00"], ... }
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  sede          Sede     @unique
+  systemPrompt  String   @db.Text
+  businessHours Json? // { "mon": ["06:00", "22:00"], ... }
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model MessageTemplate {
   id               String              @id @default(cuid())
   name             String              @unique // internal key, e.g. "trial_reminder_24h"
   channel          ConversationChannel @default(WHATSAPP)
-  metaTemplateName String              // name registered in Meta Business Manager
+  metaTemplateName String // name registered in Meta Business Manager
   language         String              @default("es")
   body             String              @db.Text // human-readable preview, with {{var}} placeholders
-  variables        Json?               // ["leadName", "sede", "datetime"]
+  variables        Json? // ["leadName", "sede", "datetime"]
   active           Boolean             @default(true)
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
@@ -761,7 +793,7 @@ model MessageTemplate {
 model SrxfitSessionOverride {
   id                  String   @id @default(cuid())
   weekNumber          Int
-  dayIndex            Int      // 1=Mon ... 6=Sat
+  dayIndex            Int // 1=Mon ... 6=Sat
   activacionMd        String?  @db.Text
   fuerzaMd            String?  @db.Text
   acondicionamientoMd String?  @db.Text
@@ -773,4 +805,102 @@ model SrxfitSessionOverride {
   createdAt           DateTime @default(now())
 
   @@unique([weekNumber, dayIndex])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Nutrición — planes y adherencia
+// ─────────────────────────────────────────────────────────────
+
+enum MealPlanSource {
+  MANUAL // nutritionist authored / linked by hand (v1)
+  AI_GENERATED // produced by Claude API (future)
+  AI_ASSISTED // AI draft edited by nutritionist (future)
+}
+
+// A member's meal plan. v1 is pragmatic (calorie target + a link to the
+// nutritionist's existing Google Doc). `content` is the forward-compat landing
+// zone for structured days→meals→options→kcal — manual authoring and future AI
+// generation write the SAME shape, so a native renderer is source-agnostic.
+model MealPlan {
+  id              String            @id @default(cuid())
+  memberId        String
+  member          Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  title           String
+  calorieTarget   Int? // kcal/day — mirrors her calorie-level classification
+  externalUrl     String? // Google Sheet/Doc — the immediate-term bridge
+  content         Json? // structured plan; null in v1
+  schemaVersion   Int               @default(1)
+  source          MealPlanSource    @default(MANUAL)
+  templateId      String?
+  template        MealPlanTemplate? @relation(fields: [templateId], references: [id])
+  startsAt        DateTime?
+  endsAt          DateTime?
+  active          Boolean           @default(true) // soft-delete + "current plan"
+  visibleToMember Boolean           @default(true) // portal shows only visible plans
+  authoredById    String?
+  authoredBy      User?             @relation("MealPlanAuthor", fields: [authoredById], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  logs MealLog[]
+
+  @@index([memberId, active])
+  @@index([memberId, createdAt])
+}
+
+// One row per member per day — the v1 adherence unit. `followed` is the daily
+// "comí mi plan" check; `freeText` is what they actually ate. Upsert on the
+// unique key so re-taps are idempotent.
+model MealLog {
+  id         String    @id @default(cuid())
+  memberId   String
+  member     Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mealPlanId String?
+  mealPlan   MealPlan? @relation(fields: [mealPlanId], references: [id])
+  date       DateTime  @db.Date // Ecuador local day
+  followed   Boolean   @default(false)
+  freeText   String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  entries MealLogEntry[] // empty in v1 — the per-meal extension point
+
+  @@unique([memberId, date])
+  @@index([memberId, date])
+}
+
+// Per-meal granularity. Table ships in v1 but is UNUSED until the structured
+// `content` renderer exists — so per-food-option checks need no later migration.
+model MealLogEntry {
+  id          String   @id @default(cuid())
+  mealLogId   String
+  mealLog     MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  mealKey     String // "breakfast" | "lunch" | ... matches content JSON
+  optionLabel String?
+  ate         Boolean  @default(false)
+  freeText    String?  @db.Text
+  kcal        Int? // snapshot of chosen option's kcal, for adherence math
+  createdAt   DateTime @default(now())
+
+  @@index([mealLogId])
+}
+
+// Reusable standard plans keyed by calorie level — the digital form of her
+// calorie-classified Google Sheets, and the source-of-truth for future AI
+// generation. No authoring UI in v1; seed manually or skip.
+model MealPlanTemplate {
+  id            String   @id @default(cuid())
+  name          String // "Estándar 1400 kcal"
+  calorieLevel  Int
+  sede          Sede? // null = both
+  content       Json?
+  schemaVersion Int      @default(1)
+  notes         String?  @db.Text
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  plans MealPlan[]
+
+  @@index([calorieLevel, active])
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Sede, MemberStatus, MembershipState, BillingCycle } from "@/generated/prisma/client";
+import { requireAuth, can } from "@/lib/auth";
 
 // ── List / Search ───────────────────────────────────────────────────
 
@@ -278,4 +279,84 @@ export async function getMemberStats(sede?: Sede) {
   ]);
 
   return { total, active, trial, paused, churned };
+}
+
+// ── Portal invite codes ─────────────────────────────────────────────
+
+/** Days an issued invite code stays valid before the socio must be re-invited.
+ *  Module-local: a "use server" file may only export async functions. */
+const PORTAL_INVITE_TTL_DAYS = 14;
+
+// Unambiguous alphabet (no 0/O, 1/I/L) — the code is typed by hand on a phone.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+function randomInviteCode(): string {
+  let raw = "";
+  for (let i = 0; i < 8; i++) {
+    raw += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  }
+  // Grouped for readability: ABCD-2345. Stored with the dash so what the admin
+  // copies is exactly what the socio types.
+  return `${raw.slice(0, 4)}-${raw.slice(4)}`;
+}
+
+export type PortalInviteResult =
+  | { ok: true; code: string; expiresAt: string }
+  | { ok: false; error: string };
+
+/**
+ * Issue (or re-issue) a one-time portal invite code for a socio. Admin-only.
+ * The code is returned once for the admin to send (e.g. WhatsApp); the socio
+ * redeems it at /portal/signup. Regenerating replaces any prior unused code.
+ */
+export async function generatePortalInvite(memberId: string): Promise<PortalInviteResult> {
+  const actor = await requireAuth();
+  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { id: true, email: true, userId: true },
+  });
+  if (!member) return { ok: false, error: "Socio no encontrado." };
+  if (member.userId) {
+    return { ok: false, error: "Este socio ya tiene la app activa." };
+  }
+  if (!member.email) {
+    return { ok: false, error: "El socio no tiene email. Agrega uno antes de invitar." };
+  }
+
+  const expiresAt = new Date(Date.now() + PORTAL_INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+
+  // Retry on the (rare) unique-collision so a clash never surfaces to the admin.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = randomInviteCode();
+    try {
+      await prisma.member.update({
+        where: { id: memberId },
+        data: { portalInviteCode: code, portalInviteCodeExpiresAt: expiresAt },
+      });
+      revalidatePath(`/dashboard/socios/${memberId}`);
+      return { ok: true, code, expiresAt: expiresAt.toISOString() };
+    } catch (err: unknown) {
+      // P2002 = unique constraint failed → collided code, try again.
+      if (typeof err === "object" && err && "code" in err && (err as { code?: string }).code === "P2002") {
+        continue;
+      }
+      throw err;
+    }
+  }
+  return { ok: false, error: "No se pudo generar el código. Intenta de nuevo." };
+}
+
+/** Cancel an outstanding invite code so it can no longer be redeemed. Admin-only. */
+export async function revokePortalInvite(memberId: string): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireAuth();
+  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+
+  await prisma.member.update({
+    where: { id: memberId },
+    data: { portalInviteCode: null, portalInviteCodeExpiresAt: null },
+  });
+  revalidatePath(`/dashboard/socios/${memberId}`);
+  return { ok: true };
 }

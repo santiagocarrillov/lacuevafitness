@@ -9,8 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MemberActions } from "./member-actions";
+import { InviteMemberButton } from "./invite-member-button";
 import { NotesTimeline } from "./notes-timeline";
 import { HealthSection } from "./health-section";
+import { ClinicalRecordsSection } from "./clinical-records-section";
+import { getClinicalRecords } from "@/lib/actions/clinical-records";
+import { NutritionSection } from "./nutrition-section";
+import { getMemberMealPlans, getMemberMealLogs } from "@/lib/actions/nutrition";
 import { TestResultsSection } from "./test-results-section";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
@@ -95,6 +100,10 @@ export default async function MemberDetailPage({
   ]);
   if (!member) return notFound();
   const canEditHealth = user.role === "OWNER" || user.role === "NUTRITIONIST";
+  // Private clinical history + nutrition — only fetch for staff who may edit health data.
+  const [clinicalRecords, mealPlans, mealLogs] = canEditHealth
+    ? await Promise.all([getClinicalRecords(id), getMemberMealPlans(id), getMemberMealLogs(id)])
+    : [[], [], []];
 
   const now = new Date();
   // Active membership = state ACTIVE + not expired + not a one-time daily pass.
@@ -127,7 +136,24 @@ export default async function MemberDetailPage({
             <ChurnRiskBadge risk={analytics.churnRisk} reasons={analytics.churnReasons} />
           </div>
         </div>
-        <MemberActions memberId={member.id} status={member.status} plans={plans} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <InviteMemberButton
+            memberId={member.id}
+            hasApp={member.userId != null}
+            memberEmail={member.email}
+            existingInvite={
+              member.portalInviteCode &&
+              member.portalInviteCodeExpiresAt &&
+              member.portalInviteCodeExpiresAt > now
+                ? {
+                    code: member.portalInviteCode,
+                    expiresAt: member.portalInviteCodeExpiresAt.toISOString(),
+                  }
+                : null
+            }
+          />
+          <MemberActions memberId={member.id} status={member.status} plans={plans} />
+        </div>
       </header>
 
       {/* Stats cards */}
@@ -317,6 +343,16 @@ export default async function MemberDetailPage({
         clinicalMarkers={member.clinicalMarkers}
         canEdit={canEditHealth}
       />
+
+      {/* Historia clínica privada (solo personal con acceso a salud) */}
+      {canEditHealth && (
+        <ClinicalRecordsSection memberId={member.id} records={clinicalRecords} />
+      )}
+
+      {/* Nutrición — planes + adherencia */}
+      {canEditHealth && (
+        <NutritionSection memberId={member.id} plans={mealPlans} logs={mealLogs} />
+      )}
 
       {/* Resultados de tests SRXFit */}
       <TestResultsSection

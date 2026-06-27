@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { requireAuth, can } from "@/lib/auth";
+import { requireAuth, can, resolveAthleteMember } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
 
 const roleLabels: Record<string, string> = {
@@ -36,8 +36,17 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     user.sede ? ` · ${sedeLabels[user.sede]}` : ""
   }`;
 
+  // Staff who are also athletes (a Member matches them) can jump to their own
+  // member view. Read-only resolve here; the link is shown only when one exists.
+  const athlete = user.role !== "MEMBER" ? await resolveAthleteMember(user) : null;
+
   return (
-    <DashboardShell nav={nav} userName={user.fullName} userMeta={userMeta}>
+    <DashboardShell
+      nav={nav}
+      userName={user.fullName}
+      userMeta={userMeta}
+      showAthleteView={athlete != null}
+    >
       {children}
     </DashboardShell>
   );

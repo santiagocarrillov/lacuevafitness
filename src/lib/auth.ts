@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getPortalAccess, type PortalAccess } from "@/lib/portal-access";
 import type { Member, User, UserRole, Sede } from "@/generated/prisma/client";
 
 /**
@@ -76,20 +77,63 @@ export async function requireRole(...allowed: UserRole[]): Promise<User> {
 }
 
 /**
- * Portal Socio: require an authenticated MEMBER whose User row is linked
- * to a Member record. Non-members get bounced to /dashboard, members
- * without a linked Member record are signed out.
+ * Resolve the athlete (Member) record for a user. Real members are linked via
+ * Member.userId. Staff who are also athletes are auto-linked by matching email
+ * the first time they open the portal (Member.userId set once on an unlinked,
+ * email-matching record). Read-only when `link` is false. Returns null if none.
  */
-export async function requireMember(): Promise<{ user: User; member: Member }> {
+export async function resolveAthleteMember(
+  user: User,
+  opts: { link?: boolean } = {},
+): Promise<Member | null> {
+  const linked = await prisma.member.findUnique({ where: { userId: user.id } });
+  if (linked) return linked;
+
+  // Staff-as-athlete: find their own unlinked record by email.
+  if (user.role !== "MEMBER" && user.email) {
+    const candidate = await prisma.member.findFirst({
+      where: { email: { equals: user.email, mode: "insensitive" }, userId: null },
+    });
+    if (candidate && opts.link) {
+      return prisma.member.update({
+        where: { id: candidate.id },
+        data: { userId: user.id },
+      });
+    }
+    return candidate;
+  }
+  return null;
+}
+
+/**
+ * Portal Socio. Real MEMBERs must have a linked Member record and are subject to
+ * the membership lifecycle gate. Staff who are also athletes (any non-MEMBER role
+ * with a matching Member) may preview their own athlete view — they bypass the
+ * lifecycle block so they can always experience the app. `isStaff` lets the UI
+ * show a "back to dashboard" affordance.
+ */
+export async function requireMember(
+  opts: { enforceAccess?: boolean } = {},
+): Promise<{ user: User; member: Member; access: PortalAccess; isStaff: boolean }> {
   const user = await requireAuth();
-  if (user.role !== "MEMBER") redirect("/dashboard?notmember=1");
-  const member = await prisma.member.findUnique({ where: { userId: user.id } });
+  const isStaff = user.role !== "MEMBER";
+
+  const member = await resolveAthleteMember(user, { link: true });
   if (!member) {
+    if (isStaff) redirect("/dashboard?noathlete=1");
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signOut();
     redirect("/portal/login?unlinked=1");
   }
-  return { user, member };
+
+  // Membership lifecycle gate. Lapsed-past-grace / churned / frozen socios are
+  // sent to the renewal wall. Staff previewing their own view skip this entirely.
+  const access = await getPortalAccess(member.id);
+  if (!isStaff && opts.enforceAccess !== false && access.state === "blocked") {
+    redirect("/portal/bloqueado");
+  }
+
+  return { user, member, access, isStaff };
 }
 
 /**

@@ -2,6 +2,7 @@ import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { CapsuleCard } from "@/components/portal/capsule-card";
+import { MealCheck } from "@/components/portal/MealCheck";
 import {
   HITOS,
   computeAttendanceStats,
@@ -15,13 +16,22 @@ import { longDate, shortDate } from "@/lib/portal/format";
 export const dynamic = "force-dynamic";
 
 export default async function HoyPage() {
-  const { member } = await requireMember();
+  const { member, access } = await requireMember();
 
   const today = new Date();
   const todayWeekday = todayDayOfWeekEcuador();
+  const { year: ecY, month: ecM, day: ecD } = ecuadorParts(today);
+  const ecuadorDateUtc = new Date(Date.UTC(ecY, ecM - 1, ecD));
 
-  const [attendanceDates, attendanceCount, lastEval, todaySchedules, latestNote] =
-    await Promise.all([
+  const [
+    attendanceDates,
+    attendanceCount,
+    lastEval,
+    todaySchedules,
+    latestNote,
+    activeMealPlan,
+    todayMealLog,
+  ] = await Promise.all([
       prisma.attendance
         .findMany({
           where: { memberId: member.id },
@@ -41,9 +51,16 @@ export default async function HoyPage() {
         orderBy: { startTime: "asc" },
       }),
       prisma.memberNote.findFirst({
-        where: { memberId: member.id },
+        where: { memberId: member.id, visibleToMember: true },
         orderBy: { createdAt: "desc" },
         include: { author: true },
+      }),
+      prisma.mealPlan.findFirst({
+        where: { memberId: member.id, active: true, visibleToMember: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.mealLog.findUnique({
+        where: { memberId_date: { memberId: member.id, date: ecuadorDateUtc } },
       }),
     ]);
 
@@ -65,6 +82,24 @@ export default async function HoyPage() {
           <em>{member.firstName}.</em>
         </h2>
       </div>
+
+      {access.state === "grace" && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "12px 14px",
+            border: "1px solid var(--pt-line)",
+            borderRadius: 12,
+            background: "var(--pt-warn-bg, rgba(234, 179, 8, 0.10))",
+            fontSize: 13,
+            color: "var(--pt-ink-1)",
+          }}
+        >
+          Tu membresía venció. Te quedan{" "}
+          <strong>{access.graceDaysLeft} día{access.graceDaysLeft === 1 ? "" : "s"}</strong>{" "}
+          de acceso — renueva con tu admin para no perder tu portal.
+        </div>
+      )}
 
       {streak >= 2 && (
         <div className="portal-streak">
@@ -117,6 +152,41 @@ export default async function HoyPage() {
           <h3>Sin clases hoy</h3>
           <div className="subtitle">Aprovecha para regular o caminar 7,000 pasos.</div>
         </div>
+      )}
+
+      {activeMealPlan && (
+        <section className="portal-card" style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+            <div className="portal-kicker">Tu plan de hoy</div>
+            {activeMealPlan.calorieTarget && (
+              <div style={{ fontSize: 12, color: "var(--pt-ink-3)" }}>
+                {activeMealPlan.calorieTarget} kcal/día
+              </div>
+            )}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 500, marginTop: 2 }}>{activeMealPlan.title}</div>
+          {activeMealPlan.externalUrl && (
+            <a
+              href={activeMealPlan.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-block",
+                marginTop: 6,
+                fontSize: 13,
+                color: "var(--pt-accent, var(--pt-green))",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+            >
+              Ver mi plan alimenticio →
+            </a>
+          )}
+          <MealCheck
+            initialFollowed={todayMealLog?.followed ?? false}
+            initialFreeText={todayMealLog?.freeText ?? null}
+          />
+        </section>
       )}
 
       <section className="portal-attendance">

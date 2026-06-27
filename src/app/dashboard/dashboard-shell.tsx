@@ -12,9 +12,10 @@ type Props = {
   nav: NavItem[];
   userName: string;
   userMeta: string;
+  showAthleteView?: boolean;
 };
 
-export function DashboardShell({ children, nav, userName, userMeta }: Props) {
+export function DashboardShell({ children, nav, userName, userMeta, showAthleteView }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -92,6 +93,14 @@ export function DashboardShell({ children, nav, userName, userMeta }: Props) {
             <p className="text-sm font-medium truncate">{userName}</p>
             <p className="text-xs text-muted-foreground truncate">{userMeta}</p>
           </div>
+          {showAthleteView && (
+            <Link
+              href="/portal/hoy"
+              className="block text-xs font-medium text-foreground hover:underline"
+            >
+              Ver mi app de socio →
+            </Link>
+          )}
           <form action={signOut}>
             <button
               type="submit"

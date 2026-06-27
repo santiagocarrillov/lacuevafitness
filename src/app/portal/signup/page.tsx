@@ -30,12 +30,24 @@ export default function PortalSignupPage() {
           Crea tu <em>cuenta</em>.
         </h1>
         <p className="sub">
-          Usa el mismo correo que registraste con tu admin de La Cueva.
+          Usa el mismo correo que registraste con tu admin de La Cueva y el código
+          de un uso que te enviaron.
         </p>
         {error && <div className="err">{error}</div>}
         <form action={handleSubmit}>
           <label htmlFor="email">Correo</label>
           <input id="email" name="email" type="email" autoComplete="email" required />
+          <label htmlFor="code">Código de invitación</label>
+          <input
+            id="code"
+            name="code"
+            type="text"
+            inputMode="text"
+            autoCapitalize="characters"
+            autoComplete="one-time-code"
+            placeholder="ABCD-2345"
+            required
+          />
           <label htmlFor="password">Contraseña (mín. 8 caracteres)</label>
           <input
             id="password"
