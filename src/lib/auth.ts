@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getPortalAccess, type PortalAccess } from "@/lib/portal-access";
 import type { Member, User, UserRole, Sede } from "@/generated/prisma/client";
 
 /**
@@ -80,7 +81,9 @@ export async function requireRole(...allowed: UserRole[]): Promise<User> {
  * to a Member record. Non-members get bounced to /dashboard, members
  * without a linked Member record are signed out.
  */
-export async function requireMember(): Promise<{ user: User; member: Member }> {
+export async function requireMember(
+  opts: { enforceAccess?: boolean } = {},
+): Promise<{ user: User; member: Member; access: PortalAccess }> {
   const user = await requireAuth();
   if (user.role !== "MEMBER") redirect("/dashboard?notmember=1");
   const member = await prisma.member.findUnique({ where: { userId: user.id } });
@@ -89,7 +92,15 @@ export async function requireMember(): Promise<{ user: User; member: Member }> {
     await supabase.auth.signOut();
     redirect("/portal/login?unlinked=1");
   }
-  return { user, member };
+
+  // Membership lifecycle gate. Lapsed-past-grace / churned / frozen socios are
+  // sent to the renewal wall. The wall page itself opts out to avoid a loop.
+  const access = await getPortalAccess(member.id);
+  if (opts.enforceAccess !== false && access.state === "blocked") {
+    redirect("/portal/bloqueado");
+  }
+
+  return { user, member, access };
 }
 
 /**

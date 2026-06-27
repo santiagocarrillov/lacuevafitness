@@ -15,7 +15,7 @@ import { longDate, shortDate } from "@/lib/portal/format";
 export const dynamic = "force-dynamic";
 
 export default async function HoyPage() {
-  const { member } = await requireMember();
+  const { member, access } = await requireMember();
 
   const today = new Date();
   const todayWeekday = todayDayOfWeekEcuador();
@@ -65,6 +65,24 @@ export default async function HoyPage() {
           <em>{member.firstName}.</em>
         </h2>
       </div>
+
+      {access.state === "grace" && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "12px 14px",
+            border: "1px solid var(--pt-line)",
+            borderRadius: 12,
+            background: "var(--pt-warn-bg, rgba(234, 179, 8, 0.10))",
+            fontSize: 13,
+            color: "var(--pt-ink-1)",
+          }}
+        >
+          Tu membresía venció. Te quedan{" "}
+          <strong>{access.graceDaysLeft} día{access.graceDaysLeft === 1 ? "" : "s"}</strong>{" "}
+          de acceso — renueva con tu admin para no perder tu portal.
+        </div>
+      )}
 
       {streak >= 2 && (
         <div className="portal-streak">

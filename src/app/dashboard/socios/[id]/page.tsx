@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MemberActions } from "./member-actions";
+import { InviteMemberButton } from "./invite-member-button";
 import { NotesTimeline } from "./notes-timeline";
 import { HealthSection } from "./health-section";
 import { TestResultsSection } from "./test-results-section";
@@ -127,7 +128,24 @@ export default async function MemberDetailPage({
             <ChurnRiskBadge risk={analytics.churnRisk} reasons={analytics.churnReasons} />
           </div>
         </div>
-        <MemberActions memberId={member.id} status={member.status} plans={plans} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <InviteMemberButton
+            memberId={member.id}
+            hasApp={member.userId != null}
+            memberEmail={member.email}
+            existingInvite={
+              member.portalInviteCode &&
+              member.portalInviteCodeExpiresAt &&
+              member.portalInviteCodeExpiresAt > now
+                ? {
+                    code: member.portalInviteCode,
+                    expiresAt: member.portalInviteCodeExpiresAt.toISOString(),
+                  }
+                : null
+            }
+          />
+          <MemberActions memberId={member.id} status={member.status} plans={plans} />
+        </div>
       </header>
 
       {/* Stats cards */}

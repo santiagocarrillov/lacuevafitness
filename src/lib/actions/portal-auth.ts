@@ -10,21 +10,32 @@ export type PortalSignupResult =
   | { ok: true }
   | { ok: false; error: string };
 
+/** Canonical form for comparing invite codes: letters/digits only, uppercased. */
+function normalizeCode(raw: string): string {
+  return raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+}
+
 /**
- * Portal signup. The security boundary is membership pre-registration: the
- * Member row must already exist (admin added them). Once that's true, email
- * confirmation adds no real security, so we auto-confirm via the admin API.
+ * Portal signup. Access is gated by a one-time invite code the admin issues and
+ * sends to the socio. To claim an account the visitor must present the email of
+ * an existing Member AND that Member's current, unexpired invite code. This
+ * closes the identity-fraud window (member emails are guessable; the code is not)
+ * and means a socio always sets their own password.
  *
- * Idempotent: if a previous attempt left a half-finished Supabase auth user
- * (e.g. they signed up before this auto-confirm change shipped and got stuck
- * with "email not confirmed"), this re-confirms it and resets the password.
+ * On success the code is consumed (nulled) so it can't be reused. We still handle
+ * a pre-existing Supabase auth user (orphan from a prior attempt) by re-confirming
+ * and resetting its password — but only after the code check passes.
  */
 export async function portalSignUp(formData: FormData): Promise<PortalSignupResult> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const code = normalizeCode(String(formData.get("code") ?? ""));
 
   if (!email || !password) {
     return { ok: false, error: "Ingresa correo y contraseña." };
+  }
+  if (!code) {
+    return { ok: false, error: "Ingresa el código que te dio tu admin." };
   }
   if (password.length < 8) {
     return { ok: false, error: "La contraseña debe tener al menos 8 caracteres." };
@@ -38,6 +49,25 @@ export async function portalSignUp(formData: FormData): Promise<PortalSignupResu
     return {
       ok: false,
       error: "No encontramos tu cuenta. Pide a tu admin que active tu portal.",
+    };
+  }
+
+  if (member.userId) {
+    return {
+      ok: false,
+      error: "Ya tienes una cuenta. Inicia sesión con tu correo y contraseña.",
+    };
+  }
+
+  // Validate the one-time code: must exist, match, and not be expired.
+  const stored = member.portalInviteCode ? normalizeCode(member.portalInviteCode) : null;
+  const notExpired =
+    member.portalInviteCodeExpiresAt != null &&
+    member.portalInviteCodeExpiresAt > new Date();
+  if (!stored || !notExpired || stored !== code) {
+    return {
+      ok: false,
+      error: "El código es inválido o expiró. Pide a tu admin uno nuevo.",
     };
   }
 
@@ -88,12 +118,15 @@ export async function portalSignUp(formData: FormData): Promise<PortalSignupResu
     update: { supabaseUserId: supaUserId, active: true },
   });
 
-  if (member.userId !== dbUser.id) {
-    await prisma.member.update({
-      where: { id: member.id },
-      data: { userId: dbUser.id },
-    });
-  }
+  // Link the User and consume the invite code so it can't be redeemed again.
+  await prisma.member.update({
+    where: { id: member.id },
+    data: {
+      userId: dbUser.id,
+      portalInviteCode: null,
+      portalInviteCodeExpiresAt: null,
+    },
+  });
 
   // Immediately sign them in so they don't have to type the password again.
   const supabase = await createSupabaseServerClient();
@@ -110,7 +143,13 @@ export async function portalSignIn(formData: FormData): Promise<PortalSignupResu
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // Supabase returns English messages; surface a Spanish one for the common case.
+    const friendly = /invalid login credentials/i.test(error.message)
+      ? "Correo o contraseña incorrectos."
+      : error.message;
+    return { ok: false, error: friendly };
+  }
 
   revalidatePath("/", "layout");
   return { ok: true };

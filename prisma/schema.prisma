@@ -72,6 +72,11 @@ model Member {
   id               String       @id @default(cuid())
   userId           String?      @unique
   user             User?        @relation(fields: [userId], references: [id])
+  // Portal access: one-time invite code an admin issues and sends (e.g. WhatsApp).
+  // The socio redeems it once at /portal/signup to claim their account and set a
+  // password. Nulled on redemption; expiresAt bounds the redemption window.
+  portalInviteCode          String?   @unique
+  portalInviteCodeExpiresAt DateTime?
   firstName        String
   lastName         String
   email            String?      @unique

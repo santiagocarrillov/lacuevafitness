@@ -31,6 +31,16 @@ export default function Home() {
           </Link>
         </div>
 
+        <p className="text-sm text-muted-foreground pt-2">
+          ¿Eres socio?{" "}
+          <Link
+            href="/portal/login"
+            className="text-foreground underline underline-offset-4 hover:no-underline"
+          >
+            Entra a tu portal →
+          </Link>
+        </p>
+
         <p className="text-xs text-muted-foreground pt-12">
           Scientifically Prescribed Fitness · Confidencial · v0.1
         </p>
