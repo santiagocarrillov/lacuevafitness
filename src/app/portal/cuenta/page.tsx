@@ -72,6 +72,25 @@ export default async function CuentaPage() {
       )}
 
       <div className="portal-section-title">
+        <h4>Nutrición</h4>
+      </div>
+
+      <Link href="/portal/nutricion" className="portal-list-item">
+        <div className="li-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M12 3v18" />
+            <path d="M5 8c0-2 1.5-3 3.5-3S12 6 12 8" />
+            <path d="M19 5c0 4-2 6-4 6" />
+          </svg>
+        </div>
+        <div className="info">
+          <div className="t">Mi plan nutricional</div>
+          <div className="s">Plan alimenticio y seguimiento</div>
+        </div>
+        <div className="arrow">→</div>
+      </Link>
+
+      <div className="portal-section-title">
         <h4>Historial</h4>
       </div>
 

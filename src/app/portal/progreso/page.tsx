@@ -49,6 +49,7 @@ export default async function ProgresoPage() {
     prisma.memberNote.findFirst({
       where: {
         memberId: member.id,
+        visibleToMember: true,
         author: { role: "NUTRITIONIST" },
       },
       orderBy: { createdAt: "desc" },
