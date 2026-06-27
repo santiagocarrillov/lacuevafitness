@@ -283,8 +283,9 @@ export async function getMemberStats(sede?: Sede) {
 
 // ── Portal invite codes ─────────────────────────────────────────────
 
-/** Days an issued invite code stays valid before the socio must be re-invited. */
-export const PORTAL_INVITE_TTL_DAYS = 14;
+/** Days an issued invite code stays valid before the socio must be re-invited.
+ *  Module-local: a "use server" file may only export async functions. */
+const PORTAL_INVITE_TTL_DAYS = 14;
 
 // Unambiguous alphabet (no 0/O, 1/I/L) — the code is typed by hand on a phone.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
