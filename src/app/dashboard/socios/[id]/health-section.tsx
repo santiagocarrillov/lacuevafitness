@@ -34,6 +34,10 @@ type BodyComp = {
   muscleMassKg: number | null;
   muscleMassPct: number | null;
   waistCm: number | null;
+  hipCm: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  thighCm: number | null;
   basalMetabolism: number | null;
   notes: string | null;
   recordedBy?: { fullName: string } | null;
@@ -178,14 +182,17 @@ function MetricCard({
 type BCFields = {
   measuredAt: string;
   weightKg: string; heightCm: string; bodyFatPct: string;
-  muscleMassPct: string; waistCm: string; basalMetabolism: string; notes: string;
+  muscleMassPct: string; waistCm: string;
+  hipCm: string; chestCm: string; armCm: string; thighCm: string;
+  basalMetabolism: string; notes: string;
 };
 
 function emptyBCFields(): BCFields {
   return {
     measuredAt: isoDateLocal(new Date()),
     weightKg: "", heightCm: "", bodyFatPct: "", muscleMassPct: "",
-    waistCm: "", basalMetabolism: "", notes: "",
+    waistCm: "", hipCm: "", chestCm: "", armCm: "", thighCm: "",
+    basalMetabolism: "", notes: "",
   };
 }
 
@@ -197,6 +204,10 @@ function bcToFields(bc: BodyComp): BCFields {
     bodyFatPct: bc.bodyFatPct?.toString() ?? "",
     muscleMassPct: musclePct(bc) != null ? musclePct(bc)!.toFixed(1) : "",
     waistCm: bc.waistCm?.toString() ?? "",
+    hipCm: bc.hipCm?.toString() ?? "",
+    chestCm: bc.chestCm?.toString() ?? "",
+    armCm: bc.armCm?.toString() ?? "",
+    thighCm: bc.thighCm?.toString() ?? "",
     basalMetabolism: bc.basalMetabolism?.toString() ?? "",
     notes: bc.notes ?? "",
   };
@@ -225,6 +236,10 @@ function BodyCompDialog({
           bodyFatPct: num(f.bodyFatPct),
           muscleMassPct: num(f.muscleMassPct),
           waistCm: num(f.waistCm),
+          hipCm: num(f.hipCm),
+          chestCm: num(f.chestCm),
+          armCm: num(f.armCm),
+          thighCm: num(f.thighCm),
           basalMetabolism: num(f.basalMetabolism) != null ? Math.round(num(f.basalMetabolism)!) : null,
           notes: f.notes,
           measuredAt: f.measuredAt,
@@ -259,6 +274,14 @@ function BodyCompDialog({
             <Input type="number" step="0.1" value={f.muscleMassPct} onChange={(e) => set("muscleMassPct", e.target.value)} /></div>
           <div className="space-y-1"><Label className="text-xs">Cintura (cm)</Label>
             <Input type="number" step="0.1" value={f.waistCm} onChange={(e) => set("waistCm", e.target.value)} /></div>
+          <div className="space-y-1"><Label className="text-xs">Cadera (cm)</Label>
+            <Input type="number" step="0.1" value={f.hipCm} onChange={(e) => set("hipCm", e.target.value)} /></div>
+          <div className="space-y-1"><Label className="text-xs">Pecho (cm)</Label>
+            <Input type="number" step="0.1" value={f.chestCm} onChange={(e) => set("chestCm", e.target.value)} /></div>
+          <div className="space-y-1"><Label className="text-xs">Brazo (cm)</Label>
+            <Input type="number" step="0.1" value={f.armCm} onChange={(e) => set("armCm", e.target.value)} /></div>
+          <div className="space-y-1"><Label className="text-xs">Muslo (cm)</Label>
+            <Input type="number" step="0.1" value={f.thighCm} onChange={(e) => set("thighCm", e.target.value)} /></div>
           <div className="space-y-1"><Label className="text-xs">Met. basal (kcal)</Label>
             <Input type="number" value={f.basalMetabolism} onChange={(e) => set("basalMetabolism", e.target.value)} /></div>
           <div className="space-y-1 col-span-2"><Label className="text-xs">Notas</Label>

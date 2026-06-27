@@ -25,6 +25,10 @@ type BodyCompInput = {
   bodyFatPct?: number | null;
   muscleMassPct?: number | null;
   waistCm?: number | null;
+  hipCm?: number | null;
+  chestCm?: number | null;
+  armCm?: number | null;
+  thighCm?: number | null;
   basalMetabolism?: number | null;
   notes?: string | null;
   measuredAt?: string | null;
@@ -42,6 +46,10 @@ export async function recordBodyComp(memberId: string, data: BodyCompInput) {
       bodyFatPct: data.bodyFatPct ?? null,
       muscleMassPct: data.muscleMassPct ?? null,
       waistCm: data.waistCm ?? null,
+      hipCm: data.hipCm ?? null,
+      chestCm: data.chestCm ?? null,
+      armCm: data.armCm ?? null,
+      thighCm: data.thighCm ?? null,
       basalMetabolism: data.basalMetabolism ?? null,
       notes: data.notes || null,
       measuredAt: parseDate(data.measuredAt),
@@ -65,6 +73,10 @@ export async function updateBodyComp(id: string, memberId: string, data: BodyCom
       bodyFatPct: data.bodyFatPct ?? null,
       muscleMassPct: data.muscleMassPct ?? null,
       waistCm: data.waistCm ?? null,
+      hipCm: data.hipCm ?? null,
+      chestCm: data.chestCm ?? null,
+      armCm: data.armCm ?? null,
+      thighCm: data.thighCm ?? null,
       basalMetabolism: data.basalMetabolism ?? null,
       notes: data.notes || null,
       ...(data.measuredAt ? { measuredAt: parseDate(data.measuredAt) } : {}),

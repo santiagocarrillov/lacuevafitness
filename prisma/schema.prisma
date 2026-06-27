@@ -494,6 +494,10 @@ model BodyComposition {
   muscleMassKg    Float? // legacy — superseded by muscleMassPct
   muscleMassPct   Float?
   waistCm         Float?
+  hipCm           Float?
+  chestCm         Float?
+  armCm           Float?
+  thighCm         Float?
   waterPct        Float? // legacy, no longer captured
   basalMetabolism Int?
   notes           String?
