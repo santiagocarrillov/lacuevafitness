@@ -97,7 +97,9 @@ export async function getTodaySchedules(sede: Sede) {
 export async function getActiveMembers(sede: Sede) {
   return prisma.member.findMany({
     where: {
-      sede,
+      // A member can train at this sede as their primary OR secondary sede, so
+      // staff at either location can register their attendance.
+      OR: [{ sede }, { secondarySede: sede }],
       status: { in: ["ACTIVE", "TRIAL"] },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],

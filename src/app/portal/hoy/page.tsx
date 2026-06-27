@@ -47,7 +47,12 @@ export default async function HoyPage() {
         select: { completedAt: true },
       }),
       prisma.classSchedule.findMany({
-        where: { sede: member.sede, dayOfWeek: todayWeekday, active: true },
+        where: {
+          // Member's primary + (optional) secondary sede.
+          sede: { in: member.secondarySede ? [member.sede, member.secondarySede] : [member.sede] },
+          dayOfWeek: todayWeekday,
+          active: true,
+        },
         orderBy: { startTime: "asc" },
       }),
       prisma.memberNote.findFirst({
@@ -125,7 +130,7 @@ export default async function HoyPage() {
           </div>
           <h3>{nextSession.name}</h3>
           <div className="subtitle">
-            Sede {member.sede === "FITNESS_CENTER" ? "Fitness Center" : "Xtreme"}
+            Sede {nextSession.sede === "FITNESS_CENTER" ? "Fitness Center" : "Xtreme"}
           </div>
           <div className="meta-row">
             <div className="meta-item">

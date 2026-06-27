@@ -108,6 +108,7 @@ export async function createMember(data: {
   emergencyName?: string;
   emergencyPhone?: string;
   sede: Sede;
+  secondarySede?: Sede | null;
   status?: MemberStatus;
   notes?: string;
 }) {
@@ -132,6 +133,7 @@ export async function createMember(data: {
         emergencyName: data.emergencyName || undefined,
         emergencyPhone: data.emergencyPhone || undefined,
         sede: data.sede,
+        secondarySede: data.secondarySede && data.secondarySede !== data.sede ? data.secondarySede : undefined,
         status: data.status ?? MemberStatus.ACTIVE,
         notes: data.notes || undefined,
       },
@@ -163,17 +165,23 @@ export async function updateMember(
     emergencyName?: string;
     emergencyPhone?: string;
     sede?: Sede;
+    secondarySede?: Sede | null;
     status?: MemberStatus;
     notes?: string;
   },
 ) {
+  const { secondarySede, ...rest } = data;
   const member = await prisma.member.update({
     where: { id },
     data: {
-      ...data,
+      ...rest,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       email: data.email || undefined,
       phone: data.phone || undefined,
+      // Secondary sede is attendance-only; never equal to the primary.
+      ...(secondarySede !== undefined
+        ? { secondarySede: secondarySede && secondarySede !== data.sede ? secondarySede : null }
+        : {}),
     },
   });
 
