@@ -118,6 +118,40 @@ export async function getActiveMembers(sede: Sede) {
   });
 }
 
+// ── Search active members across ALL sedes ──────────────────────────
+// For registering attendance of a socio who belongs to the other sede (an
+// occasional visitor). Intentionally NOT sede-scoped. Staff only.
+export async function searchMembersAllSedes(query: string) {
+  const user = await requireAuth();
+  if (user.role === "MEMBER") throw new Error("Sin permisos");
+  const q = query.trim();
+  if (q.length < 2) return [];
+  return prisma.member.findMany({
+    where: {
+      status: { in: ["ACTIVE", "TRIAL"] },
+      OR: [
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    take: 15,
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      status: true,
+      sede: true,
+      memberships: {
+        where: { state: MembershipState.ACTIVE },
+        orderBy: { endsAt: "desc" },
+        take: 1,
+        select: { endsAt: true, state: true },
+      },
+    },
+  });
+}
+
 // ── Record attendance ───────────────────────────────────────────────
 
 export async function recordAttendance(

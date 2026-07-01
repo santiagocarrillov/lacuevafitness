@@ -21,6 +21,14 @@ export function todayDateUtc(): Date {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+// "YYYY-MM-DD" for the Ecuador-local day of `d`. Use this for <input type="date">
+// defaults instead of new Date().toISOString().slice(0,10) — the latter is UTC,
+// so after 7pm Ecuador (00:00 UTC) it wrongly jumps to tomorrow. Safe on client.
+export function ecuadorDateString(d: Date = new Date()): string {
+  const { year, month, day } = ecuadorParts(d);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 export function todayDayOfWeekEcuador() {
   return ecuadorParts().weekday;
 }

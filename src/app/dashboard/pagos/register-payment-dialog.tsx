@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ecuadorDateString } from "@/lib/timezone";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +64,7 @@ export function RegisterPaymentDialog({
 
   const [method, setMethod] = useState<string>("CASH");
   const [amount, setAmount] = useState("");
-  const [paidAt, setPaidAt] = useState(new Date().toISOString().split("T")[0]);
+  const [paidAt, setPaidAt] = useState(ecuadorDateString());
   const [depositorName, setDepositorName] = useState("");
   const [bankReference, setBankReference] = useState("");
   const [bankEntity, setBankEntity] = useState("Banco Pichincha");
@@ -106,7 +107,7 @@ export function RegisterPaymentDialog({
     setMemberships([]);
     setMethod("CASH");
     setAmount("");
-    setPaidAt(new Date().toISOString().split("T")[0]);
+    setPaidAt(ecuadorDateString());
     setDepositorName("");
     setBankReference("");
     setBankEntity("Banco Pichincha");

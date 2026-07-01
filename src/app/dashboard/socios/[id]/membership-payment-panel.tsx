@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { ecuadorDateString } from "@/lib/timezone";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -138,7 +139,7 @@ export function MembershipPaymentPanel({
   const [f, setF] = useState({
     amount: ((remaining > 0 ? remaining : expectedCents) / 100).toFixed(2),
     method: "CASH",
-    paidAt: new Date().toISOString().slice(0, 10),
+    paidAt: ecuadorDateString(),
     depositorName: "",
     bankReference: "",
     bankEntity: "",

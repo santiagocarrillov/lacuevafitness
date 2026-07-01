@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ecuadorDateString } from "@/lib/timezone";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ export function ExpensesPanel({
     category: "RENT",
     description: "",
     amount: "",
-    date: new Date().toISOString().split("T")[0],
+    date: ecuadorDateString(),
     recurring: false,
     sede: sede ?? "",
   });

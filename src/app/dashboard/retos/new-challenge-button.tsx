@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ecuadorDateString } from "@/lib/timezone";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export function NewChallengeButton() {
     ruleTarget: "30",
     ruleDays: "",
     sede: "",
-    startsAt: new Date().toISOString().split("T")[0],
+    startsAt: ecuadorDateString(),
     endsAt: "",
   });
 
