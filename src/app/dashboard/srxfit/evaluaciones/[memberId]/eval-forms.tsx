@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { upsertTestResult, upsertBodyComposition, completeEvaluation } from "@/lib/actions/srxfit";
-import { TestKey } from "@/generated/prisma/client";
+import { useRouter } from "next/navigation";
+import {
+  upsertTestResult,
+  upsertBodyComposition,
+  completeEvaluation,
+  reopenEvaluation,
+  startEvaluation,
+  deleteTestResult,
+} from "@/lib/actions/srxfit";
+import { TestKey, type EvaluationType } from "@/generated/prisma/client";
 
 // ─── Test metadata ────────────────────────────────────────────────────
 
@@ -160,6 +168,7 @@ function TestRow({
   memberId: string;
   currentValue?: number;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [value, setValue] = useState(
     currentValue !== undefined
@@ -170,6 +179,15 @@ function TestRow({
   );
   const [saved, setSaved] = useState(currentValue !== undefined);
   const [notes, setNotes] = useState("");
+
+  function handleDelete() {
+    startTransition(async () => {
+      await deleteTestResult(evaluationId, meta.key, memberId);
+      setValue("");
+      setSaved(false);
+      router.refresh();
+    });
+  }
 
   const numericValue = meta.isTime ? timeToSeconds(value) : parseFloat(value);
   const derivedLabel = meta.formula && numericValue > 0 ? meta.formula(numericValue) : null;
@@ -220,6 +238,16 @@ function TestRow({
           >
             {isPending ? "..." : saved ? "✓ Guardado" : "Guardar"}
           </button>
+          {saved && (
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              title="Borrar este resultado"
+              className="h-8 px-2 text-xs rounded-md border border-input text-muted-foreground hover:text-red-600 hover:border-red-300 transition disabled:opacity-40"
+            >
+              Borrar
+            </button>
+          )}
         </div>
       </div>
       {derivedLabel && numericValue > 0 && (
@@ -418,14 +446,28 @@ export function CompleteEvalButton({
   memberId: string;
   isCompleted: boolean;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [done, setDone] = useState(isCompleted);
   const [summary, setSummary] = useState("");
 
   if (done) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-2">
+      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
         <span className="text-green-800 text-sm font-medium">✓ Evaluación completada</span>
+        <button
+          onClick={() => {
+            startTransition(async () => {
+              await reopenEvaluation(evaluationId, memberId);
+              setDone(false);
+              router.refresh();
+            });
+          }}
+          disabled={isPending}
+          className="h-8 px-3 text-xs rounded-md border border-green-300 bg-white text-green-800 hover:bg-green-100 transition disabled:opacity-40"
+        >
+          {isPending ? "..." : "Reabrir para editar"}
+        </button>
       </div>
     );
   }
@@ -452,6 +494,59 @@ export function CompleteEvalButton({
       >
         {isPending ? "Completando..." : "Marcar como completada"}
       </button>
+    </div>
+  );
+}
+
+// ─── Controls shown when no evaluation is open ────────────────────────
+export function EvalStartControls({
+  memberId,
+  evalType,
+  latestCompleted,
+}: {
+  memberId: string;
+  evalType: EvaluationType;
+  latestCompleted: { id: string; label: string } | null;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="rounded-lg border p-4 space-y-3">
+      <p className="text-sm font-medium">No hay una evaluación en curso</p>
+      <p className="text-xs text-muted-foreground">
+        {latestCompleted
+          ? `La última evaluación (${latestCompleted.label}) está completada. Reábrela para seguir editándola, o inicia una nueva.`
+          : "Inicia una evaluación para registrar tests."}
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        {latestCompleted && (
+          <button
+            onClick={() => {
+              startTransition(async () => {
+                await reopenEvaluation(latestCompleted.id, memberId);
+                router.refresh();
+              });
+            }}
+            disabled={isPending}
+            className="h-9 px-4 text-sm rounded-md border border-input hover:bg-accent transition disabled:opacity-40"
+          >
+            {isPending ? "..." : "Reabrir última evaluación"}
+          </button>
+        )}
+        <button
+          onClick={() => {
+            startTransition(async () => {
+              await startEvaluation(memberId, evalType);
+              router.refresh();
+            });
+          }}
+          disabled={isPending}
+          className="h-9 px-4 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90 transition disabled:opacity-40"
+        >
+          {isPending ? "..." : "Iniciar nueva evaluación"}
+        </button>
+      </div>
     </div>
   );
 }
