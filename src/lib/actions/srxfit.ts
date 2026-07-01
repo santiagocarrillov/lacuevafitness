@@ -247,6 +247,75 @@ export async function getOrStartEvaluation(
   return created;
 }
 
+// ─── Get open evaluation WITHOUT creating one ─────────────────────────
+// Used by the eval page so it never silently spawns an empty duplicate when
+// the latest eval is already completed. Returns null when nothing is open.
+export async function getActiveEvaluation(
+  memberId: string,
+  type: EvaluationType,
+  cycleNumber?: number,
+) {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  return prisma.evaluation.findFirst({
+    where: {
+      memberId,
+      type,
+      ...(cycleNumber !== undefined ? { cycleNumber } : {}),
+      completedAt: null,
+    },
+    include: {
+      testResults: { orderBy: { recordedAt: "desc" } },
+      bodyCompositions: { orderBy: { measuredAt: "desc" }, take: 1 },
+    },
+    orderBy: { startedAt: "desc" },
+  });
+}
+
+// ─── Start a NEW evaluation (explicit button) ─────────────────────────
+export async function startEvaluation(
+  memberId: string,
+  type: EvaluationType,
+  cycleNumber?: number,
+) {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  // Never create a second open eval — reuse the open one if it exists.
+  const open = await prisma.evaluation.findFirst({
+    where: { memberId, type, ...(cycleNumber !== undefined ? { cycleNumber } : {}), completedAt: null },
+    orderBy: { startedAt: "desc" },
+  });
+  if (open) return { id: open.id };
+  const created = await prisma.evaluation.create({
+    data: { memberId, type, ...(cycleNumber !== undefined ? { cycleNumber } : {}), coachId: user.id },
+  });
+  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
+  return { id: created.id };
+}
+
+// ─── Reopen a completed evaluation ────────────────────────────────────
+// Undo an accidental "Marcar como completada" so staff can keep editing.
+export async function reopenEvaluation(evaluationId: string, memberId: string) {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  await prisma.evaluation.update({
+    where: { id: evaluationId },
+    data: { completedAt: null },
+  });
+  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
+  revalidatePath("/dashboard/srxfit/evaluaciones");
+  return { success: true };
+}
+
+// ─── Delete a test result ─────────────────────────────────────────────
+export async function deleteTestResult(evaluationId: string, test: TestKey, memberId: string) {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  await prisma.testResult.deleteMany({ where: { evaluationId, test } });
+  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
+  return { success: true };
+}
+
 // ─── Upsert test result ───────────────────────────────────────────────
 
 export async function upsertTestResult(data: {

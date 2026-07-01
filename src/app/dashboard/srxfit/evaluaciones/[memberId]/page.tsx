@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
-import { getMemberEvalDetail, getOrStartEvaluation } from "@/lib/actions/srxfit";
-import { TestForm, BodyCompForm, CompleteEvalButton } from "./eval-forms";
+import { getMemberEvalDetail, getActiveEvaluation } from "@/lib/actions/srxfit";
+import { TestForm, BodyCompForm, CompleteEvalButton, EvalStartControls } from "./eval-forms";
 
 export const dynamic = "force-dynamic";
 
@@ -84,18 +84,19 @@ export default async function MemberEvalPage({
     );
   }
 
-  // Get or open an evaluation (only for active socios)
-  const activeEval = await getOrStartEvaluation(memberId, evalType);
+  // Get the OPEN evaluation for this type — never auto-create (avoids empty
+  // duplicates when the last one was just completed). null = nothing in progress.
+  const activeEval = await getActiveEvaluation(memberId, evalType);
 
   const currentLevel = member.trainingLevels[0]?.level;
 
-  // Comparison: most recent completed eval before current
-  const completedEvals = evaluations.filter((e) => e.completedAt && e.id !== activeEval.id);
+  // Comparison: most recent completed eval (excluding the active one).
+  const completedEvals = evaluations.filter((e) => e.completedAt && e.id !== activeEval?.id);
   const prevEval = completedEvals[0] ?? null;
+  const latestCompletedSameType = completedEvals.find((e) => e.type === evalType) ?? null;
 
   // Build comparison delta for weight tests
-  const prevTestMap = new Map(prevEval?.testResults.map((t) => [t.test, t.valueNumeric]) ?? []);
-  const currTestMap = new Map(activeEval.testResults.map((t) => [t.test, t.valueNumeric]));
+  const currTestMap = new Map((activeEval?.testResults ?? []).map((t) => [t.test, t.valueNumeric]));
 
   return (
     <div className="p-8 space-y-8 max-w-4xl">
@@ -140,6 +141,8 @@ export default async function MemberEvalPage({
         </div>
       </div>
 
+      {activeEval ? (
+      <>
       {/* Current evaluation info */}
       <div className="rounded-lg border p-4 bg-muted/20 flex items-center justify-between gap-4 flex-wrap">
         <div className="text-sm space-y-0.5">
@@ -218,6 +221,21 @@ export default async function MemberEvalPage({
         memberId={memberId}
         isCompleted={!!activeEval.completedAt}
       />
+      </>
+      ) : (
+        <EvalStartControls
+          memberId={memberId}
+          evalType={evalType}
+          latestCompleted={
+            latestCompletedSameType
+              ? {
+                  id: latestCompletedSameType.id,
+                  label: `${new Date(latestCompletedSameType.startedAt).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })} · ${latestCompletedSameType.testResults.length} tests`,
+                }
+              : null
+          }
+        />
+      )}
 
       {/* History */}
       {completedEvals.length > 0 && (
