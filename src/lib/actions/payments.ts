@@ -415,6 +415,42 @@ export async function assignPoolEntryToMembership(
   return updated;
 }
 
+// ─── Link an EXISTING member payment to a membership ─────────────────────────
+// For payments registered from the general Payments section (memberId set but no
+// membershipId): lets the admin attach them to the membership from the socio's
+// ficha, so they count toward it — without re-registering (no duplicate).
+export async function assignPaymentToMembership(paymentId: string, membershipId: string) {
+  const user = await requireAuth();
+  if (!canManagePayments(user)) throw new Error("No autorizado");
+
+  const payment = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+  if (payment.isPoolEntry || !payment.memberId) {
+    throw new Error("Este pago no está asignado a un socio.");
+  }
+
+  const scopedSede = getSedeScope(user);
+  if (scopedSede && payment.sede !== scopedSede) throw new Error("No autorizado");
+
+  // Ensure the membership belongs to the same member (no cross-member linking).
+  const membership = await prisma.membership.findUniqueOrThrow({
+    where: { id: membershipId },
+    select: { memberId: true },
+  });
+  if (membership.memberId !== payment.memberId) {
+    throw new Error("La membresía no pertenece a este socio.");
+  }
+
+  // Preserve status (a pending transfer stays pending until Isabel verifies it).
+  const updated = await prisma.payment.update({
+    where: { id: paymentId },
+    data: { membershipId },
+  });
+
+  revalidatePath("/dashboard/pagos");
+  revalidatePath(`/dashboard/socios/${payment.memberId}`);
+  return updated;
+}
+
 // ─── Update / delete any payment (admin can fix mistakes) ─────────────────────
 
 export async function updatePayment(
