@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { GestionTab } from "./gestion-tab";
+import { AsistenciaTab } from "./asistencia-tab";
 import { ComercialTab } from "./comercial-tab";
 import { ContableTab } from "./contable-tab";
 import { DateRangePicker } from "./date-range-picker";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 const tabs = [
   { key: "gestion", label: "Gestión" },
+  { key: "asistencia", label: "Asistencia" },
   { key: "comercial", label: "Comercial" },
   { key: "contable", label: "Contable" },
 ];
@@ -152,6 +154,9 @@ export default async function ReportesPage({
 
       {tab === "gestion" && (
         <GestionTab sede={sede || undefined} year={gestionYear} month={gestionMonth} />
+      )}
+      {tab === "asistencia" && (
+        <AsistenciaTab sede={sede || undefined} from={from} to={to} />
       )}
       {tab === "comercial" && (
         <ComercialTab sede={sede || undefined} from={from} to={to} buildUrl={buildUrl} />
