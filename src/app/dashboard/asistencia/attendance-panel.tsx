@@ -13,6 +13,7 @@ import {
   recordAttendance,
   removeAttendance,
   confirmCoachCount,
+  searchMembersAllSedes,
 } from "@/lib/actions/attendance";
 
 type Member = {
@@ -21,6 +22,13 @@ type Member = {
   lastName: string;
   status: string;
   memberships: { endsAt: Date; state: string }[];
+};
+
+type CrossMember = Member & { sede: string };
+
+const SEDE_LABEL: Record<string, string> = {
+  FITNESS_CENTER: "Fitness Center",
+  XTREME: "Xtreme",
 };
 
 type SessionData = Awaited<ReturnType<typeof getOrCreateTodaySession>>;
@@ -39,7 +47,20 @@ export function AttendancePanel({
   const [session, setSession] = useState<SessionData | null>(null);
   const [search, setSearch] = useState("");
   const [coachCount, setCoachCount] = useState("");
+  const [crossResults, setCrossResults] = useState<CrossMember[] | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function updateSearch(v: string) {
+    setSearch(v);
+    setCrossResults(null); // reset the all-sedes results when the query changes
+  }
+
+  function searchAllSedes() {
+    startTransition(async () => {
+      const results = (await searchMembersAllSedes(search)) as CrossMember[];
+      setCrossResults(results);
+    });
+  }
 
   useEffect(() => {
     startTransition(async () => {
@@ -80,6 +101,7 @@ export function AttendancePanel({
       const s = await getOrCreateTodaySession(scheduleId);
       setSession(s);
       setSearch("");
+      setCrossResults(null);
     });
   }
 
@@ -134,12 +156,12 @@ export function AttendancePanel({
           <Input
             placeholder="Buscar por nombre..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateSearch(e.target.value)}
           />
           {search.length >= 2 && (
             <div className="max-h-48 overflow-y-auto rounded-md border divide-y">
               {filtered.length === 0 ? (
-                <p className="p-3 text-sm text-muted-foreground">Sin resultados</p>
+                <p className="p-3 text-sm text-muted-foreground">Sin resultados en esta sede</p>
               ) : (
                 filtered.slice(0, 10).map((m) => {
                   const isExpired =
@@ -168,6 +190,50 @@ export function AttendancePanel({
                     </button>
                   );
                 })
+              )}
+            </div>
+          )}
+          {search.length >= 2 && (
+            <div className="space-y-1.5">
+              <button
+                onClick={searchAllSedes}
+                disabled={isPending}
+                className="text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                ¿No está en esta sede? Buscar «{search}» en todas las sedes →
+              </button>
+              {crossResults && (
+                <div className="max-h-48 overflow-y-auto rounded-md border divide-y">
+                  {crossResults.filter((m) => !attendedIds.has(m.id)).length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground">Sin resultados en otras sedes</p>
+                  ) : (
+                    crossResults
+                      .filter((m) => !attendedIds.has(m.id))
+                      .map((m) => {
+                        const isExpired =
+                          !m.memberships[0] || new Date(m.memberships[0].endsAt) < now;
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => handleAddMember(m.id)}
+                            disabled={isPending || !windowOpen}
+                            title={!windowOpen ? "Ventana de registro cerrada (después de las 9:30pm)" : undefined}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span>{m.lastName}, {m.firstName}</span>
+                            <div className="flex gap-1.5 items-center">
+                              <Badge variant="secondary" className="text-xs">
+                                {SEDE_LABEL[m.sede] ?? m.sede}
+                              </Badge>
+                              {isExpired && (
+                                <Badge variant="destructive" className="text-xs">Vencida</Badge>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                  )}
+                </div>
               )}
             </div>
           )}

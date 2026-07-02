@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
+import { ecuadorDateString } from "@/lib/timezone";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ type Row = {
 
 function emptyRow(defaultSede = "FITNESS_CENTER"): Row {
   return {
-    paidAt: new Date().toISOString().split("T")[0],
+    paidAt: ecuadorDateString(),
     depositorName: "",
     bankReference: "",
     bankEntity: "Banco Pichincha",

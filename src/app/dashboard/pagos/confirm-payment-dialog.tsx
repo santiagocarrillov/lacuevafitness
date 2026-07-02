@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ecuadorDateString } from "@/lib/timezone";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +74,7 @@ export function ConfirmPaymentDialog({
   const [depositorName, setDepositorName] = useState("");
   const [bankReference, setBankReference] = useState("");
   const [bankEntity, setBankEntity] = useState("Banco Pichincha");
-  const [paidAt, setPaidAt] = useState(new Date().toISOString().split("T")[0]);
+  const [paidAt, setPaidAt] = useState(ecuadorDateString());
 
   function handleConfirm() {
     startTransition(async () => {
