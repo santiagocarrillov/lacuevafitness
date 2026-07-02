@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { Sede, ExpenseCategory } from "@/generated/prisma/client";
+import { Sede, ExpenseCategory, MemberStatus } from "@/generated/prisma/client";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -21,6 +21,92 @@ function rangeBounds(from: string, to: string) {
 function prevMonth(year: number, month: number) {
   if (month === 1) return { year: year - 1, month: 12 };
   return { year, month: month - 1 };
+}
+
+// ── Attendance report: UNIQUE attending members vs active base ───────
+// Distinct members who attended (not total visits), engagement vs active
+// members, and payment status of the active base.
+export async function getAttendanceReport(sede: Sede | undefined, from: string, to: string) {
+  const { start, end } = rangeBounds(from, to);
+  const now = new Date();
+  const activeStatus = { in: [MemberStatus.ACTIVE, MemberStatus.TRIAL] };
+  const memberSede = sede ? { sede } : {};
+  const sessionInRange = { date: { gte: start, lte: end }, ...(sede ? { sede } : {}) };
+
+  const [
+    distinctOverall,
+    totalVisits,
+    distinctFC,
+    distinctXT,
+    activeTotal,
+    activeAttended,
+    alDia,
+    sinMembresia,
+  ] = await Promise.all([
+    // Unique members who attended (respecting sede filter on the session)
+    prisma.attendance.groupBy({ by: ["memberId"], where: { classSession: sessionInRange } }),
+    prisma.attendance.count({ where: { classSession: sessionInRange } }),
+    // Per-sede unique (only needed when no sede filter is applied)
+    sede
+      ? Promise.resolve([] as { memberId: string }[])
+      : prisma.attendance.groupBy({
+          by: ["memberId"],
+          where: { classSession: { date: { gte: start, lte: end }, sede: "FITNESS_CENTER" } },
+        }),
+    sede
+      ? Promise.resolve([] as { memberId: string }[])
+      : prisma.attendance.groupBy({
+          by: ["memberId"],
+          where: { classSession: { date: { gte: start, lte: end }, sede: "XTREME" } },
+        }),
+    // Active member base
+    prisma.member.count({ where: { status: activeStatus, ...memberSede } }),
+    // Active members who attended at least once in the period (anywhere)
+    prisma.member.count({
+      where: {
+        status: activeStatus,
+        ...memberSede,
+        attendance: { some: { classSession: { date: { gte: start, lte: end } } } },
+      },
+    }),
+    // Al día: active member with a currently-valid (non-daily) membership
+    prisma.member.count({
+      where: {
+        status: activeStatus,
+        ...memberSede,
+        memberships: {
+          some: { plan: { billingCycle: { not: "ONE_TIME" } }, state: "ACTIVE", endsAt: { gte: now } },
+        },
+      },
+    }),
+    // Sin membresía: active member with no (non-daily) membership at all
+    prisma.member.count({
+      where: {
+        status: activeStatus,
+        ...memberSede,
+        memberships: { none: { plan: { billingCycle: { not: "ONE_TIME" } } } },
+      },
+    }),
+  ]);
+
+  const debe = Math.max(0, activeTotal - alDia - sinMembresia);
+
+  return {
+    from,
+    to,
+    attendance: {
+      uniqueMembers: distinctOverall.length,
+      totalVisits,
+      perSede: sede ? null : { FITNESS_CENTER: distinctFC.length, XTREME: distinctXT.length },
+    },
+    active: {
+      total: activeTotal,
+      attended: activeAttended,
+      notAttended: Math.max(0, activeTotal - activeAttended),
+      engagementPct: activeTotal > 0 ? Math.round((activeAttended / activeTotal) * 100) : 0,
+    },
+    payment: { alDia, debe, sinMembresia },
+  };
 }
 
 // ── Management KPIs (Tablero de Control Gestión) ────────────────────
