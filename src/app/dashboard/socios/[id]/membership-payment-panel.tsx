@@ -15,6 +15,7 @@ import {
   registerMemberPayment, findMatchingPoolEntries, assignPoolEntryToMembership,
   assignPaymentToMembership,
 } from "@/lib/actions/payments";
+import { EditPaymentDialog } from "../../pagos/edit-payment-dialog";
 
 type Match = {
   id: string;
@@ -34,6 +35,10 @@ type Payment = {
   status: string;
   paidAt: Date | string | null;
   membershipId: string | null;
+  depositorName: string | null;
+  bankReference: string | null;
+  bankEntity: string | null;
+  notes: string | null;
 };
 
 type Membership = {
@@ -337,10 +342,13 @@ export function MembershipPaymentPanel({
                     {p.status === "PENDING" && " · ⏳ pendiente"}
                   </span>
                 </div>
-                <Button size="sm" variant="outline" disabled={isPending}
-                  onClick={() => handleAssignExisting(p.id)} className="shrink-0">
-                  Asignar
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <EditPaymentDialog payment={p} />
+                  <Button size="sm" variant="outline" disabled={isPending}
+                    onClick={() => handleAssignExisting(p.id)}>
+                    Asignar
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -365,7 +373,10 @@ export function MembershipPaymentPanel({
                 <span className="font-medium">{fmt$(p.amountCents)}</span>
                 <span className="text-muted-foreground">· {METHOD_LABELS[p.method] ?? p.method}</span>
               </div>
-              <span className="text-muted-foreground">{fmtDate(p.paidAt)}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground">{fmtDate(p.paidAt)}</span>
+                {canEdit && <EditPaymentDialog payment={p} />}
+              </div>
             </div>
           ))}
         </div>

@@ -320,6 +320,10 @@ export default async function MemberDetailPage({
                     status: p.status,
                     paidAt: p.paidAt,
                     membershipId: p.membershipId,
+                    depositorName: p.depositorName,
+                    bankReference: p.bankReference,
+                    bankEntity: p.bankEntity,
+                    notes: p.notes,
                   }))}
                   sede={member.sede}
                   canEdit={user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN"}
