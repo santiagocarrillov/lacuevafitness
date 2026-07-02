@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   registerMemberPayment, findMatchingPoolEntries, assignPoolEntryToMembership,
+  assignPaymentToMembership,
 } from "@/lib/actions/payments";
 
 type Match = {
@@ -112,6 +113,24 @@ export function MembershipPaymentPanel({
     () => payments.filter((p) => p.membershipId === membership.id),
     [payments, membership.id],
   );
+  // The member's payments not linked to ANY membership (e.g. registered from the
+  // general Payments section). Shown so the admin can attach them here.
+  const unlinked = useMemo(
+    () => payments.filter((p) => p.membershipId == null),
+    [payments],
+  );
+
+  function handleAssignExisting(paymentId: string) {
+    startTransition(async () => {
+      try {
+        await assignPaymentToMembership(paymentId, membership.id);
+        toast.success("Pago asignado a esta membresía.");
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al asignar.");
+      }
+    });
+  }
   const succeededTotal = linked.filter((p) => p.status === "SUCCEEDED").reduce((s, p) => s + p.amountCents, 0);
   const pendingTotal = linked.filter((p) => p.status === "PENDING").reduce((s, p) => s + p.amountCents, 0);
   const expectedCents = membership.customPriceCents ?? membership.priceCents;
@@ -298,6 +317,35 @@ export function MembershipPaymentPanel({
           </Dialog>
         )}
       </div>
+
+      {/* Member payments not yet linked to a membership */}
+      {canEdit && unlinked.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-2.5 space-y-1.5">
+          <p className="text-[11px] font-semibold text-amber-900">
+            Pagos de este socio sin asignar a una membresía
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            Se registraron desde la sección de Pagos. Asígnalos aquí para que cuenten en esta membresía (no vuelvas a registrarlos).
+          </p>
+          <div className="space-y-1">
+            {unlinked.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-2 rounded border bg-background px-2.5 py-1.5 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium">{fmt$(p.amountCents)}</span>
+                  <span className="text-muted-foreground truncate">
+                    · {METHOD_LABELS[p.method] ?? p.method} · {fmtDate(p.paidAt)}
+                    {p.status === "PENDING" && " · ⏳ pendiente"}
+                  </span>
+                </div>
+                <Button size="sm" variant="outline" disabled={isPending}
+                  onClick={() => handleAssignExisting(p.id)} className="shrink-0">
+                  Asignar
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Linked payments list */}
       {linked.length === 0 ? (
