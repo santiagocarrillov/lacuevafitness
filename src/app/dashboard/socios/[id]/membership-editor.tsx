@@ -35,6 +35,7 @@ export function MembershipEditor({
     customPrice: membership.customPriceCents != null ? (membership.customPriceCents / 100).toString() : "",
     paymentMethod: membership.paymentMethod ?? "",
     billingNote: membership.billingNote ?? "",
+    startsAt: membership.startsAt.split("T")[0],
     endsAt: membership.endsAt.split("T")[0],
   });
 
@@ -47,6 +48,10 @@ export function MembershipEditor({
   }
 
   async function handleSave() {
+    if (form.startsAt && form.endsAt && form.startsAt > form.endsAt) {
+      toast.error("La fecha de inicio no puede ser posterior al vencimiento.");
+      return;
+    }
     startTransition(async () => {
       const res = await fetch("/api/membership", {
         method: "PATCH",
@@ -57,6 +62,7 @@ export function MembershipEditor({
           customPriceCents: form.customPrice ? Math.round(parseFloat(form.customPrice) * 100) : null,
           paymentMethod: form.paymentMethod || null,
           billingNote: form.billingNote || null,
+          startsAt: form.startsAt,
           endsAt: form.endsAt,
         }),
       });
@@ -64,6 +70,9 @@ export function MembershipEditor({
         toast.success("Membresía actualizada.");
         setEditing(false);
         router.refresh();
+      } else {
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error ?? "No se pudo actualizar la membresía.");
       }
     });
   }
@@ -147,9 +156,15 @@ export function MembershipEditor({
           onChange={(e) => update("billingNote", e.target.value)}
         />
       </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Fecha de vencimiento</Label>
-        <Input type="date" value={form.endsAt} onChange={(e) => update("endsAt", e.target.value)} />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Fecha de inicio</Label>
+          <Input type="date" value={form.startsAt} onChange={(e) => update("startsAt", e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Fecha de vencimiento</Label>
+          <Input type="date" value={form.endsAt} onChange={(e) => update("endsAt", e.target.value)} />
+        </div>
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={handleSave} disabled={isPending}>
