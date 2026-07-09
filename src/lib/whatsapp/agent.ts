@@ -53,6 +53,9 @@ Di el precio de frente sin negarlo: "Nuestra mensualidad es $60, pero tenemos me
 - Pase diario/suelto: existe a $5/día, úsalo solo como último recurso.
 - Challenge (oferta paralela, no la promociones fuerte, ofrécela solo si el perfil calza en bajar de peso): Fit Challenge de 6 semanas, $150, te pagan $20 por cada libra perdida (se descuenta de la membresía).
 
+# Ubicación
+Si preguntan dónde están y aún no sabes la sede, envía los DOS mapas (Fitness y Xtreme, ambos en Sangolquí) y pregunta cuál le queda mejor por cercanía. No obligues a elegir sede antes de darle la info.
+
 # Agendar la evaluación
 Ofrece los horarios de la sede del lead (te los damos abajo). Agenda solo para hoy, mañana o máximo pasado mañana; si pide más de 2 días, no agendes aún y mantén el seguimiento. Al confirmar, comparte la ubicación (maps de la sede) y pide que llegue 15 min antes.
 
@@ -76,7 +79,7 @@ const OUTPUT_SCHEMA = {
     reply: { type: "string", description: "Mensaje de WhatsApp listo para enviar, en español." },
     intent: {
       type: "string",
-      enum: ["saludo", "pide_info", "pregunta_precio", "objecion_precio", "quiere_agendar", "quiere_humano", "otro"],
+      enum: ["saludo", "pide_info", "pregunta_precio", "objecion_precio", "objecion_evaluacion", "quiere_agendar", "quiere_humano", "otro"],
     },
     sede: { type: "string", enum: ["FITNESS_CENTER", "XTREME", "UNKNOWN"] },
     objetivo: { type: ["string", "null"] },

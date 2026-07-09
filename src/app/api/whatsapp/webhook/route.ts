@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { verifyChallenge, verifySignature } from "@/lib/whatsapp/webhook-verify";
 import { processWebhookPayload } from "@/lib/whatsapp/webhook-router";
+import { respondToInboundConversation, agentEnabled } from "@/lib/whatsapp/agent-runner";
 
 // Webhook must run on Node (crypto + Prisma) and never be cached.
 export const runtime = "nodejs";
@@ -49,6 +51,19 @@ export async function POST(request: Request) {
     const result = await processWebhookPayload(payload);
     if (process.env.NODE_ENV !== "production") {
       console.log("[whatsapp] processed", result);
+    }
+    // Run the sales agent AFTER acking Meta, so the Claude round-trip never
+    // delays the 200. No-ops when the agent is disabled (default).
+    if (agentEnabled() && result.conversationIds.length) {
+      after(async () => {
+        for (const id of result.conversationIds) {
+          try {
+            await respondToInboundConversation(id);
+          } catch (err) {
+            console.error("[whatsapp-agent] runner error", err);
+          }
+        }
+      });
     }
   } catch (err) {
     // We swallow errors and still return 200 — Meta would retry forever and
