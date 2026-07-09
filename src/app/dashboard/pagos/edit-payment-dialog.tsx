@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { updatePayment } from "@/lib/actions/payments";
+import { updatePayment, deletePayment } from "@/lib/actions/payments";
 
 type Payment = {
   id: string;
@@ -27,6 +27,7 @@ const METHODS: Array<{ value: string; label: string }> = [
   { value: "CASH", label: "Efectivo" },
   { value: "BANK_TRANSFER", label: "Transferencia" },
   { value: "STRIPE_CARD", label: "TC Stripe" },
+  { value: "PLUX_CARD", label: "TC Plux" },
   { value: "STRIPE_LINK", label: "Stripe Link" },
   { value: "OTHER", label: "Otro" },
 ];
@@ -62,6 +63,20 @@ export function EditPaymentDialog({ payment }: { payment: Payment }) {
     notes: payment.notes ?? "",
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  function handleDelete() {
+    if (!confirm("¿Eliminar este pago? Esta acción no se puede deshacer.")) return;
+    startTransition(async () => {
+      try {
+        await deletePayment(payment.id);
+        toast.success("Pago eliminado.");
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al eliminar.");
+      }
+    });
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -147,11 +162,17 @@ export function EditPaymentDialog({ payment }: { payment: Payment }) {
             <Label className="text-xs">Notas</Label>
             <Input value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Guardando…" : "Guardar cambios"}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={handleDelete} disabled={isPending}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10">
+              Eliminar pago
             </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Guardando…" : "Guardar cambios"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

@@ -171,23 +171,46 @@ export async function updateMember(
   },
 ) {
   const { secondarySede, ...rest } = data;
-  const member = await prisma.member.update({
-    where: { id },
-    data: {
-      ...rest,
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
-      // Secondary sede is attendance-only; never equal to the primary.
-      ...(secondarySede !== undefined
-        ? { secondarySede: secondarySede && secondarySede !== data.sede ? secondarySede : null }
-        : {}),
-    },
-  });
 
-  revalidatePath("/dashboard/socios");
-  revalidatePath(`/dashboard/socios/${id}`);
-  return member;
+  // Email is @unique. Pre-check against OTHER members so a collision surfaces as a
+  // clean message instead of an unhandled P2002 that crashes the socio page (bug #5).
+  if (data.email) {
+    const clash = await prisma.member.findUnique({
+      where: { email: data.email },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (clash && clash.id !== id) {
+      throw new Error(
+        `Ya existe otro socio con el email ${data.email} (${clash.firstName} ${clash.lastName}).`,
+      );
+    }
+  }
+
+  try {
+    const member = await prisma.member.update({
+      where: { id },
+      data: {
+        ...rest,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        // Secondary sede is attendance-only; never equal to the primary.
+        ...(secondarySede !== undefined
+          ? { secondarySede: secondarySede && secondarySede !== data.sede ? secondarySede : null }
+          : {}),
+      },
+    });
+
+    revalidatePath("/dashboard/socios");
+    revalidatePath(`/dashboard/socios/${id}`);
+    return member;
+  } catch (err: unknown) {
+    // Fallback for the race where the email is taken between the pre-check and update.
+    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
+      throw new Error("Ya existe otro socio con ese email o teléfono.");
+    }
+    throw err;
+  }
 }
 
 // ── Deactivate (churn) ──────────────────────────────────────────────

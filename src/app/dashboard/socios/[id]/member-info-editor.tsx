@@ -65,14 +65,20 @@ export function MemberInfoEditor({
     e.preventDefault();
     const { sede, secondarySede, ...rest } = form;
     startTransition(async () => {
-      await updateMember(memberId, {
-        ...rest,
-        sede: sede as Sede,
-        secondarySede: secondarySede ? (secondarySede as Sede) : null,
-      });
-      toast.success("Información actualizada.");
-      setOpen(false);
-      router.refresh();
+      try {
+        await updateMember(memberId, {
+          ...rest,
+          sede: sede as Sede,
+          secondarySede: secondarySede ? (secondarySede as Sede) : null,
+        });
+        toast.success("Información actualizada.");
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        // e.g. email already used by another socio — keep the dialog open so the
+        // admin can fix the field instead of crashing the page (bug #5).
+        toast.error(err instanceof Error ? err.message : "No se pudo actualizar la información.");
+      }
     });
   }
 

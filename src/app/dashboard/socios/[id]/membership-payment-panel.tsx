@@ -55,6 +55,7 @@ const METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
   BANK_TRANSFER: "Transferencia",
   STRIPE_CARD: "Tarjeta",
+  PLUX_CARD: "TC Plux",
   STRIPE_LINK: "Link Stripe",
   OTHER: "Otro",
 };
@@ -123,6 +124,12 @@ export function MembershipPaymentPanel({
   const unlinked = useMemo(
     () => payments.filter((p) => p.membershipId == null),
     [payments],
+  );
+  // Payments linked to a DIFFERENT membership — surfaced so the admin can re-point
+  // one that landed on the wrong membership (e.g. after fixing a mis-assigned plan).
+  const otherMembership = useMemo(
+    () => payments.filter((p) => p.membershipId != null && p.membershipId !== membership.id),
+    [payments, membership.id],
   );
 
   function handleAssignExisting(paymentId: string) {
@@ -284,6 +291,7 @@ export function MembershipPaymentPanel({
                       <option value="CASH">Efectivo (se confirma al instante)</option>
                       <option value="BANK_TRANSFER">Transferencia (queda pendiente hasta verificar)</option>
                       <option value="STRIPE_CARD">Tarjeta</option>
+                      <option value="PLUX_CARD">TC Plux</option>
                       <option value="STRIPE_LINK">Link Stripe</option>
                       <option value="OTHER">Otro</option>
                     </select>
@@ -353,6 +361,35 @@ export function MembershipPaymentPanel({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Payments sitting on a different membership — allow re-pointing */}
+      {canEdit && otherMembership.length > 0 && (
+        <details className="rounded-md border border-zinc-200 bg-zinc-50/50 p-2.5">
+          <summary className="text-[11px] font-semibold text-zinc-700 cursor-pointer">
+            ¿Un pago quedó en otra membresía? Tráelo aquí ({otherMembership.length})
+          </summary>
+          <div className="space-y-1 mt-2">
+            {otherMembership.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-2 rounded border bg-background px-2.5 py-1.5 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium">{fmt$(p.amountCents)}</span>
+                  <span className="text-muted-foreground truncate">
+                    · {METHOD_LABELS[p.method] ?? p.method} · {fmtDate(p.paidAt)}
+                    {p.status === "PENDING" && " · ⏳ pendiente"}
+                  </span>
+                </div>
+                <Button size="sm" variant="outline" disabled={isPending}
+                  onClick={() => {
+                    if (!confirm("¿Mover este pago a esta membresía?")) return;
+                    handleAssignExisting(p.id);
+                  }}>
+                  Traer aquí
+                </Button>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* Linked payments list */}
