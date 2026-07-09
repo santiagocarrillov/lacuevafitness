@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import type { LeadStage, Sede } from "@/generated/prisma/client";
 import { runAgent, type AgentTurn } from "./agent";
 import { sendText } from "./client";
+import { scheduleTrialReminders } from "./sequences";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -111,6 +112,25 @@ export async function respondToInboundConversation(conversationId: string): Prom
       },
     });
   });
+
+  // If the agent booked an evaluation, record it and schedule anti-no-show reminders.
+  if (result.scheduledAtISO) {
+    const when = new Date(result.scheduledAtISO);
+    if (!isNaN(when.getTime()) && when.getTime() > Date.now()) {
+      if (conversation.leadId) {
+        await prisma.lead.update({
+          where: { id: conversation.leadId },
+          data: { trialScheduledAt: when, stage: "SCHEDULED_TRIAL" },
+        });
+      }
+      await scheduleTrialReminders(
+        conversation.id,
+        when,
+        conversation.lead?.firstName ?? null,
+        resolvedSede ?? conversation.sede,
+      );
+    }
+  }
 
   // Send only when auto-send is on and we're inside the 24h service window.
   const withinWindow =

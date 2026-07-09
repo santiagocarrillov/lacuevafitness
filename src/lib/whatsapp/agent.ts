@@ -70,7 +70,8 @@ Devuelve SIEMPRE el JSON con:
 - objetivo: el objetivo del lead si lo mencionó (o null).
 - horarioPreferido: preferencia de horario si la dio (o null).
 - handoff: true si hay que pasar a un humano.
-- suggestedStage: etapa sugerida del lead en el funnel.`;
+- suggestedStage: etapa sugerida del lead en el funnel.
+- scheduledAtISO: si en ESTE mensaje confirmas una cita de evaluación con día y hora concretos (dentro de hoy, mañana o máximo pasado mañana, y en un horario válido de la sede), devuelve la fecha-hora en ISO 8601 con zona de Ecuador, formato "YYYY-MM-DDTHH:MM:00-05:00" (usa la fecha/hora actual que te doy en el contexto para resolver "mañana", etc.). Si no hay cita confirmada aún, devuelve null.`;
 
 // ── Structured output schema ────────────────────────────────────────────────
 const OUTPUT_SCHEMA = {
@@ -89,8 +90,9 @@ const OUTPUT_SCHEMA = {
       type: "string",
       enum: ["NEW", "CONTACTED", "SCHEDULED_TRIAL", "NEGOTIATING", "CONVERTED", "LOST"],
     },
+    scheduledAtISO: { type: ["string", "null"] },
   },
-  required: ["reply", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage"],
+  required: ["reply", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "scheduledAtISO"],
   additionalProperties: false,
 } as const;
 
@@ -102,6 +104,7 @@ export type AgentResult = {
   horarioPreferido: string | null;
   handoff: boolean;
   suggestedStage: "NEW" | "CONTACTED" | "SCHEDULED_TRIAL" | "NEGOTIATING" | "CONVERTED" | "LOST";
+  scheduledAtISO: string | null;
 };
 
 export type AgentTurn = { role: "user" | "assistant"; text: string };
@@ -126,7 +129,14 @@ export async function runAgent(
     })
     .join("\n");
 
+  const nowEcuador = new Intl.DateTimeFormat("es-EC", {
+    timeZone: "America/Guayaquil",
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(new Date());
+
   const contextBlock =
+    `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}. Úsala para resolver "hoy", "mañana", "pasado mañana".\n\n` +
     `Horarios de evaluación disponibles (L–V, hora Ecuador):\n${slotsContext}` +
     (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "");
 
