@@ -21,6 +21,8 @@ export async function PATCH(request: Request) {
   const membership = await prisma.membership.update({
     where: { id: data.membershipId },
     data: {
+      // planId lets an admin fix a wrongly-assigned plan (e.g. Fitness → Xtreme).
+      ...(data.planId ? { planId: data.planId } : {}),
       customPriceCents: data.customPriceCents,
       paymentMethod: data.paymentMethod,
       billingNote: data.billingNote,

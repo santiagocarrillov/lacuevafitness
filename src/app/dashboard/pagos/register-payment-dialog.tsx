@@ -24,6 +24,7 @@ const METHOD_OPTIONS = [
   { value: "CASH", label: "Efectivo", badge: "💵" },
   { value: "BANK_TRANSFER", label: "Transferencia bancaria", badge: "🏦" },
   { value: "STRIPE_CARD", label: "Tarjeta de crédito / débito", badge: "💳" },
+  { value: "PLUX_CARD", label: "TC Plux", badge: "💳" },
   { value: "STRIPE_LINK", label: "Stripe Link", badge: "🔗" },
   { value: "OTHER", label: "Otro", badge: "📋" },
 ] as const;

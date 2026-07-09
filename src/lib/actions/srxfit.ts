@@ -364,6 +364,50 @@ export async function upsertTestResult(data: {
   return { success: true };
 }
 
+// ─── Single ad-hoc test result (no full battery) ─────────────────────
+// A member may test just one movement (e.g. re-check every 4 weeks). This
+// records ONE standalone TestResult with its own date + notes, not tied to a
+// full evaluation. It still shows in the socio ficha and the client portal,
+// where progress is read purely from `recordedAt` per test.
+export async function createSingleTestResult(data: {
+  memberId: string;
+  test: TestKey;
+  valueNumeric: number;
+  unit: string;
+  recordedAt?: string; // yyyy-mm-dd; defaults to today
+  notes?: string;
+}) {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+
+  await prisma.testResult.create({
+    data: {
+      memberId: data.memberId,
+      test: data.test,
+      valueNumeric: data.valueNumeric,
+      unit: data.unit,
+      // Noon avoids the date sliding to the previous day in Ecuador (UTC-5).
+      recordedAt: data.recordedAt ? new Date(`${data.recordedAt}T12:00:00`) : new Date(),
+      notes: data.notes ?? null,
+      recordedByUserId: user.id,
+    },
+  });
+
+  revalidatePath(`/dashboard/socios/${data.memberId}`);
+  revalidatePath(`/dashboard/srxfit/evaluaciones/${data.memberId}`);
+  return { success: true };
+}
+
+// Delete a single test result by id (used for ad-hoc tests that have no eval).
+export async function deleteTestResultById(id: string, memberId: string) {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  await prisma.testResult.delete({ where: { id } });
+  revalidatePath(`/dashboard/socios/${memberId}`);
+  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
+  return { success: true };
+}
+
 // ─── Upsert body composition ──────────────────────────────────────────
 
 export async function upsertBodyComposition(data: {

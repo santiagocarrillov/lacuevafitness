@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SingleTestDialog } from "./single-test-dialog";
 
 type TestResult = {
   id: string;
@@ -30,12 +31,15 @@ export function TestResultsSection({
 
   const AddButton = () =>
     canRegister && memberIsActive ? (
-      <Link
-        href={addUrl}
-        className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:opacity-90 transition"
-      >
-        + Agregar resultados
-      </Link>
+      <div className="flex items-center gap-2">
+        <SingleTestDialog memberId={memberId} />
+        <Link
+          href={addUrl}
+          className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:opacity-90 transition"
+        >
+          + Batería completa
+        </Link>
+      </div>
     ) : null;
 
   if (testResults.length === 0) {
@@ -105,6 +109,11 @@ export function TestResultsSection({
                 <p className="text-xs text-muted-foreground">
                   {new Date(latest.recordedAt).toLocaleDateString("es-EC")}
                 </p>
+                {latest.notes && (
+                  <p className="text-xs text-muted-foreground italic border-t pt-1 mt-1">
+                    {latest.notes}
+                  </p>
+                )}
               </div>
             );
           })}

@@ -61,7 +61,7 @@ const sourceLabels: Record<string, string> = {
 
 const paymentMethodLabels: Record<string, string> = {
   STRIPE_CARD: "Tarjeta", STRIPE_LINK: "Link", BANK_TRANSFER: "Transferencia",
-  CASH: "Efectivo", OTHER: "Otro",
+  CASH: "Efectivo", PLUX_CARD: "TC Plux", OTHER: "Otro",
 };
 
 const testLabels: Record<string, string> = {
@@ -157,7 +157,7 @@ export default async function MemberDetailPage({
                 : null
             }
           />
-          <MemberActions memberId={member.id} status={member.status} plans={plans} />
+          <MemberActions memberId={member.id} status={member.status} plans={plans} sede={member.sede} />
         </div>
       </header>
 
@@ -292,6 +292,7 @@ export default async function MemberDetailPage({
               <>
                 <MembershipEditor membership={{
                   id: activeMembership.id,
+                  planId: activeMembership.planId,
                   planName: activeMembership.plan.name,
                   priceCents: activeMembership.plan.priceCents,
                   customPriceCents: activeMembership.customPriceCents,
@@ -301,7 +302,11 @@ export default async function MemberDetailPage({
                   endsAt: activeMembership.endsAt.toISOString(),
                   state: activeMembership.state,
                   autoRenew: activeMembership.autoRenew,
-                }} memberId={member.id} />
+                }} memberId={member.id}
+                  plans={plans
+                    .filter((p) => p.sede == null || p.sede === member.sede)
+                    .map((p) => ({ id: p.id, name: p.name, priceCents: p.priceCents, durationDays: p.durationDays }))}
+                />
                 <MembershipPaymentPanel
                   memberId={member.id}
                   membership={{

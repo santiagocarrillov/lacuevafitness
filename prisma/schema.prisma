@@ -189,6 +189,7 @@ enum PaymentMethod {
   STRIPE_LINK
   BANK_TRANSFER
   CASH
+  PLUX_CARD // Tarjeta de crédito vía TC Plux (procesador distinto de Stripe)
   OTHER
 }
 

@@ -20,17 +20,22 @@ type Plan = {
   name: string;
   priceCents: number;
   durationDays: number;
+  sede: string | null;
 };
 
 export function MemberActions({
   memberId,
   status,
   plans,
+  sede,
 }: {
   memberId: string;
   status: string;
   plans: Plan[];
+  sede: string;
 }) {
+  // Show plans for this member's sede + sede-agnostic ones (trial $9, daily pass…).
+  const visiblePlans = plans.filter((p) => p.sede == null || p.sede === sede);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [churnReason, setChurnReason] = useState("");
@@ -75,8 +80,8 @@ export function MemberActions({
             <DialogTitle>Asignar membresía</DialogTitle>
             <DialogDescription>Selecciona un plan para este socio.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            {plans.map((p) => (
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+            {visiblePlans.map((p) => (
               <button
                 key={p.id}
                 onClick={() => handleAssignPlan(p.id)}
