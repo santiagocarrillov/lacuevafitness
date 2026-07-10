@@ -10,9 +10,11 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:migrate": "prisma migrate dev",
-    "import:hubspot": "tsx scripts/import-hubspot.ts"
+    "import:hubspot": "tsx scripts/import-hubspot.ts",
+    "test:agent": "tsx scripts/test-agent.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@base-ui/react": "^1.4.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.7.0",

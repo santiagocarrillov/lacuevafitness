@@ -108,10 +108,13 @@ export type ProcessResult = {
   processed: number;
   skipped: number;
   statuses: number;
+  /** Conversation ids that received a NEW inbound message (for the agent to answer). */
+  conversationIds: string[];
 };
 
 export async function processWebhookPayload(payload: unknown): Promise<ProcessResult> {
-  const result: ProcessResult = { processed: 0, skipped: 0, statuses: 0 };
+  const result: ProcessResult = { processed: 0, skipped: 0, statuses: 0, conversationIds: [] };
+  const inboundConversationIds = new Set<string>();
   const wp = payload as WaWebhookPayload;
   if (!wp?.entry?.length) return result;
 
@@ -128,7 +131,8 @@ export async function processWebhookPayload(payload: unknown): Promise<ProcessRe
 
       for (const msg of value.messages ?? []) {
         try {
-          await ingestInbound(msg, contactName.get(msg.from));
+          const convId = await ingestInbound(msg, contactName.get(msg.from));
+          if (convId) inboundConversationIds.add(convId);
           result.processed += 1;
         } catch (err) {
           // Idempotency collision (duplicate externalId) is the most common case.
@@ -148,17 +152,19 @@ export async function processWebhookPayload(payload: unknown): Promise<ProcessRe
     }
   }
 
+  result.conversationIds = [...inboundConversationIds];
   return result;
 }
 
-async function ingestInbound(msg: WaMessage, profileName: string | undefined): Promise<void> {
+/** Returns the conversation id when a NEW inbound was stored, else null (duplicate). */
+async function ingestInbound(msg: WaMessage, profileName: string | undefined): Promise<string | null> {
   const waUserId = msg.from;
   const { body, mediaUrl } = extractBody(msg);
   const occurredAt = new Date(Number(msg.timestamp) * 1000);
 
   // Idempotency short-circuit: if we've already stored this externalId, no-op.
   const existing = await prisma.message.findUnique({ where: { externalId: msg.id } });
-  if (existing) return;
+  if (existing) return null;
 
   // Find conversation by (channel, externalId). Create lead+conversation if first contact.
   let conversation = await prisma.conversation.findUnique({
@@ -212,4 +218,6 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
 
   // Best-effort blue ticks. Non-critical.
   await markAsRead(msg.id);
+
+  return conversation.id;
 }
