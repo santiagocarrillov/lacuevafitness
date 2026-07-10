@@ -26,7 +26,13 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isStaffProtected = path.startsWith("/dashboard") || path.startsWith("/api/");
+  // Public API endpoints that must bypass session auth:
+  // - the WhatsApp webhook (Meta calls it; it's guarded by HMAC signature)
+  // - cron endpoints (guarded by CRON_SECRET, not a user session)
+  const isPublicApi =
+    path.startsWith("/api/whatsapp/webhook") || path.startsWith("/api/cron/");
+  const isStaffProtected =
+    !isPublicApi && (path.startsWith("/dashboard") || path.startsWith("/api/"));
   const isPortalProtected =
     path.startsWith("/portal") &&
     path !== "/portal/login" &&
