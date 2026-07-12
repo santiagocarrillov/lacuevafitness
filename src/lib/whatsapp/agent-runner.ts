@@ -11,11 +11,25 @@
 
 import { prisma } from "@/lib/prisma";
 import type { LeadStage, Sede } from "@/generated/prisma/client";
-import { runAgent, type AgentTurn } from "./agent";
+import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
 import { sendText } from "./client";
 import { scheduleTrialReminders } from "./sequences";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Build the map link(s) the agent asked to share. We attach these in code (never
+ * from the model) so the URL is always correct — the LLM must not emit URLs.
+ */
+function locationSuffix(share: AgentResult["shareLocation"], sede: Sede | null): string {
+  const line = (s: Sede) => `📍 ${SEDE_INFO[s].name}: ${SEDE_INFO[s].maps}`;
+  if (share === "sede" && sede) return `\n\n${line(sede)}`;
+  // "both", or "sede" without a resolved sede yet → send both, let the lead pick.
+  if (share === "both" || share === "sede") {
+    return `\n\n${line("FITNESS_CENTER")}\n${line("XTREME")}`;
+  }
+  return "";
+}
 
 export function agentEnabled(): boolean {
   return process.env.WHATSAPP_AGENT_ENABLED === "true";
@@ -80,6 +94,17 @@ export async function respondToInboundConversation(conversationId: string): Prom
     ? (result.suggestedStage as LeadStage)
     : undefined;
 
+  // Never send a blank message: if the model returned an empty reply, hand off to
+  // a human with a safe holding message instead of pushing "" to WhatsApp.
+  let replyText = (result.reply ?? "").trim();
+  let forceHandoff = result.handoff;
+  if (!replyText) {
+    console.warn("[whatsapp-agent] empty reply from model; handing off");
+    replyText = "¡Gracias por escribir! 😊 En un momento un asesor te atiende.";
+    forceHandoff = true;
+  }
+  const finalReply = replyText + locationSuffix(result.shareLocation, resolvedSede);
+
   // Persist the draft reply + lead updates in one transaction.
   const draft = await prisma.$transaction(async (tx) => {
     if (conversation.leadId) {
@@ -98,7 +123,7 @@ export async function respondToInboundConversation(conversationId: string): Prom
     if (resolvedSede && resolvedSede !== conversation.sede) {
       await tx.conversation.update({ where: { id: conversation.id }, data: { sede: resolvedSede } });
     }
-    if (result.handoff) {
+    if (forceHandoff) {
       await tx.conversation.update({ where: { id: conversation.id }, data: { botPaused: true } });
     }
     return tx.message.create({
@@ -106,7 +131,7 @@ export async function respondToInboundConversation(conversationId: string): Prom
         conversationId: conversation.id,
         direction: "OUTBOUND",
         channel: "WHATSAPP",
-        body: result.reply,
+        body: finalReply,
         llmGenerated: true,
         // sentByUserId + externalId stay null: this is a bot draft until sent.
       },
@@ -138,16 +163,16 @@ export async function respondToInboundConversation(conversationId: string): Prom
     Date.now() - new Date(conversation.lastInboundAt).getTime() < WINDOW_MS;
 
   if (!autoSendEnabled() || !withinWindow) {
-    return result.handoff ? { status: "handoff", sent: false } : { status: "drafted" };
+    return forceHandoff ? { status: "handoff", sent: false } : { status: "drafted" };
   }
 
   try {
-    const sent = await sendText(conversation.externalId, result.reply);
+    const sent = await sendText(conversation.externalId, finalReply);
     await prisma.$transaction([
       prisma.message.update({ where: { id: draft.id }, data: { externalId: sent.messageId } }),
       prisma.conversation.update({ where: { id: conversation.id }, data: { lastOutboundAt: new Date() } }),
     ]);
-    return result.handoff ? { status: "handoff", sent: true } : { status: "sent" };
+    return forceHandoff ? { status: "handoff", sent: true } : { status: "sent" };
   } catch (err) {
     console.error("[whatsapp-agent] send failed; reply left as draft", err);
     return { status: "error", error: err instanceof Error ? err.message : "send error" };

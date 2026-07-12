@@ -54,17 +54,18 @@ Di el precio de frente sin negarlo: "Nuestra mensualidad es $60, pero tenemos me
 - Challenge (oferta paralela, no la promociones fuerte, ofrécela solo si el perfil calza en bajar de peso): Fit Challenge de 6 semanas, $150, te pagan $20 por cada libra perdida (se descuenta de la membresía).
 
 # Ubicación
-Si preguntan dónde están y aún no sabes la sede, envía los DOS mapas (Fitness y Xtreme, ambos en Sangolquí) y pregunta cuál le queda mejor por cercanía. No obligues a elegir sede antes de darle la info.
+NUNCA escribas enlaces, URLs ni direcciones de mapa en tu mensaje: el sistema adjunta el mapa correcto automáticamente según el campo shareLocation. Si preguntan dónde están y aún no sabes la sede, pon shareLocation="both" (se adjuntan los DOS mapas, Fitness y Xtreme, ambos en Sangolquí) y pregunta cuál le queda mejor por cercanía. Cuando ya haya una sede definida y toque compartir su ubicación, pon shareLocation="sede". En tu texto solo invita con naturalidad (p. ej. "te paso la ubicación 👇"). No obligues a elegir sede antes de darle la info.
 
 # Agendar la evaluación
-Ofrece los horarios de la sede del lead (te los damos abajo). Agenda solo para hoy, mañana o máximo pasado mañana; si pide más de 2 días, no agendes aún y mantén el seguimiento. Al confirmar, comparte la ubicación (maps de la sede) y pide que llegue 15 min antes.
+Ofrece los horarios de la sede del lead (te los damos abajo). Agenda solo para hoy, mañana o máximo pasado mañana; si pide más de 2 días, no agendes aún y mantén el seguimiento. Al confirmar, pon shareLocation="sede" para adjuntar el mapa de la sede (no escribas el enlace tú) y pide que llegue 15 min antes.
 
 # Handoff a humano
 Si el lead pide explícitamente hablar con una persona, o hay una queja, tema clínico serio, o negociación fuera de la escalera de precio, o algo que no sabes con certeza: marca handoff=true y dile con calidez que un asesor le escribe enseguida. Mejor handoff que inventar.
 
 # Tu salida
 Devuelve SIEMPRE el JSON con:
-- reply: el mensaje de WhatsApp que enviarías ahora (en español, listo para enviar).
+- reply: el mensaje de WhatsApp que enviarías ahora (en español, listo para enviar). SIN enlaces ni URLs: el sistema adjunta los mapas.
+- shareLocation: "both" si debes mostrar ambas ubicaciones, "sede" si compartes la ubicación de una sede ya definida, o "none" si no aplica.
 - intent: la intención principal del último mensaje del lead.
 - sede: FITNESS_CENTER, XTREME o UNKNOWN si aún no se define.
 - objetivo: el objetivo del lead si lo mencionó (o null).
@@ -77,7 +78,12 @@ Devuelve SIEMPRE el JSON con:
 const OUTPUT_SCHEMA = {
   type: "object",
   properties: {
-    reply: { type: "string", description: "Mensaje de WhatsApp listo para enviar, en español." },
+    reply: { type: "string", description: "Mensaje de WhatsApp listo para enviar, en español. SIN enlaces ni URLs." },
+    shareLocation: {
+      type: "string",
+      enum: ["none", "both", "sede"],
+      description: "Qué mapa adjunta el sistema: 'both' ambas sedes, 'sede' la sede definida, 'none' ninguno.",
+    },
     intent: {
       type: "string",
       enum: ["saludo", "pide_info", "pregunta_precio", "objecion_precio", "objecion_evaluacion", "quiere_agendar", "quiere_humano", "otro"],
@@ -92,12 +98,13 @@ const OUTPUT_SCHEMA = {
     },
     scheduledAtISO: { type: ["string", "null"] },
   },
-  required: ["reply", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "scheduledAtISO"],
+  required: ["reply", "shareLocation", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "scheduledAtISO"],
   additionalProperties: false,
 } as const;
 
 export type AgentResult = {
   reply: string;
+  shareLocation: "none" | "both" | "sede";
   intent: string;
   sede: "FITNESS_CENTER" | "XTREME" | "UNKNOWN";
   objetivo: string | null;
@@ -122,10 +129,13 @@ export async function runAgent(
 
   // Slots context: show the known sede's, or both when undecided.
   const sedesToShow: Sede[] = opts.knownSede ? [opts.knownSede] : ["FITNESS_CENTER", "XTREME"];
+  // No incluimos las URLs de mapas a propósito: el sistema las adjunta de forma
+  // determinística (ver agent-runner) según shareLocation, para no depender de que
+  // el modelo reproduzca un enlace largo sin errores.
   const slotsContext = sedesToShow
     .map((s) => {
       const i = SEDE_INFO[s];
-      return `${i.name} — mañana: ${i.morning} · tarde: ${i.evening} · ubicación: ${i.maps}`;
+      return `${i.name} — mañana: ${i.morning} · tarde: ${i.evening}`;
     })
     .join("\n");
 
@@ -146,20 +156,32 @@ export async function runAgent(
     ...history.map((t) => ({ role: t.role, content: t.text })),
   ];
 
-  // `output_config` (format + effort) is a recent API surface; cast to keep the
-  // build's type-check green regardless of the installed SDK's typings.
+  // Structured output via TOOL USE (not `output_config.format`): forcing the
+  // long, emoji-heavy free-text `reply` through the json_schema grammar was
+  // producing intermittent character corruption ("te resento La escue") and the
+  // occasional empty field. A forced tool call lets the model write the JSON
+  // naturally, which is far more robust for conversational text. `effort` still
+  // lives inside `output_config` (a recent API surface — cast to keep tsc green).
   const params = {
     model: MODEL,
     max_tokens: 1024,
     system: SYSTEM_PROMPT,
-    output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA }, effort: EFFORT },
+    tools: [
+      {
+        name: "responder",
+        description: "Devuelve la respuesta de WhatsApp para el lead + su calificación estructurada.",
+        input_schema: OUTPUT_SCHEMA,
+      },
+    ],
+    tool_choice: { type: "tool", name: "responder" },
+    output_config: { effort: EFFORT },
     messages,
   };
   const response: Anthropic.Message = await (client.messages.create as (p: unknown) => Promise<Anthropic.Message>)(params);
 
-  const text = response.content.find((b) => b.type === "text");
-  if (!text || text.type !== "text") {
-    throw new Error("El agente no devolvió texto.");
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    throw new Error("El agente no devolvió la llamada a la herramienta 'responder'.");
   }
-  return JSON.parse(text.text) as AgentResult;
+  return toolUse.input as AgentResult;
 }
