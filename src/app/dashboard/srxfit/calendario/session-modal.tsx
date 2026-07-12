@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { SrxfitSession } from "@/lib/srxfit-calendar";
 import {
   activacionToMd, fuerzaToMd, acondicionamientoToMd, regulacionToMd, MarkdownText,
@@ -377,8 +378,16 @@ export function SessionModal({ session, date, canEdit, onClose }: Props) {
                   onClick={() => setEditing(true)}
                   className="text-xs px-2 py-1 rounded border hover:bg-accent transition"
                 >
-                  Editar
+                  Editar día
                 </button>
+              )}
+              {canEdit && (
+                <Link
+                  href={`/dashboard/srxfit/calendario/semana/${weekNumber}`}
+                  className="text-xs px-2 py-1 rounded border hover:bg-accent transition"
+                >
+                  Editar semana
+                </Link>
               )}
               <button
                 onClick={onClose}
