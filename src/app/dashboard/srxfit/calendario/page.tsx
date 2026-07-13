@@ -107,6 +107,31 @@ export default async function CalendarioPage({
           ))}
         </div>
       </div>
+
+      {/* Week editor strip — OWNER only */}
+      {canEdit && (
+        <div className="rounded-lg border p-4 space-y-2">
+          <div className="space-y-0.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Editar programación por semana
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Vista de semana completa: edita los 4 bloques de los 6 días y guarda todo de una vez.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {Array.from({ length: 18 }, (_, i) => i + 1).map((w) => (
+              <Link
+                key={w}
+                href={`/dashboard/srxfit/calendario/semana/${w}`}
+                className="px-2.5 py-1 text-xs rounded-md border transition hover:bg-accent"
+              >
+                Sem {w}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

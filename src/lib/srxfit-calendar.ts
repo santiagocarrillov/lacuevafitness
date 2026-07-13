@@ -98,6 +98,26 @@ export function getSessionForDate(date: Date): SrxfitSession | null {
   };
 }
 
+// ─── Week helpers (for the week editor) ──────────────────────────────
+
+export function dateForWeekDay(weekNumber: number, dayIndex: number): Date {
+  const d = new Date(SRXFIT_START);
+  d.setDate(d.getDate() + (weekNumber - 1) * 7 + (dayIndex - 1));
+  return d;
+}
+
+export type WeekDaySlot = { dayIndex: number; date: string; session: SrxfitSession | null };
+
+// All six training days (Mon–Sat) of a plan week, resolved against the base plan.
+export function getWeekSessions(weekNumber: number): WeekDaySlot[] {
+  const out: WeekDaySlot[] = [];
+  for (let di = 1; di <= 6; di++) {
+    const date = dateForWeekDay(weekNumber, di);
+    out.push({ dayIndex: di, date: isoDate(date), session: getSessionForDate(date) });
+  }
+  return out;
+}
+
 // ─── Monthly calendar builder ─────────────────────────────────────────
 
 export function buildMonthCalendar(year: number, month: number): CalendarCell[][] {
