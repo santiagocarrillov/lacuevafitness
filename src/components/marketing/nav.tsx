@@ -5,11 +5,13 @@ export function MarketingNav() {
   return (
     <nav className="nav">
       <Link href="/" aria-label="La Cueva SRXFIT — inicio">
+        {/* Se muestra a 52px de alto (~79px de ancho). Declaramos 2x para retina:
+            con width={1200} next/image servía una imagen de 1200px para un logo de 70px. */}
         <Image
           src="/img/logo-lacueva-srxfit.png"
           alt="La Cueva SRXFIT"
-          width={1973}
-          height={1476}
+          width={158}
+          height={104}
           className="nav-logo"
           priority
         />

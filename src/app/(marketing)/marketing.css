@@ -36,7 +36,12 @@
   color: var(--black);
   font-family: var(--sans2);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+
+  /* OJO: `overflow-x: hidden` aquí ROMPE el position:sticky del .stage.
+     El navegador computa overflow-y:auto y convierte a .mkt en contenedor de
+     scroll; sticky no pega si un ancestro tiene overflow != visible.
+     `clip` recorta igual pero NO crea contenedor de scroll. */
+  overflow-x: clip;
 }
 
 .mkt *,
