@@ -58,6 +58,22 @@ Reabrir una conversación que quedó fría fuera de la ventana de 24h.
 
 ---
 
+## 5. `miembro_inasistencia` — Categoría: **Marketing**
+Fase 3 (retención). Se envía a un **miembro activo** que lleva varios días seguidos sin
+asistir → abre una conversación de retención. Cuando el miembro responde, el bot conversa
+en la ventana de 24h hasta que un admin retome.
+
+**Body:**
+```
+¡Hola {{1}}! 💪 Te extrañamos en La Cueva estos días. ¿Todo bien? Cuéntanos si necesitas ayuda para retomar tu rutina o reacomodar tus horarios; aquí estamos para ti. 🙌
+```
+**Variables:** `{{1}}` = nombre
+**Ejemplo:** Andrea
+**Nota categoría:** es un check-in de retención a un cliente activo; si Meta la rechaza como
+Marketing, reintentar como **Utility** (mensaje sobre su membresía/servicio vigente).
+
+---
+
 ## Notas
 - **Categoría correcta = aprobación más rápida.** Los recordatorios (1, 2) son transaccionales sobre una cita que el lead agendó → **Utility**. Los que llevan la oferta $9 (3, 4) son promocionales → **Marketing**.
 - **Sin botones por ahora:** el cliente (`sendTemplate`) hoy solo mete variables en el body. Si más adelante queremos botones "Sí, confirmo / Reagendar", se amplía el cliente y se re-somete la template.
