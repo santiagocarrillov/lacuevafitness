@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+.gstack/
+
+# Carpeta de trabajo de diseño (fuentes crudas: .mov, .ai, .psd, HEIC ~300MB).
+# Al repo solo entran los assets optimizados en /public.
+/web/
