@@ -81,8 +81,12 @@ Los admins ven los mismos campos al registrar un pago.
 - `MEMBER` — app móvil (Fase 3, no aún).
 
 ### Sedes (enum `Sede`)
-- `FITNESS_CENTER` (CrossFit)
-- `XTREME` (funcional)
+- `FITNESS_CENTER` — casa original (techado, mezzanine, fuerza). Test de empuje: bench press.
+- `XTREME` — nave abovedada abierta. Test de empuje: push press.
+
+> ⚠️ **Las DOS sedes entrenan SRXFIT** (el mismo método). Los rótulos viejos
+> "Fitness Center = CrossFit" / "Xtreme = funcional" están **OBSOLETOS** — se
+> diferencian por espacio/ubicación, no por método. No usar CrossFit/funcional en UI ni copy.
 
 ---
 
