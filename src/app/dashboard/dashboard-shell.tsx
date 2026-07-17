@@ -39,7 +39,7 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <p className="text-sm font-semibold">La Cueva</p>
+        <p className="font-heading text-base font-semibold uppercase tracking-wide">La Cueva</p>
         <div className="w-8" />
       </header>
 
@@ -64,7 +64,7 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
         <div className="px-6 py-5 border-b border-border flex items-center justify-between">
           <div>
             <p className="text-xs tracking-[0.3em] text-muted-foreground uppercase">La Cueva</p>
-            <p className="text-sm font-semibold">Dashboard SRXFit</p>
+            <p className="font-heading text-base font-semibold uppercase tracking-wide">Dashboard SRXFit</p>
           </div>
           <button
             onClick={() => setOpen(false)}
