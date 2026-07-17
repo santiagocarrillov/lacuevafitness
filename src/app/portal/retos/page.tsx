@@ -34,7 +34,7 @@ export default async function RetosPage() {
   const active = progressRows.filter(
     (p) => !p.completed && p.challenge.active && p.challenge.endsAt >= now,
   );
-  const won = progressRows.filter((p) => p.completed);
+  const won = progressRows.filter((p) => p.completed && p.challenge.active);
   const available = openChallenges.filter((c) => !joinedIds.has(c.id));
 
   const initial = member.firstName.charAt(0).toUpperCase();

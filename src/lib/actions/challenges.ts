@@ -35,6 +35,53 @@ export async function createChallenge(data: {
   return challenge;
 }
 
+// ── Update challenge ────────────────────────────────────────────────
+
+export async function updateChallenge(
+  id: string,
+  data: {
+    name: string;
+    description?: string;
+    reward?: string;
+    ruleType: ChallengeRuleType;
+    ruleTarget: number;
+    ruleDays?: number;
+    sede?: Sede;
+    startsAt: string;
+    endsAt: string;
+  },
+) {
+  const challenge = await prisma.challenge.update({
+    where: { id },
+    data: {
+      name: data.name,
+      description: data.description ?? null,
+      reward: data.reward ?? null,
+      ruleType: data.ruleType,
+      ruleTarget: data.ruleTarget,
+      ruleDays: data.ruleDays ?? null,
+      sede: data.sede ?? null,
+      startsAt: new Date(data.startsAt),
+      endsAt: new Date(data.endsAt),
+    },
+  });
+
+  revalidatePath("/dashboard/retos");
+  return challenge;
+}
+
+// ── Delete challenge (soft delete — hides it from all views) ─────────
+
+export async function deleteChallenge(id: string) {
+  const challenge = await prisma.challenge.update({
+    where: { id },
+    data: { active: false },
+  });
+
+  revalidatePath("/dashboard/retos");
+  return challenge;
+}
+
 // ── List challenges ─────────────────────────────────────────────────
 
 export async function getChallenges(activeOnly = true) {
