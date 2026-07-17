@@ -49,24 +49,28 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Cuerpo de la app en Barlow Semi Condensed (mismo que el portal). Geist queda de fallback. */
+  --font-sans: var(--font-barlow-semi), var(--font-geist-sans), system-ui, sans-serif;
+
+  /* Identidad La Cueva — blanco/negro sobre paper cálido del kit; acentos = zonas SRXFIT */
+  --background: #f4f2ed;      /* paper */
+  --foreground: #0b0b0b;      /* tinta de marca */
+  --card: #ffffff;
+  --card-foreground: #0b0b0b;
+  --popover: #ffffff;
+  --popover-foreground: #0b0b0b;
+  --primary: #0b0b0b;         /* negro de marca */
+  --primary-foreground: #ffffff;
+  --secondary: #f7f5f0;       /* superficie alterna */
+  --secondary-foreground: #0b0b0b;
+  --muted: #f0ede4;
+  --muted-foreground: #64675f;
+  --accent: #f0ede4;          /* hover/estado sutil — el color vivo se reserva a datos/estados */
+  --accent-foreground: #0b0b0b;
+  --destructive: #c8493c;     /* alerta — familia peak */
+  --border: #e6e3dc;
+  --input: #e6e3dc;
+  --ring: #1b1f23;            /* graphite del kit */
   /* Escala de zonas SRXFIT como paleta de datos (recuperación → pico) */
   --chart-1: #6b4fb5;
   --chart-2: #3a8fd1;
@@ -74,14 +78,14 @@
   --chart-4: #f5a623;
   --chart-5: #ff6b5a;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b0b0b;
+  --sidebar-primary: #0b0b0b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0ede4;
+  --sidebar-accent-foreground: #0b0b0b;
+  --sidebar-border: #e6e3dc;
+  --sidebar-ring: #1b1f23;
 }
 
 .dark {
