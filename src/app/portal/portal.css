@@ -1,32 +1,47 @@
 /* Portal Socio — tokens from LaCueva_PortalSocio_Mockup.html */
 
 .portal-root {
-  --pt-bg-page: #f4f1ea;
-  --pt-bg-phone: #fdfcf9;
+  /* Base — blanco/negro dominan + paper cálido sutil (tomado del kit .mkt) */
+  --pt-bg-page: #f4f2ed;
+  --pt-bg-phone: #ffffff;
   --pt-bg-card: #ffffff;
-  --pt-bg-card-alt: #faf8f3;
-  --pt-bg-dark: #0a0a0a;
-  --pt-bg-dark-soft: #1a1a1a;
-  --pt-ink: #0a0a0a;
-  --pt-ink-2: #4a4a44;
-  --pt-ink-3: #8a8a82;
+  --pt-bg-card-alt: #f7f5f0;
+  --pt-bg-dark: #0b0b0b;
+  --pt-bg-dark-soft: #1b1f23; /* slate-graphite del kit — no negro puro */
+  --pt-ink: #0b0b0b;
+  --pt-ink-2: #45494d;
+  --pt-ink-3: #8a8a86;
   --pt-ink-4: #b8b6ae;
-  --pt-line: #e8e5dc;
+  --pt-line: #e6e3dc;
   --pt-line-soft: #f0ede4;
-  --pt-accent: #f5c518;
-  --pt-accent-deep: #d4a800;
-  --pt-green: #2d8659;
-  --pt-green-bg: #e8f3ec;
-  --pt-orange: #d97f30;
+
+  /* Escala de zonas SRXFIT — color con propósito (recuperación → pico) */
+  --cal-recovery: #6b4fb5;
+  --cal-zone2: #3a8fd1;
+  --cal-strength: #00d4c4;
+  --cal-power: #c9f543;
+  --cal-threshold: #f5a623;
+  --cal-peak: #ff6b5a;
+  --grad-cal: linear-gradient(90deg, var(--cal-recovery) 0%, var(--cal-zone2) 20%, var(--cal-strength) 42%, var(--cal-power) 62%, var(--cal-threshold) 82%, var(--cal-peak) 100%);
+
+  /* Acento de energía = chartreuse (zona potencia). Reemplaza el dorado fuera de marca. */
+  --pt-accent: var(--cal-power);
+  --pt-accent-deep: #a6cc1f;
+
+  /* Semáforo de salud reconciliado con la familia de zonas (variantes legibles en claro) */
+  --pt-green: #1f8f74;   /* vital / óptimo — afín a strength */
+  --pt-green-bg: #e3f3ee;
+  --pt-orange: #cf8a2a;  /* umbral */
   --pt-orange-bg: #fbeedd;
-  --pt-red: #b94545;
+  --pt-red: #c8493c;     /* alerta — afín a peak */
   --pt-red-bg: #f7e3e3;
-  --pt-blue: #3a6ea5;
+  --pt-blue: #3a6ea5;    /* zona 2 */
   --pt-blue-bg: #e6eef7;
 
-  --pt-font-serif: 'Fraunces', 'Georgia', serif;
-  --pt-font-sans: 'Geist', -apple-system, sans-serif;
-  --pt-font-mono: 'Geist Mono', ui-monospace, monospace;
+  /* Tipografía — 100% kit de marca: Barlow (datos/cuerpo) + IMPACTED (marca) */
+  --pt-font-cond: var(--font-barlow-cond), 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --pt-font-sans: var(--font-barlow-semi), 'Barlow Semi Condensed', system-ui, sans-serif;
+  --pt-font-display: var(--font-impacted), 'Barlow Condensed', Impact, sans-serif;
 
   background: var(--pt-bg-page);
   color: var(--pt-ink);
@@ -57,42 +72,45 @@
   top: 0;
   z-index: 20;
 }
-.portal-brand { display: flex; align-items: center; gap: 8px; }
-.portal-brand-bolt {
-  width: 16px; height: 16px; background: var(--pt-bg-dark);
-  clip-path: polygon(50% 0, 0 60%, 40% 60%, 25% 100%, 100% 35%, 60% 35%, 75% 0);
+.portal-brand { display: flex; align-items: baseline; gap: 8px; }
+/* Wordmark de marca en IMPACTED — va sólido (su textura desgarrada ya es el efecto). */
+.portal-wordmark {
+  font-family: var(--pt-font-display);
+  font-size: 22px; line-height: 1; letter-spacing: 0.01em;
+  text-transform: uppercase; color: var(--pt-ink);
 }
-.portal-brand-name {
-  font-family: var(--pt-font-serif);
-  font-size: 17px; font-weight: 500; letter-spacing: -0.01em;
+.portal-brand-tag {
+  font-family: var(--pt-font-cond);
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--pt-ink-3);
 }
-.portal-brand-name em { font-style: italic; font-weight: 300; color: var(--pt-ink-3); }
 .portal-avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, #e8c490, #b8855a);
+  background: var(--pt-bg-dark);
   color: white;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--pt-font-serif); font-size: 13px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 13px; font-weight: 600;
   text-decoration: none;
 }
 .portal-staff-back {
   display: inline-flex; align-items: center;
   padding: 5px 11px; border-radius: 999px;
   background: var(--pt-bg-dark); color: white;
-  font-family: var(--pt-font-mono); font-size: 11px;
+  font-family: var(--pt-font-cond); font-size: 11px;
   letter-spacing: 0.04em; text-decoration: none; white-space: nowrap;
 }
 
 .portal-content { padding: 20px 22px 110px; flex: 1; }
 
 .portal-kicker {
-  font-family: var(--pt-font-mono);
+  font-family: var(--pt-font-cond);
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--pt-ink-3); margin-bottom: 6px;
 }
 .portal-title {
-  font-family: var(--pt-font-serif);
-  font-weight: 400; font-size: 30px; letter-spacing: -0.02em; line-height: 1.05;
+  font-family: var(--pt-font-cond);
+  font-weight: 600; font-size: 32px; letter-spacing: -0.01em; line-height: 1.02;
+  text-transform: uppercase;
 }
 .portal-title em { font-style: italic; color: var(--pt-ink-2); }
 
@@ -101,7 +119,7 @@
   margin: 22px 2px 12px;
 }
 .portal-section-title h4 {
-  font-family: var(--pt-font-mono);
+  font-family: var(--pt-font-cond);
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--pt-ink-3); font-weight: 500;
 }
@@ -131,7 +149,7 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  background: rgba(253, 252, 249, 0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--pt-line);
   padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
@@ -164,14 +182,14 @@
 }
 .portal-streak .info { flex: 1; }
 .portal-streak .num {
-  font-family: var(--pt-font-serif); font-size: 18px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 18px; font-weight: 500;
 }
 .portal-streak .label {
   font-size: 10px; color: rgba(255,255,255,0.6);
   text-transform: uppercase; letter-spacing: 0.1em;
 }
 .portal-streak .next {
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   color: var(--pt-accent); text-align: right; line-height: 1.3;
 }
 
@@ -185,18 +203,18 @@
   position: relative; overflow: hidden;
 }
 .portal-today .ribbon {
-  position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--pt-accent);
+  position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--grad-cal);
 }
 .portal-today .tag {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.12em;
   color: var(--pt-ink-3); margin-bottom: 12px;
 }
 .portal-today .tag .dot { width: 6px; height: 6px; background: var(--pt-accent); border-radius: 50%; }
 .portal-today h3 {
-  font-family: var(--pt-font-serif); font-weight: 400; font-size: 28px;
-  letter-spacing: -0.02em; line-height: 1; margin-bottom: 4px;
+  font-family: var(--pt-font-cond); font-weight: 600; font-size: 28px;
+  letter-spacing: -0.01em; line-height: 1; margin-bottom: 4px;
 }
 .portal-today .subtitle { color: var(--pt-ink-2); font-size: 13px; margin-bottom: 16px; }
 .portal-today .meta-row {
@@ -209,7 +227,7 @@
   color: var(--pt-ink-3); margin-bottom: 3px;
 }
 .portal-today .v {
-  font-family: var(--pt-font-serif); font-size: 15px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 15px; font-weight: 500;
 }
 
 /* Countdown */
@@ -221,9 +239,9 @@
   border: 1px solid var(--pt-line-soft);
 }
 .portal-countdown .days {
-  font-family: var(--pt-font-serif);
-  font-size: 36px; font-weight: 400; line-height: 1;
-  letter-spacing: -0.03em; color: var(--pt-ink);
+  font-family: var(--pt-font-cond);
+  font-size: 40px; font-weight: 700; line-height: 1;
+  letter-spacing: -0.02em; color: var(--pt-ink);
 }
 .portal-countdown .info { flex: 1; }
 .portal-countdown .label {
@@ -231,7 +249,7 @@
   color: var(--pt-ink-3); margin-bottom: 3px;
 }
 .portal-countdown .title {
-  font-family: var(--pt-font-serif); font-size: 14px; font-style: italic;
+  font-family: var(--pt-font-cond); font-size: 14px; font-style: italic;
   color: var(--pt-ink); line-height: 1.3;
 }
 
@@ -247,7 +265,7 @@
   width: 38px; height: 38px; border-radius: 10px;
   background: var(--pt-bg-card-alt);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--pt-font-serif); font-size: 14px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 14px; font-weight: 500;
   color: var(--pt-ink-2); flex-shrink: 0;
 }
 .portal-hito .icon.done { background: var(--pt-green-bg); color: var(--pt-green); }
@@ -259,7 +277,7 @@
 .portal-hito .fill.gold { background: var(--pt-accent); }
 .portal-hito .fill.done { background: var(--pt-green); }
 .portal-hito .pct {
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   color: var(--pt-ink-3); white-space: nowrap;
 }
 
@@ -269,17 +287,17 @@
   border-radius: 14px; padding: 18px; margin-bottom: 8px;
 }
 .portal-capsule .label {
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--pt-accent); margin-bottom: 8px;
 }
 .portal-capsule h5 {
-  font-family: var(--pt-font-serif); font-weight: 400;
+  font-family: var(--pt-font-cond); font-weight: 400;
   font-size: 17px; line-height: 1.2; letter-spacing: -0.01em;
   margin-bottom: 8px;
 }
 .portal-capsule .read {
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   color: rgba(255,255,255,0.5);
 }
 
@@ -302,7 +320,7 @@
 .portal-metric .dot.gray { background: var(--pt-ink-4); }
 .portal-metric .label { font-size: 11px; color: var(--pt-ink-3); margin-bottom: 6px; }
 .portal-metric .value {
-  font-family: var(--pt-font-serif); font-size: 22px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 24px; font-weight: 700;
   letter-spacing: -0.02em; line-height: 1;
 }
 .portal-metric .u { font-size: 11px; color: var(--pt-ink-3); font-weight: 400; margin-left: 2px; }
@@ -317,10 +335,10 @@
 .portal-chart .head {
   display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;
 }
-.portal-chart .t { font-family: var(--pt-font-serif); font-size: 15px; font-style: italic; }
-.portal-chart .delta-pos { font-family: var(--pt-font-mono); font-size: 11px; color: var(--pt-green); }
-.portal-chart .delta-neg { font-family: var(--pt-font-mono); font-size: 11px; color: var(--pt-red); }
-.portal-chart .delta-zero { font-family: var(--pt-font-mono); font-size: 11px; color: var(--pt-ink-3); }
+.portal-chart .t { font-family: var(--pt-font-cond); font-size: 15px; font-style: italic; }
+.portal-chart .delta-pos { font-family: var(--pt-font-cond); font-size: 11px; color: var(--pt-green); }
+.portal-chart .delta-neg { font-family: var(--pt-font-cond); font-size: 11px; color: var(--pt-red); }
+.portal-chart .delta-zero { font-family: var(--pt-font-cond); font-size: 11px; color: var(--pt-ink-3); }
 
 /* PR card */
 .portal-pr {
@@ -332,12 +350,12 @@
   width: 32px; height: 32px; border-radius: 8px;
   background: var(--pt-accent); color: var(--pt-bg-dark);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--pt-font-mono); font-weight: 600; font-size: 11px;
+  font-family: var(--pt-font-cond); font-weight: 600; font-size: 11px;
 }
 .portal-pr .name { flex: 1; font-size: 12px; }
-.portal-pr .value { font-family: var(--pt-font-serif); font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+.portal-pr .value { font-family: var(--pt-font-cond); font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
 .portal-pr .u { font-size: 10px; color: var(--pt-ink-3); margin-left: 2px; }
-.portal-pr .date { font-family: var(--pt-font-mono); font-size: 9px; color: var(--pt-ink-3); margin-left: 8px; }
+.portal-pr .date { font-family: var(--pt-font-cond); font-size: 9px; color: var(--pt-ink-3); margin-left: 8px; }
 
 /* Nutritionist note */
 .portal-nutri {
@@ -349,11 +367,11 @@
   width: 28px; height: 28px; border-radius: 50%;
   background: linear-gradient(135deg, #6ba089, #3d6e5a); color: white;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--pt-font-serif); font-size: 12px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 12px; font-weight: 500;
 }
 .portal-nutri .name { font-size: 12px; font-weight: 500; }
 .portal-nutri .role { font-size: 10px; color: var(--pt-ink-3); }
-.portal-nutri .when { margin-left: auto; font-family: var(--pt-font-mono); font-size: 10px; color: var(--pt-ink-3); }
+.portal-nutri .when { margin-left: auto; font-family: var(--pt-font-cond); font-size: 10px; color: var(--pt-ink-3); }
 .portal-nutri .body { font-size: 12px; line-height: 1.55; color: var(--pt-ink-2); }
 .portal-nutri .body strong { color: var(--pt-ink); font-weight: 500; }
 
@@ -369,13 +387,13 @@
 }
 .portal-reto .tag {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--pt-font-mono); font-size: 9px;
+  font-family: var(--pt-font-cond); font-size: 9px;
   text-transform: uppercase; letter-spacing: 0.12em;
   color: var(--pt-ink-3); margin-bottom: 8px;
 }
 .portal-reto.featured .tag { color: var(--pt-accent); }
 .portal-reto h4 {
-  font-family: var(--pt-font-serif); font-weight: 400; font-size: 19px;
+  font-family: var(--pt-font-cond); font-weight: 400; font-size: 19px;
   line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 4px;
 }
 .portal-reto .prize { font-size: 11px; color: var(--pt-ink-2); margin-bottom: 12px; }
@@ -388,7 +406,7 @@
 .portal-reto.featured .bar .fill { background: var(--pt-accent); }
 .portal-reto .meta {
   display: flex; justify-content: space-between;
-  font-family: var(--pt-font-mono); font-size: 10px; color: var(--pt-ink-3);
+  font-family: var(--pt-font-cond); font-size: 10px; color: var(--pt-ink-3);
 }
 .portal-reto.featured .meta { color: rgba(255,255,255,0.6); }
 .portal-reto .join-btn {
@@ -396,7 +414,7 @@
   width: 100%; padding: 9px 12px;
   background: var(--pt-bg-dark); color: white;
   border-radius: 10px; border: 0;
-  font-family: var(--pt-font-mono); font-size: 11px;
+  font-family: var(--pt-font-cond); font-size: 11px;
   text-transform: uppercase; letter-spacing: 0.1em;
   cursor: pointer;
 }
@@ -413,7 +431,7 @@
   font-weight: 700; font-size: 14px;
 }
 .portal-reto-won .name { font-size: 12px; font-weight: 500; }
-.portal-reto-won .when { font-family: var(--pt-font-mono); font-size: 10px; color: var(--pt-ink-3); }
+.portal-reto-won .when { font-family: var(--pt-font-cond); font-size: 10px; color: var(--pt-ink-3); }
 
 /* Membership card */
 .portal-membership {
@@ -428,13 +446,13 @@
   opacity: 0.15; border-radius: 50%; filter: blur(20px);
 }
 .portal-membership .plan-label {
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--pt-accent); margin-bottom: 8px;
 }
 .portal-membership .plan-name {
-  font-family: var(--pt-font-serif); font-weight: 400; font-size: 26px;
-  letter-spacing: -0.02em; margin-bottom: 18px;
+  font-family: var(--pt-font-cond); font-weight: 700; font-size: 28px;
+  letter-spacing: -0.01em; text-transform: uppercase; margin-bottom: 18px;
 }
 .portal-membership .plan-row {
   display: flex; justify-content: space-between; align-items: flex-end;
@@ -445,7 +463,7 @@
   text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;
 }
 .portal-membership .plan-item .v {
-  font-family: var(--pt-font-serif); font-size: 15px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 15px; font-weight: 500;
 }
 .portal-membership .plan-item.days .v { color: var(--pt-accent); }
 
@@ -466,7 +484,7 @@
 .portal-list-item .info { flex: 1; }
 .portal-list-item .t { font-size: 12px; font-weight: 500; }
 .portal-list-item .s { font-size: 10px; color: var(--pt-ink-3); margin-top: 2px; }
-.portal-list-item .arrow { font-family: var(--pt-font-mono); font-size: 14px; color: var(--pt-ink-3); }
+.portal-list-item .arrow { font-family: var(--pt-font-cond); font-size: 14px; color: var(--pt-ink-3); }
 
 /* Auth pages */
 .portal-auth-shell {
@@ -483,8 +501,9 @@
   padding: 28px 24px;
 }
 .portal-auth-card h1 {
-  font-family: var(--pt-font-serif); font-weight: 400;
-  font-size: 28px; letter-spacing: -0.02em; line-height: 1.05;
+  font-family: var(--pt-font-cond); font-weight: 600;
+  font-size: 30px; letter-spacing: -0.01em; line-height: 1.02;
+  text-transform: uppercase;
   margin-bottom: 6px;
 }
 .portal-auth-card h1 em { font-style: italic; color: var(--pt-ink-2); }
@@ -545,21 +564,21 @@
   margin-bottom: 10px;
 }
 .portal-attendance .head .t {
-  font-family: var(--pt-font-serif); font-size: 15px; font-style: italic;
+  font-family: var(--pt-font-cond); font-size: 15px; font-style: italic;
 }
 .portal-attendance .head .sub {
-  font-family: var(--pt-font-mono); font-size: 10px; color: var(--pt-ink-3);
+  font-family: var(--pt-font-cond); font-size: 10px; color: var(--pt-ink-3);
 }
 .portal-attendance .grid {
   display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
 }
 .portal-attendance .stat .k {
-  font-family: var(--pt-font-mono); font-size: 9px;
+  font-family: var(--pt-font-cond); font-size: 9px;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--pt-ink-3); margin-bottom: 4px;
 }
 .portal-attendance .stat .v {
-  font-family: var(--pt-font-serif); font-size: 22px;
+  font-family: var(--pt-font-cond); font-size: 22px;
   font-weight: 500; letter-spacing: -0.02em; line-height: 1;
 }
 .portal-attendance .stat .v .u {
@@ -581,13 +600,13 @@
   width: 28px; height: 28px; border-radius: 50%;
   background: linear-gradient(135deg, #b8855a, #8a5a3a); color: white;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--pt-font-serif); font-size: 12px; font-weight: 500;
+  font-family: var(--pt-font-cond); font-size: 12px; font-weight: 500;
 }
 .portal-note-preview .who { flex: 1; min-width: 0; }
 .portal-note-preview .who .name { font-size: 12px; font-weight: 500; }
 .portal-note-preview .who .role { font-size: 10px; color: var(--pt-ink-3); }
 .portal-note-preview .when {
-  font-family: var(--pt-font-mono); font-size: 10px; color: var(--pt-ink-3);
+  font-family: var(--pt-font-cond); font-size: 10px; color: var(--pt-ink-3);
 }
 .portal-note-preview .body {
   font-size: 13px; line-height: 1.55; color: var(--pt-ink-2);
@@ -606,7 +625,7 @@
 .portal-status-pill {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 9px; border-radius: 20px;
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.08em;
 }
 .portal-status-pill.green { background: var(--pt-green-bg); color: var(--pt-green); }
@@ -638,7 +657,7 @@
   border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
 }
 .portal-recs .label {
-  font-family: var(--pt-font-mono); font-size: 10px;
+  font-family: var(--pt-font-cond); font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--pt-ink-3); margin-bottom: 6px;
 }

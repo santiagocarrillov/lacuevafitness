@@ -10,10 +10,8 @@ export function AppHeader({
   return (
     <header className="portal-app-header">
       <div className="portal-brand">
-        <div className="portal-brand-bolt" />
-        <div className="portal-brand-name">
-          La Cueva <em>Socio</em>
-        </div>
+        <span className="portal-wordmark">La Cueva</span>
+        <span className="portal-brand-tag">Socio</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {isStaff && (
