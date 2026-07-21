@@ -19,6 +19,7 @@ import { getMemberMealPlans, getMemberMealLogs } from "@/lib/actions/nutrition";
 import { TestResultsSection } from "./test-results-section";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
+import { RenewMembershipDialog } from "./renew-membership-dialog";
 import { MembershipPaymentPanel } from "./membership-payment-panel";
 import { ChurnRiskBadge } from "./churn-risk-badge";
 import { MemberInfoEditor } from "./member-info-editor";
@@ -114,6 +115,14 @@ export default async function MemberDetailPage({
       new Date(m.endsAt) >= now &&
       m.plan.billingCycle !== "ONE_TIME",
   );
+  // Most recent non-daily membership (active or lapsed) — the source for a
+  // "Renovar" when the socio has no currently-valid membership. memberships come
+  // ordered by startsAt desc, so the first non-one-time entry is the latest.
+  const lastMembership = member.memberships.find(
+    (m) => m.plan.billingCycle !== "ONE_TIME",
+  );
+  const canEditMembership =
+    user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN";
   const latestLevel = member.trainingLevels[0];
 
   return (
@@ -307,6 +316,24 @@ export default async function MemberDetailPage({
                     .filter((p) => p.sede == null || p.sede === member.sede)
                     .map((p) => ({ id: p.id, name: p.name, priceCents: p.priceCents, durationDays: p.durationDays }))}
                 />
+                {canEditMembership && (
+                  <div className="flex justify-end">
+                    <RenewMembershipDialog
+                      memberId={member.id}
+                      membership={{
+                        id: activeMembership.id,
+                        planId: activeMembership.planId,
+                        planName: activeMembership.plan.name,
+                        priceCents: activeMembership.plan.priceCents,
+                        customPriceCents: activeMembership.customPriceCents,
+                        endsAt: activeMembership.endsAt,
+                      }}
+                      plans={plans
+                        .filter((p) => p.sede == null || p.sede === member.sede)
+                        .map((p) => ({ id: p.id, name: p.name, priceCents: p.priceCents, durationDays: p.durationDays }))}
+                    />
+                  </div>
+                )}
                 <MembershipPaymentPanel
                   memberId={member.id}
                   membership={{
@@ -334,6 +361,34 @@ export default async function MemberDetailPage({
                   canEdit={user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN"}
                 />
               </>
+            ) : lastMembership ? (
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  Sin membresía vigente. Última: {lastMembership.plan.name} · venció el{" "}
+                  {new Date(lastMembership.endsAt).toLocaleDateString("es-EC", {
+                    timeZone: "America/Guayaquil",
+                  })}
+                  .
+                </p>
+                {canEditMembership && (
+                  <div className="flex justify-end">
+                    <RenewMembershipDialog
+                      memberId={member.id}
+                      membership={{
+                        id: lastMembership.id,
+                        planId: lastMembership.planId,
+                        planName: lastMembership.plan.name,
+                        priceCents: lastMembership.plan.priceCents,
+                        customPriceCents: lastMembership.customPriceCents,
+                        endsAt: lastMembership.endsAt,
+                      }}
+                      plans={plans
+                        .filter((p) => p.sede == null || p.sede === member.sede)
+                        .map((p) => ({ id: p.id, name: p.name, priceCents: p.priceCents, durationDays: p.durationDays }))}
+                    />
+                  </div>
+                )}
+              </div>
             ) : (
               <p className="text-muted-foreground">Asigna un plan desde las acciones de arriba.</p>
             )}
