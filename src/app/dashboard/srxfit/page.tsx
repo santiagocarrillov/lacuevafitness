@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAuth, getSedeScope } from "@/lib/auth";
+import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { getSrxfitHubStats } from "@/lib/actions/srxfit";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +12,18 @@ export default async function SrxfitPage() {
   const sedeLabel = scope === "FITNESS_CENTER" ? "Fitness Center"
     : scope === "XTREME" ? "Xtreme" : "Ambas sedes";
 
+  // Same permissions the top-nav items used before they moved into this hub.
+  const showNutricion = can.editBodyComp(user);
+  const showRetos =
+    can.manageChallenges(user) || user.role === "COACH" || user.role === "NUTRITIONIST";
+  const showNotificaciones = can.manageMembers(user);
+
   return (
     <div className="p-8 space-y-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">SRXFit</h1>
         <p className="text-sm text-muted-foreground">
-          Metodología · Evaluaciones · Programación de 18 semanas · {sedeLabel}
+          Evaluaciones · Programación · Nutrición · Retos · Comunicación · {sedeLabel}
         </p>
       </header>
 
@@ -55,6 +61,44 @@ export default async function SrxfitPage() {
           note="Inicia lunes 4 mayo 2026"
         />
       </div>
+
+      {/* Gestión del método — lo que hace único a SRXFit */}
+      {(showNutricion || showRetos || showNotificaciones) && (
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Gestión del método
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {showNutricion && (
+              <ModuleCard
+                href="/dashboard/nutricion"
+                title="Nutrición"
+                description="Planes alimenticios, prioridad de la semana y cápsulas de consejos que ven los socios en su app."
+                badge="Nutrición"
+                badgeColor="bg-emerald-100 text-emerald-800"
+              />
+            )}
+            {showRetos && (
+              <ModuleCard
+                href="/dashboard/retos"
+                title="Retos"
+                description="Crea y administra los retos de asistencia y de métricas SRXFIT (gamificación) para los socios."
+                badge="Retos"
+                badgeColor="bg-amber-100 text-amber-800"
+              />
+            )}
+            {showNotificaciones && (
+              <ModuleCard
+                href="/dashboard/notificaciones"
+                title="Notificaciones"
+                description="Envía avisos push a los socios (broadcast o por sede). Comunicación directa a su teléfono."
+                badge="Comunicación"
+                badgeColor="bg-sky-100 text-sky-800"
+              />
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Methodology summary */}
       <section className="rounded-lg border p-6 space-y-3">
@@ -94,14 +138,14 @@ function StatCard({ label, value }: { label: string; value: number }) {
 }
 
 function ModuleCard({
-  href, title, description, badge, badgeColor, stats, note,
+  href, title, description, badge, badgeColor, stats = [], note,
 }: {
   href: string;
   title: string;
   description: string;
   badge: string;
   badgeColor: string;
-  stats: Array<{ label: string; value: number | string }>;
+  stats?: Array<{ label: string; value: number | string }>;
   note?: string;
 }) {
   return (

@@ -26,11 +26,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
     { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
     { href: "/dashboard/comunicacion", label: "Comunicación", show: can.manageLeads(user) },
-    { href: "/dashboard/retos", label: "Retos", show: can.manageChallenges(user) || user.role === "COACH" || user.role === "NUTRITIONIST" },
-    { href: "/dashboard/nutricion", label: "Nutrición", show: can.editBodyComp(user) },
-    { href: "/dashboard/notificaciones", label: "Notificaciones", show: can.manageMembers(user) },
     { href: "/dashboard/pagos", label: "Pagos", show: can.viewPayments(user) },
     { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
+    // Retos, Nutrición y Notificaciones viven ahora dentro del hub de SRXFit.
     { href: "/dashboard/srxfit", label: "SRXFit", show: true },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },
   ].filter((n) => n.show).map(({ href, label }) => ({ href, label }));
