@@ -19,17 +19,17 @@ const sedeLabels: Record<string, string> = {
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await requireAuth();
 
+  // Retos, Nutrición y Notificaciones viven ahora dentro del hub de SRXFit.
   const nav = [
     { href: "/dashboard", label: "Resumen", show: true },
     { href: "/dashboard/asistencia", label: "Asistencia", show: true },
     { href: "/dashboard/socios", label: "Socios", show: can.viewMembers(user) },
-    { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
-    { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
-    { href: "/dashboard/comunicacion", label: "Comunicación", show: can.manageLeads(user) },
     { href: "/dashboard/pagos", label: "Pagos", show: can.viewPayments(user) },
-    { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
-    // Retos, Nutrición y Notificaciones viven ahora dentro del hub de SRXFit.
     { href: "/dashboard/srxfit", label: "SRXFit", show: true },
+    { href: "/dashboard/comunicacion", label: "Comunicación", show: can.manageLeads(user) },
+    { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
+    { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
+    { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },
   ].filter((n) => n.show).map(({ href, label }) => ({ href, label }));
 
