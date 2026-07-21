@@ -32,6 +32,15 @@ export const metadata: Metadata = {
   title: "La Cueva · Socio",
   description: "Portal del socio de La Cueva Fitness.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "La Cueva",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icons/portal-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
