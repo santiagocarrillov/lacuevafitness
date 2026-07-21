@@ -40,7 +40,7 @@ export async function getAttendanceReport(sede: Sede | undefined, from: string, 
     distinctXT,
     activeTotal,
     activeAttended,
-    alDia,
+    coverageMembers,
     sinMembresia,
   ] = await Promise.all([
     // Unique members who attended (respecting sede filter on the session)
@@ -69,13 +69,20 @@ export async function getAttendanceReport(sede: Sede | undefined, from: string, 
         attendance: { some: { classSession: { date: { gte: start, lte: end } } } },
       },
     }),
-    // Al día: active member with a currently-valid (non-daily) membership
-    prisma.member.count({
-      where: {
-        status: activeStatus,
-        ...memberSede,
+    // Al día (estricto): fetch each active member's CURRENT valid (non-daily)
+    // membership + its SUCCEEDED payments, to check full payment coverage in JS.
+    prisma.member.findMany({
+      where: { status: activeStatus, ...memberSede },
+      select: {
         memberships: {
-          some: { plan: { billingCycle: { not: "ONE_TIME" } }, state: "ACTIVE", endsAt: { gte: now } },
+          where: { plan: { billingCycle: { not: "ONE_TIME" } }, state: "ACTIVE", endsAt: { gte: now } },
+          orderBy: { endsAt: "desc" },
+          take: 1,
+          select: {
+            customPriceCents: true,
+            plan: { select: { priceCents: true } },
+            payments: { where: { status: "SUCCEEDED" }, select: { amountCents: true } },
+          },
         },
       },
     }),
@@ -88,6 +95,18 @@ export async function getAttendanceReport(sede: Sede | undefined, from: string, 
       },
     }),
   ]);
+
+  // Al día = current membership fully covered by SUCCEEDED payments (PENDING /
+  // unverified funds do NOT count). Everyone else with an active status but no
+  // fully-paid current membership falls into "debe".
+  let alDia = 0;
+  for (const m of coverageMembers) {
+    const cur = m.memberships[0];
+    if (!cur) continue;
+    const expected = cur.customPriceCents ?? cur.plan.priceCents;
+    const paid = cur.payments.reduce((s, p) => s + p.amountCents, 0);
+    if (paid >= expected) alDia++;
+  }
 
   const debe = Math.max(0, activeTotal - alDia - sinMembresia);
 
@@ -223,6 +242,40 @@ export async function getManagementKPIs(
     }),
   ]);
 
+  // ── Ventas nuevas vs renovaciones ──────────────────────────────────
+  // A membership created in the period is a "venta nueva" if it's the member's
+  // FIRST non-daily membership ever; otherwise it's a "renovación" (a
+  // continuation — e.g. a month-to-month renewal). ventasNuevas + renovaciones
+  // = total non-daily memberships created in the period.
+  const membershipsInRange = await prisma.membership.findMany({
+    where: {
+      ...memberSedeFilter,
+      createdAt: { gte: start, lte: end },
+      state: { in: ["ACTIVE", "PENDING_PAYMENT"] },
+      plan: { billingCycle: { not: "ONE_TIME" } },
+    },
+    select: { memberId: true },
+  });
+  const rangeMemberIds = [...new Set(membershipsInRange.map((m) => m.memberId))];
+  const earliestPerMember = rangeMemberIds.length
+    ? await prisma.membership.groupBy({
+        by: ["memberId"],
+        where: {
+          memberId: { in: rangeMemberIds },
+          plan: { billingCycle: { not: "ONE_TIME" } },
+        },
+        _min: { createdAt: true },
+      })
+    : [];
+  // Members whose first-ever non-daily membership falls inside the period.
+  const newMemberIds = new Set(
+    earliestPerMember
+      .filter((e) => e._min.createdAt && e._min.createdAt >= start && e._min.createdAt <= end)
+      .map((e) => e.memberId),
+  );
+  const ventasNuevas = newMemberIds.size;
+  const renovaciones = Math.max(0, membershipsInRange.length - ventasNuevas);
+
   // Get plan names
   const planIds = planBreakdown.map((p) => p.planId);
   const plans = await prisma.membershipPlan.findMany({
@@ -267,6 +320,8 @@ export async function getManagementKPIs(
   return {
     activeMembers,
     sales,
+    ventasNuevas,
+    renovaciones,
     leads,
     leadsScheduled,
     trialsAttended,

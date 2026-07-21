@@ -93,6 +93,10 @@ export function RegisterPaymentDialog({
       if (res.ok) {
         const data = await res.json();
         setMemberships(data);
+        // Auto-link to the member's current membership (API returns ACTIVE /
+        // PENDING_PAYMENT ordered by endsAt desc, so [0] is the most current).
+        // The admin can still switch it back to "— Sin vincular —".
+        setMembershipId(data[0]?.id ?? "");
       }
     } catch {
       // ignore — membership link is optional

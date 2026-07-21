@@ -108,6 +108,8 @@ export async function GestionTab({
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <KPI label="Ventas" value={kpis.sales} targetPct={kpis.pctMetaVentas} href={url("sales")} />
+          <KPI label="Ventas nuevas" value={kpis.ventasNuevas} hint="Socios que compraron su 1ª membresía" />
+          <KPI label="Renovaciones" value={kpis.renovaciones} hint="Membresías de socios que ya tenían" />
           <KPI label="ACTIVOS Totales" value={kpis.activeMembers} href={url("activos")} />
           <KPI label="Ticket Promedio" value={fmtMoney(Math.round(kpis.ticketPromedio * 100))} hint="Referencial al cierre del periodo" />
           <KPI label="Efectividad de ventas" value={fmtPct(kpis.efectividadVentas)} targetPct={kpis.efectividadVentas} hint="Ventas / Visitantes" />
