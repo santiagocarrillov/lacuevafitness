@@ -48,8 +48,7 @@ export default async function AsistenciasPage() {
             <div className="info">
               <div className="t">{longDate(a.recordedAt)}</div>
               <div className="s">
-                {a.classSession.schedule?.name ?? "Clase"} ·{" "}
-                {a.classSession.schedule?.startTime ?? ""}
+                Clase · {a.classSession.schedule?.name ?? a.classSession.schedule?.startTime ?? ""}
               </div>
             </div>
           </div>

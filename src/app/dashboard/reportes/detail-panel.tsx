@@ -500,7 +500,7 @@ async function DiscrepanciesTable({ from, to, sede }: { from: string; to: string
             {rows.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="text-xs">{new Date(c.date).toLocaleDateString("es-EC")}</TableCell>
-                <TableCell className="text-xs">{c.schedule?.name ?? "—"} ({c.schedule?.startTime})</TableCell>
+                <TableCell className="text-xs">{c.schedule?.name ?? c.schedule?.startTime ?? "—"}</TableCell>
                 <TableCell className="text-right">{c.adminCount ?? "—"}</TableCell>
                 <TableCell className="text-right">{c.coachCount ?? "—"}</TableCell>
                 <TableCell className="text-right font-medium text-red-600">
