@@ -4,82 +4,94 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { logMeal } from "@/lib/actions/nutrition";
 
+type Level = "GREEN" | "YELLOW" | "ORANGE" | "RED";
+
+const LEVELS: { value: Level; label: string; hint: string; color: string }[] = [
+  { value: "GREEN", label: "Verde", hint: "+80%", color: "#16a34a" },
+  { value: "YELLOW", label: "Amarillo", hint: "60–80%", color: "#eab308" },
+  { value: "ORANGE", label: "Naranja", hint: "40–60%", color: "#f97316" },
+  { value: "RED", label: "Rojo", hint: "–40%", color: "#ef4444" },
+];
+
 export function MealCheck({
-  initialFollowed,
+  initialAdherence,
   initialFreeText,
 }: {
-  initialFollowed: boolean;
+  initialAdherence: Level | null;
   initialFreeText: string | null;
 }) {
   const router = useRouter();
-  const [followed, setFollowed] = useState(initialFollowed);
+  const [adherence, setAdherence] = useState<Level | null>(initialAdherence);
   const [freeText, setFreeText] = useState(initialFreeText ?? "");
   const [isPending, startTransition] = useTransition();
 
-  function persist(nextFollowed: boolean, nextFreeText: string) {
+  function persist(nextAdherence: Level | null, nextFreeText: string) {
     startTransition(async () => {
       try {
-        await logMeal({ followed: nextFollowed, freeText: nextFreeText || undefined });
+        await logMeal({ adherence: nextAdherence, freeText: nextFreeText || undefined });
         router.refresh();
       } catch {
-        // revert optimistic check on failure
-        setFollowed(initialFollowed);
+        setAdherence(initialAdherence);
       }
     });
   }
 
-  function toggleFollowed() {
-    const next = !followed;
-    setFollowed(next);
+  function pick(level: Level) {
+    const next = adherence === level ? null : level; // tap again to unset
+    setAdherence(next);
     persist(next, freeText);
   }
 
   return (
     <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-      <button
-        type="button"
-        onClick={toggleFollowed}
-        disabled={isPending}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "11px 14px",
-          borderRadius: 10,
-          border: `1px solid ${followed ? "var(--pt-green)" : "var(--pt-line)"}`,
-          background: followed ? "var(--pt-green)" : "transparent",
-          color: followed ? "#fff" : "var(--pt-ink-1)",
-          fontSize: 14,
-          fontWeight: 500,
-          cursor: "pointer",
-          textAlign: "left",
-        }}
-      >
-        <span
-          aria-hidden
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 20,
-            height: 20,
-            borderRadius: 999,
-            border: `2px solid ${followed ? "#fff" : "var(--pt-ink-3)"}`,
-            fontSize: 12,
-            lineHeight: 1,
-          }}
-        >
-          {followed ? "✓" : ""}
-        </span>
-        {followed ? "Cumpliste tu plan hoy" : "Marcar que cumplí mi plan hoy"}
-      </button>
+      <div style={{ fontSize: 13, color: "var(--pt-ink-2)", fontWeight: 500 }}>
+        ¿Cuánto cumpliste tu plan hoy?
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+        {LEVELS.map((l) => {
+          const selected = adherence === l.value;
+          return (
+            <button
+              key={l.value}
+              type="button"
+              onClick={() => pick(l.value)}
+              disabled={isPending}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                padding: "10px 4px",
+                borderRadius: 10,
+                border: selected ? `2px solid ${l.color}` : "1px solid var(--pt-line)",
+                background: selected ? l.color : "transparent",
+                color: selected ? "#fff" : "var(--pt-ink-2)",
+                cursor: "pointer",
+                transition: "all .12s",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  background: selected ? "#fff" : l.color,
+                }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 700 }}>{l.label}</span>
+              <span style={{ fontSize: 10, opacity: 0.85 }}>{l.hint}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <textarea
         placeholder="¿Comiste algo distinto? Escríbelo aquí…"
         value={freeText}
         onChange={(e) => setFreeText(e.target.value)}
         onBlur={() => {
-          if ((freeText || "") !== (initialFreeText ?? "")) persist(followed, freeText);
+          if ((freeText || "") !== (initialFreeText ?? "")) persist(adherence, freeText);
         }}
         rows={2}
         style={{

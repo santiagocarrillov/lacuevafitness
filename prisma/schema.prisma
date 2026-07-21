@@ -116,6 +116,7 @@ model Member {
   clinicalRecords   ClinicalRecord[]
   mealPlans         MealPlan[]
   mealLogs          MealLog[]
+  nutritionFocus    NutritionFocus?
   challengeProgress ChallengeProgress[]
 
   @@index([sede, status])
@@ -864,7 +865,8 @@ model MealLog {
   mealPlanId String?
   mealPlan   MealPlan? @relation(fields: [mealPlanId], references: [id])
   date       DateTime  @db.Date // Ecuador local day
-  followed   Boolean   @default(false)
+  followed   Boolean   @default(false) // legacy sí/no check (kept for back-compat)
+  adherence  AdherenceLevel? // semáforo diario: verde/amarillo/naranja/rojo; null = sin marcar
   freeText   String?   @db.Text
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -909,4 +911,41 @@ model MealPlanTemplate {
   plans MealPlan[]
 
   @@index([calorieLevel, active])
+}
+
+// Daily adherence "traffic light" the member self-reports for a day.
+// GREEN = cumplió >80% del plan, YELLOW = 60–80, ORANGE = 40–60, RED = <40.
+enum AdherenceLevel {
+  GREEN
+  YELLOW
+  ORANGE
+  RED
+}
+
+// "Prioridad de la semana" — a short focus message the nutritionist sets per
+// member, shown at the top of the portal Nutrición section. One current message
+// per member (upsert on memberId).
+model NutritionFocus {
+  id           String   @id @default(cuid())
+  memberId     String   @unique
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  message      String   @db.Text
+  authoredById String? // User who wrote it (no FK navigation needed)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Nutrition tip "capsules" — a library the nutritionist manages, surfaced to
+// members in the portal (replaces sharing them ad-hoc over WhatsApp).
+model NutritionTip {
+  id           String   @id @default(cuid())
+  title        String
+  body         String   @db.Text
+  sede         Sede? // null = ambas sedes
+  active       Boolean  @default(true) // soft-delete
+  authoredById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([active, createdAt])
 }

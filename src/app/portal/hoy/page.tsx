@@ -233,7 +233,7 @@ export default async function HoyPage() {
             </a>
           )}
           <MealCheck
-            initialFollowed={todayMealLog?.followed ?? false}
+            initialAdherence={todayMealLog?.adherence ?? null}
             initialFreeText={todayMealLog?.freeText ?? null}
           />
         </section>
