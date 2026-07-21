@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { Sede, MemberStatus, MembershipState, BillingCycle } from "@/generated/prisma/client";
+import { Sede, MemberStatus, MembershipState, BillingCycle, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
 import { requireAuth, can } from "@/lib/auth";
 
 // ── List / Search ───────────────────────────────────────────────────
@@ -280,6 +280,114 @@ export async function assignMembership(data: {
   await prisma.member.update({
     where: { id: data.memberId },
     data: { status: MemberStatus.ACTIVE },
+  });
+
+  revalidatePath("/dashboard/socios");
+  revalidatePath(`/dashboard/socios/${data.memberId}`);
+  return membership;
+}
+
+// ── Renew membership (month-to-month) ────────────────────────────────
+//
+// Each renewal is its OWN membership record, chained after the previous one
+// (startsAt = previous endsAt, or today if the socio already lapsed). The
+// previous membership is marked EXPIRED so only one is ACTIVE at a time and the
+// ficha shows a clean per-month history. Optionally registers the month's
+// payment in the same step, linked to the new membership.
+export async function renewMembership(data: {
+  memberId: string;
+  fromMembershipId: string;
+  planId?: string; // defaults to the previous membership's plan
+  customPriceCents?: number | null; // defaults to the previous membership's custom price
+  startsAt?: string; // override; defaults to the chained date
+  payment?: {
+    amountCents: number;
+    method: PaymentMethod;
+    paidAt?: string;
+    depositorName?: string;
+    bankReference?: string;
+    bankEntity?: string;
+    notes?: string;
+  };
+}) {
+  const user = await requireAuth();
+  if (!can.editMembership(user)) throw new Error("No autorizado");
+
+  const prev = await prisma.membership.findUniqueOrThrow({
+    where: { id: data.fromMembershipId },
+    include: { member: true },
+  });
+  if (prev.memberId !== data.memberId) throw new Error("Membresía no corresponde al socio");
+
+  const planId = data.planId ?? prev.planId;
+  const plan = await prisma.membershipPlan.findUniqueOrThrow({ where: { id: planId } });
+
+  // Chain without gaps: start when the previous one ends, unless the socio
+  // already lapsed (endsAt in the past) — then start today.
+  const now = new Date();
+  const chainStart = new Date(prev.endsAt) > now ? new Date(prev.endsAt) : now;
+  const startsAt = data.startsAt ? new Date(data.startsAt) : chainStart;
+  const endsAt = new Date(startsAt);
+  endsAt.setDate(endsAt.getDate() + plan.durationDays);
+
+  const customPriceCents =
+    data.customPriceCents !== undefined ? data.customPriceCents : prev.customPriceCents;
+
+  const membership = await prisma.$transaction(async (tx) => {
+    // Close out the previous membership so only one is ACTIVE at a time.
+    if (prev.state === MembershipState.ACTIVE) {
+      await tx.membership.update({
+        where: { id: prev.id },
+        data: { state: MembershipState.EXPIRED },
+      });
+    }
+
+    const created = await tx.membership.create({
+      data: {
+        memberId: data.memberId,
+        planId,
+        state: MembershipState.ACTIVE,
+        customPriceCents,
+        paymentMethod: prev.paymentMethod,
+        startsAt,
+        endsAt,
+      },
+    });
+
+    await tx.member.update({
+      where: { id: data.memberId },
+      data: { status: MemberStatus.ACTIVE },
+    });
+
+    if (data.payment) {
+      const isCash = data.payment.method === PaymentMethod.CASH;
+      const status: PaymentStatus = isCash ? PaymentStatus.SUCCEEDED : PaymentStatus.PENDING;
+      const paidAt = data.payment.paidAt
+        ? new Date(data.payment.paidAt)
+        : isCash
+          ? new Date()
+          : undefined;
+      await tx.payment.create({
+        data: {
+          memberId: data.memberId,
+          membershipId: created.id,
+          amountCents: data.payment.amountCents,
+          currency: "USD",
+          method: data.payment.method,
+          status,
+          paidAt,
+          depositorName: data.payment.depositorName || undefined,
+          bankReference: data.payment.bankReference || undefined,
+          bankEntity: data.payment.bankEntity || undefined,
+          isPoolEntry: false,
+          sede: prev.member.sede,
+          recordedByUserId: user.id,
+          notes: data.payment.notes || undefined,
+        },
+      });
+    }
+
+    return created;
   });
 
   revalidatePath("/dashboard/socios");
