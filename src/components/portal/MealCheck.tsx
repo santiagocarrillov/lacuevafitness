@@ -101,7 +101,7 @@ export function MealCheck({
           borderRadius: 10,
           border: "1px solid var(--pt-line)",
           background: "var(--pt-bg-card)",
-          color: "var(--pt-ink-1)",
+          color: "var(--pt-ink)",
           fontSize: 13,
           fontFamily: "inherit",
         }}

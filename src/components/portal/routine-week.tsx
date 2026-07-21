@@ -50,7 +50,13 @@ const BLOCKS: { key: keyof RoutineDay; label: string }[] = [
 export function RoutineWeek({ data }: { data: RoutineWeekData }) {
   const initial = data.todayDayIndex ?? data.days[0]?.dayIndex ?? 1;
   const [selected, setSelected] = useState(initial);
+  const [open, setOpen] = useState<string | null>(null); // which block is expanded
   const day = data.days.find((d) => d.dayIndex === selected) ?? data.days[0];
+
+  function selectDay(dayIndex: number) {
+    setSelected(dayIndex);
+    setOpen(null); // collapse blocks when switching day
+  }
 
   if (!day) return null;
 
@@ -83,17 +89,17 @@ export function RoutineWeek({ data }: { data: RoutineWeekData }) {
             <button
               key={d.dayIndex}
               type="button"
-              onClick={() => setSelected(d.dayIndex)}
+              onClick={() => selectDay(d.dayIndex)}
               style={{
                 flex: "1 1 0",
                 minWidth: 42,
                 padding: "6px 0",
                 borderRadius: 10,
                 border: isSelected
-                  ? "1.5px solid var(--pt-ink-1)"
+                  ? "1.5px solid var(--pt-ink)"
                   : "1px solid var(--pt-line)",
-                background: isSelected ? "var(--pt-ink-1)" : "transparent",
-                color: isSelected ? "var(--pt-bg, #fff)" : "var(--pt-ink-2)",
+                background: isSelected ? "var(--pt-ink)" : "transparent",
+                color: isSelected ? "#fff" : "var(--pt-ink-2)",
                 fontSize: 12,
                 fontWeight: isSelected ? 700 : 500,
                 cursor: "pointer",
@@ -110,7 +116,7 @@ export function RoutineWeek({ data }: { data: RoutineWeekData }) {
                     width: 5,
                     height: 5,
                     borderRadius: "50%",
-                    background: isSelected ? "var(--pt-bg, #fff)" : phaseColor,
+                    background: isSelected ? "#fff" : phaseColor,
                   }}
                 />
               )}
@@ -119,10 +125,10 @@ export function RoutineWeek({ data }: { data: RoutineWeekData }) {
         })}
       </div>
 
-      {/* Selected day header */}
+      {/* Selected day intro */}
       <div style={{ marginTop: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 16, fontWeight: 600 }}>{day.dayName}</span>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "var(--pt-ink)" }}>{day.dayName}</span>
           {day.phase && (
             <span
               style={{
@@ -150,27 +156,60 @@ export function RoutineWeek({ data }: { data: RoutineWeekData }) {
         )}
       </div>
 
-      {/* Blocks */}
+      {/* Blocks — collapsed accordions, expand on tap */}
       {hasContent ? (
-        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           {BLOCKS.map(({ key, label }) => {
             const md = day[key] as string;
             if (!md) return null;
+            const isOpen = open === key;
             return (
-              <div key={key}>
-                <div
+              <div
+                key={key}
+                style={{
+                  border: "1px solid var(--pt-line)",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpen(isOpen ? null : key)}
+                  aria-expanded={isOpen}
                   style={{
-                    fontSize: 11,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    padding: "11px 12px",
+                    background: isOpen ? "var(--pt-bg-card-alt)" : "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 13,
                     fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    color: "var(--pt-ink-3)",
-                    marginBottom: 4,
+                    color: "var(--pt-ink)",
+                    textAlign: "left",
                   }}
                 >
-                  {label}
-                </div>
-                <MarkdownText source={md} />
+                  <span>{label}</span>
+                  <span
+                    aria-hidden
+                    style={{
+                      transition: "transform .15s",
+                      transform: isOpen ? "rotate(90deg)" : "none",
+                      color: "var(--pt-ink-3)",
+                      fontSize: 14,
+                    }}
+                  >
+                    ›
+                  </span>
+                </button>
+                {isOpen && (
+                  <div style={{ padding: "4px 12px 12px" }}>
+                    <MarkdownText source={md} />
+                  </div>
+                )}
               </div>
             );
           })}
