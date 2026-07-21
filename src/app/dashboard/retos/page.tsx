@@ -2,6 +2,7 @@ import { getChallenges } from "@/lib/actions/challenges";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NewChallengeButton } from "./new-challenge-button";
+import { EditChallengeDialog } from "./edit-challenge-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ const ruleLabels: Record<string, string> = {
 };
 
 export default async function RetosPage() {
-  const challenges = await getChallenges(false);
+  const challenges = await getChallenges(true);
 
   return (
     <div className="p-8 space-y-6">
@@ -55,6 +56,7 @@ export default async function RetosPage() {
                         <Badge variant="outline">Finalizado</Badge>
                       )}
                       {c.reward && <Badge variant="outline">Premio: {c.reward}</Badge>}
+                      <EditChallengeDialog challenge={c} />
                     </div>
                   </div>
                 </CardHeader>
