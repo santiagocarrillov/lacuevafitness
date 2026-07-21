@@ -647,6 +647,9 @@ enum ChallengeRuleType {
   TOTAL_CLASSES // X clases totales durante el reto
   CONSECUTIVE_CLASSES // X clases seguidas (sin faltar)
   CLASSES_IN_DAYS // X clases en Y días
+  WEIGHT_LOSS // ranking: mayor pérdida de peso (lb) en el período
+  WAIST_LOSS // ranking: mayor reducción de cintura (% del punto de partida)
+  TEST_IMPROVEMENT // ranking: mayor mejora de marcas (% ) — un test o promedio de todos
 }
 
 model Challenge {
@@ -655,8 +658,9 @@ model Challenge {
   description String? // "Asiste a 30 clases en 60 días"
   reward      String? // "Camiseta La Cueva"
   ruleType    ChallengeRuleType
-  ruleTarget  Int // X clases requeridas
+  ruleTarget  Int? // meta: X clases requeridas, o meta mínima del ranking (lb / %). null = solo ranking
   ruleDays    Int? // Y días (para CLASSES_IN_DAYS)
+  metricTest  TestKey? // para TEST_IMPROVEMENT: test específico, o null = promedio de todos
   sede        Sede? // null = ambas sedes
   startsAt    DateTime
   endsAt      DateTime
