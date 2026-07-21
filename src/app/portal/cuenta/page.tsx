@@ -90,6 +90,27 @@ export default async function CuentaPage() {
         <div className="arrow">→</div>
       </Link>
 
+      {member.sex === "FEMALE" && (
+        <>
+          <div className="portal-section-title">
+            <h4>Bienestar</h4>
+          </div>
+          <Link href="/portal/cuenta/ciclo" className="portal-list-item">
+            <div className="li-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M12 22c4-2 6-6 6-11a6 6 0 00-12 0c0 5 2 9 6 11z" />
+                <circle cx="12" cy="11" r="2.2" />
+              </svg>
+            </div>
+            <div className="info">
+              <div className="t">Mi ciclo</div>
+              <div className="s">Registra tu período y ajusta tu entrenamiento</div>
+            </div>
+            <div className="arrow">→</div>
+          </Link>
+        </>
+      )}
+
       <div className="portal-section-title">
         <h4>Historial</h4>
       </div>
