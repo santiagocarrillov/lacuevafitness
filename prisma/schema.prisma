@@ -117,6 +117,7 @@ model Member {
   mealPlans         MealPlan[]
   mealLogs          MealLog[]
   nutritionFocus    NutritionFocus?
+  menstrualPeriods  MenstrualPeriod[]
   challengeProgress ChallengeProgress[]
 
   @@index([sede, status])
@@ -948,4 +949,20 @@ model NutritionTip {
   updatedAt    DateTime @updatedAt
 
   @@index([active, createdAt])
+}
+
+// Menstrual period tracking (portal, socias only). One row per period; the
+// current cycle day/phase is derived from the most recent startDate and the
+// average gap between registered starts. Personal health data the member owns.
+model MenstrualPeriod {
+  id        String    @id @default(cuid())
+  memberId  String
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  startDate DateTime  @db.Date
+  endDate   DateTime? @db.Date
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([memberId, startDate])
 }
