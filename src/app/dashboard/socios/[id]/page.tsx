@@ -15,7 +15,7 @@ import { HealthSection } from "./health-section";
 import { ClinicalRecordsSection } from "./clinical-records-section";
 import { getClinicalRecords } from "@/lib/actions/clinical-records";
 import { NutritionSection } from "./nutrition-section";
-import { getMemberMealPlans, getMemberMealLogs } from "@/lib/actions/nutrition";
+import { getMemberMealPlans, getMemberMealLogs, getNutritionFocus } from "@/lib/actions/nutrition";
 import { TestResultsSection } from "./test-results-section";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
@@ -103,9 +103,14 @@ export default async function MemberDetailPage({
   if (!member) return notFound();
   const canEditHealth = user.role === "OWNER" || user.role === "NUTRITIONIST";
   // Private clinical history + nutrition — only fetch for staff who may edit health data.
-  const [clinicalRecords, mealPlans, mealLogs] = canEditHealth
-    ? await Promise.all([getClinicalRecords(id), getMemberMealPlans(id), getMemberMealLogs(id)])
-    : [[], [], []];
+  const [clinicalRecords, mealPlans, mealLogs, nutritionFocus] = canEditHealth
+    ? await Promise.all([
+        getClinicalRecords(id),
+        getMemberMealPlans(id),
+        getMemberMealLogs(id),
+        getNutritionFocus(id),
+      ])
+    : [[], [], [], null];
 
   const now = new Date();
   // Active membership = state ACTIVE + not expired + not a one-time daily pass.
@@ -424,7 +429,7 @@ export default async function MemberDetailPage({
 
       {/* Nutrición — planes + adherencia */}
       {canEditHealth && (
-        <NutritionSection memberId={member.id} plans={mealPlans} logs={mealLogs} />
+        <NutritionSection memberId={member.id} plans={mealPlans} logs={mealLogs} focusMessage={nutritionFocus?.message ?? null} />
       )}
 
       {/* Resultados de tests SRXFit */}

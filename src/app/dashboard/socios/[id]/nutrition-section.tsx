@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createMealPlan, setMealPlanActive } from "@/lib/actions/nutrition";
+import { createMealPlan, setMealPlanActive, upsertNutritionFocus } from "@/lib/actions/nutrition";
 
 type MealPlan = {
   id: string;
@@ -20,10 +20,13 @@ type MealPlan = {
   createdAt: Date;
 };
 
+type Adherence = "GREEN" | "YELLOW" | "ORANGE" | "RED" | null;
+
 type MealLog = {
   id: string;
   date: Date;
   followed: boolean;
+  adherence: Adherence;
   freeText: string | null;
 };
 
@@ -31,23 +34,45 @@ function fmtDay(d: Date) {
   return new Date(d).toLocaleDateString("es-EC", { day: "numeric", month: "short" });
 }
 
+const ADHERENCE_META: Record<string, { label: string; cls: string }> = {
+  GREEN: { label: "🟢 +80%", cls: "text-emerald-600" },
+  YELLOW: { label: "🟡 60–80%", cls: "text-yellow-600" },
+  ORANGE: { label: "🟠 40–60%", cls: "text-orange-600" },
+  RED: { label: "🔴 –40%", cls: "text-red-600" },
+};
+
 export function NutritionSection({
   memberId,
   plans,
   logs,
+  focusMessage,
 }: {
   memberId: string;
   plans: MealPlan[];
   logs: MealLog[];
+  focusMessage: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [focus, setFocus] = useState(focusMessage ?? "");
   const [form, setForm] = useState({
     title: "",
     calorieTarget: "",
     externalUrl: "",
     visibleToMember: true,
   });
+
+  function saveFocus() {
+    startTransition(async () => {
+      try {
+        await upsertNutritionFocus(memberId, focus);
+        toast.success(focus.trim() ? "Prioridad actualizada." : "Prioridad eliminada.");
+        router.refresh();
+      } catch {
+        toast.error("No se pudo guardar la prioridad.");
+      }
+    });
+  }
 
   function update(field: string, value: string | boolean) {
     setForm((p) => ({ ...p, [field]: value }));
@@ -97,6 +122,29 @@ export function NutritionSection({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        {/* Prioridad de la semana */}
+        <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+          <Label className="text-sm">Prioridad de la semana (la ve el socio en su app)</Label>
+          <textarea
+            value={focus}
+            onChange={(e) => setFocus(e.target.value)}
+            rows={2}
+            placeholder="Ej: Esta semana enfócate en tomar 2L de agua y no saltarte el desayuno."
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isPending || focus === (focusMessage ?? "")}
+              onClick={saveFocus}
+            >
+              Guardar prioridad
+            </Button>
+          </div>
+        </div>
+
         {/* Crear plan */}
         <form onSubmit={handleCreate} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -202,15 +250,18 @@ export function NutritionSection({
             <p className="text-sm text-muted-foreground">El socio aún no registra comidas.</p>
           ) : (
             <div className="space-y-1.5">
-              {logs.map((l) => (
-                <div key={l.id} className="flex items-start gap-3 text-sm">
-                  <span className="text-muted-foreground w-14 shrink-0">{fmtDay(l.date)}</span>
-                  <span className={l.followed ? "text-emerald-600" : "text-muted-foreground"}>
-                    {l.followed ? "✓ Cumplió" : "✗ No marcó"}
-                  </span>
-                  {l.freeText && <span className="text-muted-foreground flex-1">· {l.freeText}</span>}
-                </div>
-              ))}
+              {logs.map((l) => {
+                const meta = l.adherence ? ADHERENCE_META[l.adherence] : null;
+                return (
+                  <div key={l.id} className="flex items-start gap-3 text-sm">
+                    <span className="text-muted-foreground w-14 shrink-0">{fmtDay(l.date)}</span>
+                    <span className={meta ? meta.cls : "text-muted-foreground"}>
+                      {meta ? meta.label : l.followed ? "✓ Cumplió" : "✗ No marcó"}
+                    </span>
+                    {l.freeText && <span className="text-muted-foreground flex-1">· {l.freeText}</span>}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
