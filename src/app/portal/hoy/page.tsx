@@ -3,6 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { CapsuleCard } from "@/components/portal/capsule-card";
 import { MealCheck } from "@/components/portal/MealCheck";
+import { RoutineWeek, type RoutineWeekData } from "@/components/portal/routine-week";
+import { getWeekNumberForDate, getWeekSessions } from "@/lib/srxfit-calendar";
+import { getWeekOverrides } from "@/lib/actions/srxfit-overrides";
+import {
+  activacionToMd,
+  fuerzaToMd,
+  acondicionamientoToMd,
+  regulacionToMd,
+} from "@/lib/srxfit-md";
 import {
   HITOS,
   computeAttendanceStats,
@@ -77,6 +86,40 @@ export default async function HoyPage() {
   const nextSession = todaySchedules[0] ?? null;
   const { year, month, day } = ecuadorParts(today);
   const friendlyDate = longDate(new Date(year, month - 1, day));
+
+  // ── Rutina de la semana (SRXFit) — misma programación para todos ──
+  const ecuadorLocalDate = new Date(ecY, ecM - 1, ecD);
+  const weekNumber = getWeekNumberForDate(ecuadorLocalDate);
+  const jsDay = ecuadorLocalDate.getDay(); // 0=Sun … 6=Sat
+  const todayDayIndex = jsDay === 0 ? null : jsDay;
+  const DAY_NAMES: Record<number, string> = {
+    1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves", 5: "Viernes", 6: "Sábado",
+  };
+  let routineWeek: RoutineWeekData | null = null;
+  if (weekNumber) {
+    const overrides = await getWeekOverrides(weekNumber);
+    routineWeek = {
+      weekNumber,
+      todayDayIndex,
+      days: getWeekSessions(weekNumber).map((s) => {
+        const ov = overrides[s.dayIndex];
+        const sess = s.session;
+        return {
+          dayIndex: s.dayIndex,
+          dayName: DAY_NAMES[s.dayIndex] ?? `Día ${s.dayIndex}`,
+          emphasis: sess?.emphasis ?? "",
+          pattern: sess?.pattern ?? "",
+          dayType: sess?.dayType ?? "",
+          phase: sess?.phase ?? "",
+          weekSummary: sess?.weekSummary ?? "",
+          activacion: ov?.activacionMd ?? (sess ? activacionToMd(sess.blocks.activacion) : ""),
+          fuerza: ov?.fuerzaMd ?? (sess ? fuerzaToMd(sess.blocks.fuerza) : ""),
+          acondicionamiento: ov?.acondicionamientoMd ?? (sess ? acondicionamientoToMd(sess.blocks.acondicionamiento) : ""),
+          regulacion: ov?.regulacionMd ?? (sess ? regulacionToMd(sess.blocks.regulacion) : ""),
+        };
+      }),
+    };
+  }
 
   return (
     <PortalShell avatarInitial={initial}>
@@ -158,6 +201,8 @@ export default async function HoyPage() {
           <div className="subtitle">Aprovecha para regular o caminar 7,000 pasos.</div>
         </div>
       )}
+
+      {routineWeek && <RoutineWeek data={routineWeek} />}
 
       {activeMealPlan && (
         <section className="portal-card" style={{ marginBottom: 14 }}>

@@ -100,6 +100,15 @@ export function getSessionForDate(date: Date): SrxfitSession | null {
 
 // ─── Week helpers (for the week editor) ──────────────────────────────
 
+// The plan week number (1–18) a date falls in, or null if outside the program.
+export function getWeekNumberForDate(date: Date): number | null {
+  const days = daysBetween(SRXFIT_START, date);
+  if (days < 0) return null;
+  const weekIdx = Math.floor(days / 7);
+  if (weekIdx >= 18) return null;
+  return weekIdx + 1;
+}
+
 export function dateForWeekDay(weekNumber: number, dayIndex: number): Date {
   const d = new Date(SRXFIT_START);
   d.setDate(d.getDate() + (weekNumber - 1) * 7 + (dayIndex - 1));
