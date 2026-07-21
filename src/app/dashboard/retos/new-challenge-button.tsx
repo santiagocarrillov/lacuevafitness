@@ -5,57 +5,67 @@ import { ecuadorDateString } from "@/lib/timezone";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { createChallenge, enrollAllActiveMembers } from "@/lib/actions/challenges";
+import { ChallengeFields, type ChallengeForm, isMetric } from "./challenge-fields";
 
 export function NewChallengeButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ChallengeForm>({
     name: "",
     description: "",
     reward: "",
     ruleType: "TOTAL_CLASSES",
     ruleTarget: "30",
     ruleDays: "",
+    metricTest: "",
     sede: "",
     startsAt: ecuadorDateString(),
     endsAt: "",
   });
 
-  function update(field: string, value: string) {
+  function update(field: keyof ChallengeForm, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name || !form.ruleTarget || !form.startsAt || !form.endsAt) {
+    const metric = isMetric(form.ruleType);
+    if (!form.name || !form.startsAt || !form.endsAt || (!metric && !form.ruleTarget)) {
       toast.error("Completa nombre, meta, fecha de inicio y fin.");
       return;
     }
     startTransition(async () => {
-      const challenge = await createChallenge({
-        name: form.name,
-        description: form.description || undefined,
-        reward: form.reward || undefined,
-        ruleType: form.ruleType as any,
-        ruleTarget: parseInt(form.ruleTarget),
-        ruleDays: form.ruleDays ? parseInt(form.ruleDays) : undefined,
-        sede: form.sede ? (form.sede as any) : undefined,
-        startsAt: form.startsAt,
-        endsAt: form.endsAt,
-      });
+      try {
+        const challenge = await createChallenge({
+          name: form.name,
+          description: form.description || undefined,
+          reward: form.reward || undefined,
+          ruleType: form.ruleType as never,
+          ruleTarget: form.ruleTarget ? parseFloat(form.ruleTarget) : null,
+          ruleDays: form.ruleDays ? parseInt(form.ruleDays) : undefined,
+          metricTest: form.metricTest ? (form.metricTest as never) : null,
+          sede: form.sede ? (form.sede as never) : undefined,
+          startsAt: form.startsAt,
+          endsAt: form.endsAt,
+        });
 
-      // Auto-enroll all active members
-      const enrolled = await enrollAllActiveMembers(challenge.id);
-      toast.success(`Reto creado. ${enrolled} socios inscritos automáticamente.`);
-      setOpen(false);
-      router.refresh();
+        if (metric) {
+          // Metric rankings are computed live from SRXFIT data — no enrollment.
+          toast.success("Reto de ranking creado. El podio se calcula con los datos SRXFIT.");
+        } else {
+          const enrolled = await enrollAllActiveMembers(challenge.id);
+          toast.success(`Reto creado. ${enrolled} socios inscritos automáticamente.`);
+        }
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al crear el reto.");
+      }
     });
   }
 
@@ -64,68 +74,15 @@ export function NewChallengeButton() {
       <DialogTrigger className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-7 px-2.5">
         + Nuevo reto
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Crear reto</DialogTitle>
           <DialogDescription>
-            Todos los socios activos se inscribirán automáticamente.
+            Retos de asistencia inscriben a todos los socios activos. Los retos SRXFIT arman un ranking en vivo.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <Label>Nombre del reto *</Label>
-            <Input required placeholder='ej: "Reto 30 clases"' value={form.name} onChange={(e) => update("name", e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Descripción</Label>
-            <Input placeholder='ej: "Asiste a 30 clases en 60 días"' value={form.description} onChange={(e) => update("description", e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Recompensa</Label>
-            <Input placeholder='ej: "Camiseta La Cueva"' value={form.reward} onChange={(e) => update("reward", e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Tipo de regla *</Label>
-              <select value={form.ruleType} onChange={(e) => update("ruleType", e.target.value)}
-                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-sm">
-                <option value="TOTAL_CLASSES">X clases totales</option>
-                <option value="CONSECUTIVE_CLASSES">X clases consecutivas</option>
-                <option value="CLASSES_IN_DAYS">X clases en Y días</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>Meta (# clases) *</Label>
-              <Input type="number" required min={1} value={form.ruleTarget} onChange={(e) => update("ruleTarget", e.target.value)} />
-            </div>
-          </div>
-          {form.ruleType === "CLASSES_IN_DAYS" && (
-            <div className="space-y-1">
-              <Label>En cuántos días</Label>
-              <Input type="number" min={1} value={form.ruleDays} onChange={(e) => update("ruleDays", e.target.value)} />
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Sede</Label>
-              <select value={form.sede} onChange={(e) => update("sede", e.target.value)}
-                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-sm">
-                <option value="">Ambas sedes</option>
-                <option value="FITNESS_CENTER">Fitness Center</option>
-                <option value="XTREME">Xtreme</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Fecha inicio *</Label>
-              <Input type="date" required value={form.startsAt} onChange={(e) => update("startsAt", e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label>Fecha fin *</Label>
-              <Input type="date" required value={form.endsAt} onChange={(e) => update("endsAt", e.target.value)} />
-            </div>
-          </div>
+          <ChallengeFields form={form} update={update} />
           <div className="flex gap-2 justify-end pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={isPending}>

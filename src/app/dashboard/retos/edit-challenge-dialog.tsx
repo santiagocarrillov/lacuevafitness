@@ -4,12 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { updateChallenge, deleteChallenge } from "@/lib/actions/challenges";
+import { ChallengeFields, type ChallengeForm, isMetric } from "./challenge-fields";
 
 type Challenge = {
   id: string;
@@ -17,8 +16,9 @@ type Challenge = {
   description: string | null;
   reward: string | null;
   ruleType: string;
-  ruleTarget: number;
+  ruleTarget: number | null;
   ruleDays: number | null;
+  metricTest: string | null;
   sede: string | null;
   startsAt: Date | string;
   endsAt: Date | string;
@@ -36,19 +36,20 @@ export function EditChallengeDialog({ challenge }: { challenge: Challenge }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ChallengeForm>({
     name: challenge.name,
     description: challenge.description ?? "",
     reward: challenge.reward ?? "",
     ruleType: challenge.ruleType,
-    ruleTarget: String(challenge.ruleTarget),
+    ruleTarget: challenge.ruleTarget != null ? String(challenge.ruleTarget) : "",
     ruleDays: challenge.ruleDays != null ? String(challenge.ruleDays) : "",
+    metricTest: challenge.metricTest ?? "",
     sede: challenge.sede ?? "",
     startsAt: isoDate(challenge.startsAt),
     endsAt: isoDate(challenge.endsAt),
   });
 
-  function update(field: keyof typeof form, value: string) {
+  function update(field: keyof ChallengeForm, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -68,7 +69,8 @@ export function EditChallengeDialog({ challenge }: { challenge: Challenge }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name || !form.ruleTarget || !form.startsAt || !form.endsAt) {
+    const metric = isMetric(form.ruleType);
+    if (!form.name || !form.startsAt || !form.endsAt || (!metric && !form.ruleTarget)) {
       toast.error("Completa nombre, meta, fecha de inicio y fin.");
       return;
     }
@@ -79,8 +81,9 @@ export function EditChallengeDialog({ challenge }: { challenge: Challenge }) {
           description: form.description || undefined,
           reward: form.reward || undefined,
           ruleType: form.ruleType as never,
-          ruleTarget: parseInt(form.ruleTarget),
+          ruleTarget: form.ruleTarget ? parseFloat(form.ruleTarget) : null,
           ruleDays: form.ruleDays ? parseInt(form.ruleDays) : undefined,
+          metricTest: form.metricTest ? (form.metricTest as never) : null,
           sede: form.sede ? (form.sede as never) : undefined,
           startsAt: form.startsAt,
           endsAt: form.endsAt,
@@ -99,68 +102,15 @@ export function EditChallengeDialog({ challenge }: { challenge: Challenge }) {
       <DialogTrigger className="text-xs text-muted-foreground hover:text-foreground transition">
         editar
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar reto</DialogTitle>
           <DialogDescription>
-            Corrige los datos del reto. No cambia las inscripciones existentes.
+            Corrige los datos del reto. Al guardar se recalcula el ranking de asistencia.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <Label>Nombre del reto *</Label>
-            <Input required placeholder='ej: "Reto 30 clases"' value={form.name} onChange={(e) => update("name", e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Descripción</Label>
-            <Input placeholder='ej: "Asiste a 30 clases en 60 días"' value={form.description} onChange={(e) => update("description", e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label>Recompensa</Label>
-            <Input placeholder='ej: "Camiseta La Cueva"' value={form.reward} onChange={(e) => update("reward", e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Tipo de regla *</Label>
-              <select value={form.ruleType} onChange={(e) => update("ruleType", e.target.value)}
-                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-sm">
-                <option value="TOTAL_CLASSES">X clases totales</option>
-                <option value="CONSECUTIVE_CLASSES">X clases consecutivas</option>
-                <option value="CLASSES_IN_DAYS">X clases en Y días</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>Meta (# clases) *</Label>
-              <Input type="number" required min={1} value={form.ruleTarget} onChange={(e) => update("ruleTarget", e.target.value)} />
-            </div>
-          </div>
-          {form.ruleType === "CLASSES_IN_DAYS" && (
-            <div className="space-y-1">
-              <Label>En cuántos días</Label>
-              <Input type="number" min={1} value={form.ruleDays} onChange={(e) => update("ruleDays", e.target.value)} />
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Sede</Label>
-              <select value={form.sede} onChange={(e) => update("sede", e.target.value)}
-                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-sm">
-                <option value="">Ambas sedes</option>
-                <option value="FITNESS_CENTER">Fitness Center</option>
-                <option value="XTREME">Xtreme</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Fecha inicio *</Label>
-              <Input type="date" required value={form.startsAt} onChange={(e) => update("startsAt", e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label>Fecha fin *</Label>
-              <Input type="date" required value={form.endsAt} onChange={(e) => update("endsAt", e.target.value)} />
-            </div>
-          </div>
+          <ChallengeFields form={form} update={update} />
           <div className="flex items-center justify-between gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={handleDelete} disabled={isPending}
               className="text-destructive hover:text-destructive hover:bg-destructive/10">

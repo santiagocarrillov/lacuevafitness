@@ -12,7 +12,7 @@ type ChallengeProgress = {
     name: string;
     description: string | null;
     reward: string | null;
-    ruleTarget: number;
+    ruleTarget: number | null;
     startsAt: Date;
     endsAt: Date;
   };
@@ -29,7 +29,8 @@ export function ChallengesSection({
       <CardContent>
         <div className="space-y-3">
           {challenges.map((cp) => {
-            const pct = Math.min(100, Math.round((cp.currentCount / cp.challenge.ruleTarget) * 100));
+            const target = cp.challenge.ruleTarget ?? 0;
+            const pct = Math.min(100, Math.round((cp.currentCount / Math.max(target, 1)) * 100));
             return (
               <div key={cp.id} className="p-3 rounded-md border space-y-2">
                 <div className="flex items-center justify-between">
@@ -44,7 +45,7 @@ export function ChallengesSection({
                       Completado
                     </Badge>
                   ) : (
-                    <Badge variant="outline">{cp.currentCount} / {cp.challenge.ruleTarget}</Badge>
+                    <Badge variant="outline">{cp.currentCount} / {target}</Badge>
                   )}
                 </div>
                 {/* Progress bar */}

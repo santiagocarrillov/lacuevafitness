@@ -19,6 +19,9 @@ export default async function RetosPage() {
     prisma.challenge.findMany({
       where: {
         active: true,
+        // Only attendance challenges are joinable; metric rankings are computed
+        // live and shown admin-side, so they must not appear as "join" cards.
+        ruleType: { in: ["TOTAL_CLASSES", "CONSECUTIVE_CLASSES", "CLASSES_IN_DAYS"] },
         startsAt: { lte: now },
         endsAt: { gte: now },
         OR: [
@@ -66,7 +69,7 @@ export default async function RetosPage() {
           {active.map((p, idx) => {
             const pct = Math.min(
               100,
-              Math.round((p.currentCount / Math.max(p.challenge.ruleTarget, 1)) * 100),
+              Math.round((p.currentCount / Math.max(p.challenge.ruleTarget ?? 1, 1)) * 100),
             );
             const featured = idx === 0;
             const ruleHint =
