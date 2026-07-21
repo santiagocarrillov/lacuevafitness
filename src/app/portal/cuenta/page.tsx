@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function CuentaPage() {
   const { member } = await requireMember();
 
-  const [activeMembership, paymentCount, attendanceCount, evalCount] = await Promise.all([
+  const [activeMembership, paymentCount, attendanceCount] = await Promise.all([
     prisma.membership.findFirst({
       where: { memberId: member.id, state: "ACTIVE" },
       orderBy: { endsAt: "desc" },
@@ -19,7 +19,6 @@ export default async function CuentaPage() {
     }),
     prisma.payment.count({ where: { memberId: member.id } }),
     prisma.attendance.count({ where: { memberId: member.id } }),
-    prisma.evaluation.count({ where: { memberId: member.id } }),
   ]);
 
   const initial = member.firstName.charAt(0).toUpperCase();
@@ -71,25 +70,6 @@ export default async function CuentaPage() {
         </div>
       )}
 
-      <div className="portal-section-title">
-        <h4>Nutrición</h4>
-      </div>
-
-      <Link href="/portal/nutricion" className="portal-list-item">
-        <div className="li-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M12 3v18" />
-            <path d="M5 8c0-2 1.5-3 3.5-3S12 6 12 8" />
-            <path d="M19 5c0 4-2 6-4 6" />
-          </svg>
-        </div>
-        <div className="info">
-          <div className="t">Mi plan nutricional</div>
-          <div className="s">Plan alimenticio y seguimiento</div>
-        </div>
-        <div className="arrow">→</div>
-      </Link>
-
       {member.sex === "FEMALE" && (
         <>
           <div className="portal-section-title">
@@ -139,19 +119,6 @@ export default async function CuentaPage() {
         <div className="info">
           <div className="t">Asistencias</div>
           <div className="s">{attendanceCount} visitas en total</div>
-        </div>
-        <div className="arrow">→</div>
-      </Link>
-
-      <Link href="/portal/cuenta/evaluaciones" className="portal-list-item">
-        <div className="li-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M3 12h4l3-8 4 16 3-8h4" />
-          </svg>
-        </div>
-        <div className="info">
-          <div className="t">Historial de evaluaciones</div>
-          <div className="s">{evalCount} evaluaciones SRXFit</div>
         </div>
         <div className="arrow">→</div>
       </Link>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
@@ -31,7 +32,7 @@ export const dynamic = "force-dynamic";
 export default async function ProgresoPage() {
   const { member } = await requireMember();
 
-  const [bodyComps, clinicalMarkers, recentEvals, nutriNote, prResults] = await Promise.all([
+  const [bodyComps, clinicalMarkers, recentEvals, nutriNote, prResults, evalCount] = await Promise.all([
     prisma.bodyComposition.findMany({
       where: { memberId: member.id },
       orderBy: { measuredAt: "desc" },
@@ -72,6 +73,7 @@ export default async function ProgresoPage() {
         return tr ? { test, value: tr.valueNumeric, recordedAt: tr.recordedAt } : null;
       }),
     ),
+    prisma.evaluation.count({ where: { memberId: member.id } }),
   ]);
 
   const age = computeAge(member.dateOfBirth);
@@ -391,6 +393,23 @@ export default async function ProgresoPage() {
           </div>
         </>
       )}
+
+      {/* Historial de evaluaciones (movido desde Cuenta) */}
+      <div className="portal-section-title">
+        <h4>Historial</h4>
+      </div>
+      <Link href="/portal/cuenta/evaluaciones" className="portal-list-item">
+        <div className="li-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M3 12h4l3-8 4 16 3-8h4" />
+          </svg>
+        </div>
+        <div className="info">
+          <div className="t">Historial de evaluaciones</div>
+          <div className="s">{evalCount} evaluaciones SRXFit</div>
+        </div>
+        <div className="arrow">→</div>
+      </Link>
     </PortalShell>
   );
 }
