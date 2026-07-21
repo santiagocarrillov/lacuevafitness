@@ -118,6 +118,7 @@ model Member {
   mealLogs          MealLog[]
   nutritionFocus    NutritionFocus?
   menstrualPeriods  MenstrualPeriod[]
+  pushSubscriptions PushSubscription[]
   challengeProgress ChallengeProgress[]
 
   @@index([sede, status])
@@ -965,4 +966,20 @@ model MenstrualPeriod {
   updatedAt DateTime  @updatedAt
 
   @@index([memberId, startDate])
+}
+
+// Web-push subscription for a member's device. One row per browser/device
+// (unique endpoint). Used to send notifications via VAPID.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId])
 }

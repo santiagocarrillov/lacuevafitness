@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { MemberActions } from "./member-actions";
 import { InviteMemberButton } from "./invite-member-button";
+import { MemberPushButton } from "./member-push-button";
 import { NotesTimeline } from "./notes-timeline";
 import { HealthSection } from "./health-section";
 import { ClinicalRecordsSection } from "./clinical-records-section";
@@ -173,6 +174,9 @@ export default async function MemberDetailPage({
                 : null
             }
           />
+          {(user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN") && (
+            <MemberPushButton memberId={member.id} memberName={member.firstName} />
+          )}
           <MemberActions memberId={member.id} status={member.status} plans={plans} sede={member.sede} />
         </div>
       </header>
