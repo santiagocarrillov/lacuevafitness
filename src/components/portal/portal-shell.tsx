@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { AppHeader } from "./app-header";
 import { BottomNav } from "./bottom-nav";
+import { PwaSetup } from "./pwa-setup";
 import { getCurrentUser } from "@/lib/auth";
 
 type Props = {
@@ -18,6 +19,7 @@ export async function PortalShell({ avatarInitial, children }: Props) {
       <AppHeader avatarInitial={avatarInitial} isStaff={isStaff} />
       <div className="portal-content">{children}</div>
       <BottomNav />
+      <PwaSetup />
     </div>
   );
 }
