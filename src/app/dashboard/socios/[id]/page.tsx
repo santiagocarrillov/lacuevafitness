@@ -22,6 +22,7 @@ import { MembershipEditor } from "./membership-editor";
 import { RenewMembershipDialog } from "./renew-membership-dialog";
 import { MembershipPaymentPanel } from "./membership-payment-panel";
 import { ChurnRiskBadge } from "./churn-risk-badge";
+import { FrequencyBadge } from "@/components/frequency-badge";
 import { MemberInfoEditor } from "./member-info-editor";
 
 export const dynamic = "force-dynamic";
@@ -147,6 +148,7 @@ export default async function MemberDetailPage({
               </Badge>
             )}
             {latestLevel && <Badge variant="outline">Nivel {latestLevel.level.replace("LEVEL_", "")}</Badge>}
+            <FrequencyBadge visitsLast30={analytics.attendanceLast30Days} showCount />
             <ChurnRiskBadge risk={analytics.churnRisk} reasons={analytics.churnReasons} />
           </div>
         </div>

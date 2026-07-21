@@ -137,7 +137,7 @@ export async function AsistenciaTab({
               <CardTitle className="text-3xl text-emerald-700">{r.payment.alDia}</CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              membresía vigente (no vencida)
+              membresía vigente y pagada 100%
             </CardContent>
           </Card>
           <Card>
@@ -146,7 +146,7 @@ export async function AsistenciaTab({
               <CardTitle className="text-3xl text-red-700">{r.payment.debe}</CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              membresía vencida o pendiente de pago
+              vencida, sin pagar o pago incompleto
             </CardContent>
           </Card>
           <Card>
@@ -160,9 +160,9 @@ export async function AsistenciaTab({
           </Card>
         </div>
         <p className="text-xs text-muted-foreground">
-          &quot;Al día&quot; = tiene una membresía vigente (no vencida). El estado de pago se basa en la
-          vigencia de la membresía; para que refleje bien lo cobrado, los pagos deben estar
-          asignados a la membresía del socio.
+          &quot;Al día&quot; = membresía vigente con pagos confirmados que cubren el 100% del precio.
+          Las transferencias/TC sin verificar (pendientes) no cuentan hasta confirmarse, y un
+          socio solo cuenta si sus pagos están asignados a su membresía.
         </p>
       </section>
     </div>

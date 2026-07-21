@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { FrequencyBadge } from "@/components/frequency-badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -27,6 +28,7 @@ type MemberRow = {
     state: string;
     plan: { name: string };
   }[];
+  _count?: { attendance: number };
 };
 
 const statusColors: Record<string, string> = {
@@ -81,6 +83,7 @@ export function MemberTable({
               <TableHead>Nombre</TableHead>
               <TableHead>Sede</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Frecuencia</TableHead>
               <TableHead>Plan actual</TableHead>
               <TableHead>Vencimiento</TableHead>
               <TableHead>Contacto</TableHead>
@@ -89,7 +92,7 @@ export function MemberTable({
           <TableBody>
             {members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No hay socios que coincidan con los filtros.
                 </TableCell>
               </TableRow>
@@ -111,6 +114,9 @@ export function MemberTable({
                       <Badge variant="outline" className={statusColors[m.status] ?? ""}>
                         {statusLabels[m.status] ?? m.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <FrequencyBadge visitsLast30={m._count?.attendance ?? 0} showCount />
                     </TableCell>
                     <TableCell className="text-sm">
                       {membership?.plan.name ?? "—"}

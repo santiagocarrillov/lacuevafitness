@@ -32,6 +32,9 @@ export async function getMembers({
     ];
   }
 
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
   const [members, total] = await Promise.all([
     prisma.member.findMany({
       where,
@@ -43,6 +46,10 @@ export async function getMembers({
           orderBy: { endsAt: "desc" },
           take: 1,
           include: { plan: true },
+        },
+        // Visits in the last 30 days → drives the attendance-frequency badge.
+        _count: {
+          select: { attendance: { where: { recordedAt: { gte: thirtyDaysAgo } } } },
         },
       },
     }),
