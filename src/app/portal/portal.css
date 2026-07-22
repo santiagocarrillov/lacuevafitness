@@ -62,7 +62,12 @@
 }
 
 .portal-app-header {
-  padding: 16px 22px 12px;
+  /* Installed as a PWA the header sits flush with the top of the screen, so we
+     add the device safe-area insets (notch / Dynamic Island / rounded corners)
+     to the padding — otherwise the brand + avatar sit under the camera cutout
+     and are hard to tap. env() is 0 in a normal browser tab, so no harm there. */
+  padding: calc(16px + env(safe-area-inset-top)) calc(22px + env(safe-area-inset-right))
+    12px calc(22px + env(safe-area-inset-left));
   display: flex;
   justify-content: space-between;
   align-items: center;

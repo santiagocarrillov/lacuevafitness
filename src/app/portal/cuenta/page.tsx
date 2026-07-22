@@ -5,6 +5,7 @@ import { PortalShell } from "@/components/portal/portal-shell";
 import { CapsuleCard } from "@/components/portal/capsule-card";
 import { portalSignOut } from "@/lib/actions/portal-auth";
 import { NotificationsToggle } from "@/components/portal/notifications-toggle";
+import { PasswordChange } from "@/components/portal/password-change";
 import { daysBetween, money, shortDate } from "@/lib/portal/format";
 
 export const dynamic = "force-dynamic";
@@ -127,6 +128,7 @@ export default async function CuentaPage() {
       <div className="portal-section-title">
         <h4>Ajustes</h4>
       </div>
+      <PasswordChange />
       <NotificationsToggle />
 
       <div className="portal-section-title">

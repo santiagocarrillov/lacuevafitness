@@ -155,6 +155,32 @@ export async function portalSignIn(formData: FormData): Promise<PortalSignupResu
   return { ok: true };
 }
 
+/**
+ * Let a logged-in socio set/change their own password from inside the app.
+ * Requires an active session (they're already authenticated). Supabase enforces
+ * its own minimum, but we require 8 chars to match signup.
+ */
+export async function portalSetPassword(formData: FormData): Promise<PortalSignupResult> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (password.length < 8) {
+    return { ok: false, error: "La contraseña debe tener al menos 8 caracteres." };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Las contraseñas no coinciden." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { ok: false, error: error.message };
+
+  return { ok: true };
+}
+
 export async function portalSignOut() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();

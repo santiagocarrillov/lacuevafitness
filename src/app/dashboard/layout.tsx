@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { requireAuth, can, resolveAthleteMember } from "@/lib/auth";
+import { requireAuth, can } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
 
 const roleLabels: Record<string, string> = {
@@ -42,17 +42,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     user.sede ? ` · ${sedeLabels[user.sede]}` : ""
   }`;
 
-  // Staff who are also athletes (a Member matches them) can jump to their own
-  // member view. Read-only resolve here; the link is shown only when one exists.
-  // (MEMBERs were already redirected to the portal above.)
-  const athlete = await resolveAthleteMember(user);
+  // Every staff member can jump into the socio app to preview it — the portal
+  // auto-provisions a lightweight preview member on first entry, so no member
+  // record needs to exist beforehand. (MEMBERs were already redirected above.)
 
   return (
     <DashboardShell
       nav={nav}
       userName={user.fullName}
       userMeta={userMeta}
-      showAthleteView={athlete != null}
+      showAthleteView={true}
     >
       {children}
     </DashboardShell>

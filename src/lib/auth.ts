@@ -84,7 +84,7 @@ export async function requireRole(...allowed: UserRole[]): Promise<User> {
  */
 export async function resolveAthleteMember(
   user: User,
-  opts: { link?: boolean } = {},
+  opts: { link?: boolean; createForStaff?: boolean } = {},
 ): Promise<Member | null> {
   const linked = await prisma.member.findUnique({ where: { userId: user.id } });
   if (linked) return linked;
@@ -100,7 +100,32 @@ export async function resolveAthleteMember(
         data: { userId: user.id },
       });
     }
-    return candidate;
+    if (candidate) return candidate;
+
+    // No Member record at all → auto-provision a lightweight preview one so any
+    // staff member (owner, coach, admin…) can experience the socio app without
+    // anyone having to create a member + assign a membership for them. Kept out
+    // of the socios CRM (status LEAD + no membership; see getMembers). Only if a
+    // record with this email doesn't already exist (avoids the unique clash).
+    if (opts.createForStaff) {
+      const emailTaken = await prisma.member.findUnique({
+        where: { email: user.email },
+      });
+      if (emailTaken) return emailTaken.userId === user.id ? emailTaken : null;
+
+      const [firstName, ...rest] = user.fullName.trim().split(/\s+/);
+      return prisma.member.create({
+        data: {
+          userId: user.id,
+          firstName: firstName || user.fullName || "Staff",
+          lastName: rest.join(" ") || "(preview)",
+          email: user.email,
+          phone: user.phone,
+          sede: user.sede ?? "FITNESS_CENTER",
+          status: "LEAD",
+        },
+      });
+    }
   }
   return null;
 }
@@ -118,7 +143,10 @@ export async function requireMember(
   const user = await requireAuth();
   const isStaff = user.role !== "MEMBER";
 
-  const member = await resolveAthleteMember(user, { link: true });
+  const member = await resolveAthleteMember(user, {
+    link: true,
+    createForStaff: true,
+  });
   if (!member) {
     if (isStaff) redirect("/dashboard?noathlete=1");
     const supabase = await createSupabaseServerClient();
