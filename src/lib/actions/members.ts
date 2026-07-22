@@ -23,12 +23,16 @@ export async function getMembers({
   const where: any = {};
   if (sede) where.sede = sede;
   if (status) where.status = status;
-  // Hide staff self-preview member records (auto-provisioned so staff can open
-  // the socio app): linked to a staff user AND with no membership. A staff
-  // person who is also a real paying socio has memberships, so they're kept.
+  // Hide ONLY the empty auto-provisioned preview stubs (created so a staff
+  // member can open the socio app without a real ficha): linked to a staff user,
+  // still status LEAD, and with no memberships AND no attendance. Any staff
+  // member who actually trains — has attendance, an evaluation, etc. — stays
+  // visible so the nutritionist/coach can log their body comp and tests.
   where.NOT = {
     user: { role: { not: "MEMBER" } },
+    status: "LEAD",
     memberships: { none: {} },
+    attendance: { none: {} },
   };
   if (search) {
     where.OR = [
