@@ -1,7 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { CANONICAL_SITE_URL, LEGACY_VERCEL_HOST } from "@/lib/site-url";
 
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // Force human traffic off the legacy Vercel alias onto the canonical domain,
+  // so nobody signs up / installs the PWA on a throwaway URL. /api is left alone
+  // (webhooks + crons hit the deployment host directly and must not be redirected).
+  const host = request.headers.get("host") ?? "";
+  if (host === LEGACY_VERCEL_HOST && !path.startsWith("/api/")) {
+    return NextResponse.redirect(
+      new URL(path + request.nextUrl.search, CANONICAL_SITE_URL),
+      308,
+    );
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -25,7 +39,6 @@ export async function proxy(request: NextRequest) {
   // Touch the session so cookies refresh on every request
   const { data: { user } } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
   // Public API endpoints that must bypass session auth:
   // - the WhatsApp webhook (Meta calls it; it's guarded by HMAC signature)
   // - cron endpoints (guarded by CRON_SECRET, not a user session)
@@ -54,16 +67,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isStaffAuthPage && user) {
+  // A logged-in user revisiting any auth page is sent to the role-aware landing,
+  // which forwards socios to the portal and staff to the dashboard.
+  if ((isStaffAuthPage || isPortalAuthPage) && user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.searchParams.delete("next");
-    return NextResponse.redirect(url);
-  }
-
-  if (isPortalAuthPage && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/portal/hoy";
+    url.pathname = "/bienvenida";
     url.searchParams.delete("next");
     return NextResponse.redirect(url);
   }

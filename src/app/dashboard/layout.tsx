@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { requireAuth, can, resolveAthleteMember } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
 
@@ -18,6 +19,10 @@ const sedeLabels: Record<string, string> = {
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await requireAuth();
+
+  // Socios never belong in the staff dashboard — send them to their portal.
+  // (Staff who are also athletes keep dashboard access; only pure MEMBERs bounce.)
+  if (user.role === "MEMBER") redirect("/portal/hoy");
 
   // Retos, Nutrición y Notificaciones viven ahora dentro del hub de SRXFit.
   const nav = [
@@ -39,7 +44,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   // Staff who are also athletes (a Member matches them) can jump to their own
   // member view. Read-only resolve here; the link is shown only when one exists.
-  const athlete = user.role !== "MEMBER" ? await resolveAthleteMember(user) : null;
+  // (MEMBERs were already redirected to the portal above.)
+  const athlete = await resolveAthleteMember(user);
 
   return (
     <DashboardShell
