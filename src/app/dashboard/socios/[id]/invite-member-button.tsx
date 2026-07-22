@@ -8,6 +8,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { generatePortalInvite, revokePortalInvite } from "@/lib/actions/members";
+import { publicBaseUrl } from "@/lib/site-url";
 
 type ExistingInvite = { code: string; expiresAt: string } | null;
 
@@ -44,7 +45,7 @@ export function InviteMemberButton({
   }
 
   const shareText = invite
-    ? `Activa tu portal de La Cueva:\nCorreo: ${memberEmail ?? ""}\nCódigo: ${invite.code}\n${typeof window !== "undefined" ? window.location.origin : ""}/portal/signup`
+    ? `Activa tu portal de La Cueva:\nCorreo: ${memberEmail ?? ""}\nCódigo: ${invite.code}\n${publicBaseUrl()}/portal/signup`
     : "";
 
   function handleGenerate() {

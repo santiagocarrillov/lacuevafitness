@@ -54,7 +54,7 @@ function LoginForm() {
     }
     setLoading(true);
     const supabase = createSupabaseBrowserClient();
-    const next = params.get("next") ?? "/dashboard";
+    const next = params.get("next") ?? "/bienvenida";
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -81,7 +81,7 @@ function LoginForm() {
       return;
     }
     toast.success("Bienvenido a La Cueva");
-    const next = params.get("next") ?? "/dashboard";
+    const next = params.get("next") ?? "/bienvenida";
     router.push(next);
     router.refresh();
   }
@@ -91,7 +91,7 @@ function LoginForm() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Iniciar sesión</CardTitle>
-          <CardDescription>Dashboard SRXFit — La Cueva</CardDescription>
+          <CardDescription>La Cueva — entra a tu cuenta</CardDescription>
         </CardHeader>
         <CardContent>
           {magicSent ? (
