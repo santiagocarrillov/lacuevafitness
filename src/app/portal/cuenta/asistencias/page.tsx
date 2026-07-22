@@ -6,6 +6,11 @@ import { longDate } from "@/lib/portal/format";
 
 export const dynamic = "force-dynamic";
 
+const sedeLabels: Record<string, string> = {
+  FITNESS_CENTER: "Fitness Center",
+  XTREME: "Xtreme",
+};
+
 export default async function AsistenciasPage() {
   const { member } = await requireMember();
   const records = await prisma.attendance.findMany({
@@ -48,7 +53,8 @@ export default async function AsistenciasPage() {
             <div className="info">
               <div className="t">{longDate(a.recordedAt)}</div>
               <div className="s">
-                Clase · {a.classSession.schedule?.name ?? a.classSession.schedule?.startTime ?? ""}
+                {sedeLabels[a.classSession.sede] ?? "Clase"} ·{" "}
+                {a.classSession.schedule?.name ?? a.classSession.schedule?.startTime ?? ""}
               </div>
             </div>
           </div>

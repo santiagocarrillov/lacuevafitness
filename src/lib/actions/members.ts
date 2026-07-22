@@ -23,6 +23,13 @@ export async function getMembers({
   const where: any = {};
   if (sede) where.sede = sede;
   if (status) where.status = status;
+  // Hide staff self-preview member records (auto-provisioned so staff can open
+  // the socio app): linked to a staff user AND with no membership. A staff
+  // person who is also a real paying socio has memberships, so they're kept.
+  where.NOT = {
+    user: { role: { not: "MEMBER" } },
+    memberships: { none: {} },
+  };
   if (search) {
     where.OR = [
       { firstName: { contains: search, mode: "insensitive" } },
