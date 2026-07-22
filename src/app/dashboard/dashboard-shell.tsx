@@ -4,6 +4,7 @@ import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions/auth";
+import { ChangePasswordButton } from "./change-password-button";
 
 type NavItem = { href: string; label: string };
 
@@ -101,6 +102,7 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
               Ver mi app de socio →
             </Link>
           )}
+          <ChangePasswordButton />
           <form action={signOut}>
             <button
               type="submit"
