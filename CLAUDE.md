@@ -15,7 +15,10 @@ Plan estratégico completo: `/Users/santiagocarrillo/.claude/plans/vectorized-tw
 - **Supabase SSR** (`@supabase/ssr` 0.10.2) — Auth + Postgres + Storage.
 - **Tailwind 4** + **shadcn/ui** (componentes en `src/components/ui/`).
 - **Recharts**, **react-hook-form**, **zod**, **sonner**.
-- **NO instalado** (decisión: aplazar): Stripe, QuickBooks SDK, Resend, Twilio.
+- **Resend** — email transaccional. Instalado jul 2026 para el aviso del formulario web
+  (`src/lib/leads/notify.ts`). Requiere `RESEND_API_KEY`; el remitente debe estar en un dominio
+  verificado en Resend (`LEAD_NOTIFY_FROM`, destino `LEAD_NOTIFY_TO`).
+- **NO instalado** (decisión: aplazar): Stripe, QuickBooks SDK, Twilio.
 
 ---
 
