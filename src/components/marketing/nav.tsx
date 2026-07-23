@@ -26,8 +26,10 @@ export function MarketingNav() {
         <a className="plain" href="#cierre">
           Precios
         </a>
-        {/* La app vive en el mismo proyecto: /login es una ruta interna, no un dominio aparte. */}
-        <Link className="plain" href="/login">
+        {/* La app vive en el mismo proyecto: /login es una ruta interna, no un dominio aparte.
+            `nav-login` la exceptúa del ocultamiento de links en móvil: los socios entran
+            a su app desde el teléfono y este es su único punto de acceso visible. */}
+        <Link className="plain nav-login" href="/login">
           Ingresar
         </Link>
         <a className="btn btn-solid" href="#cierre">

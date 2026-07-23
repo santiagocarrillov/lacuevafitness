@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { TestKey } from "@/generated/prisma/client";
 import { requireAuth, requireMember, can } from "@/lib/auth";
 import { SELF_LOGGABLE_TESTS, SELF_TEST_KEYS } from "@/lib/portal/self-log-tests";
+import { notifyStaffOfSelfEntry } from "@/lib/push/notify-staff";
 
 export type SelfLogResult = { ok: true } | { ok: false; error: string };
 
@@ -56,6 +57,17 @@ export async function logSelfMeasurement(formData: FormData): Promise<SelfLogRes
     },
   });
 
+  // Best-effort nudge so a coach validates it instead of it sitting unseen.
+  const parts: string[] = [];
+  if (weightKg != null) parts.push(`peso ${weightKg} kg`);
+  if (waistCm != null) parts.push(`cintura ${waistCm} cm`);
+  await notifyStaffOfSelfEntry({
+    memberId: member.id,
+    memberName: `${member.firstName} ${member.lastName}`.trim(),
+    memberSede: member.sede,
+    summary: parts.length ? `registró ${parts.join(", ")}` : "registró nuevas medidas",
+  }).catch(() => undefined);
+
   revalidatePath("/portal/progreso");
   revalidatePath("/portal/hoy");
   return { ok: true };
@@ -96,6 +108,13 @@ export async function logSelfPr(formData: FormData): Promise<SelfLogResult> {
       source: "MEMBER",
     },
   });
+
+  await notifyStaffOfSelfEntry({
+    memberId: member.id,
+    memberName: `${member.firstName} ${member.lastName}`.trim(),
+    memberSede: member.sede,
+    summary: `nueva marca en ${meta.label}: ${value} ${meta.unit}`,
+  }).catch(() => undefined);
 
   revalidatePath("/portal/progreso");
   return { ok: true };
