@@ -283,3 +283,56 @@
 .mkt .widget-opt .ic { width: 30px; height: 30px; border-radius: 8px; background: rgba(201,245,67,.12); display: grid; place-items: center; color: var(--cal-power); font-size: 15px; flex: none; }
 .mkt .fab { width: 58px; height: 58px; border-radius: 50%; background: var(--grad-cal); color: #fff; border: none; cursor: pointer; font-size: 24px; display: grid; place-items: center; box-shadow: 0 12px 30px rgba(107,79,181,.45); transition: transform .2s; }
 .mkt .fab:hover { transform: scale(1.06); }
+
+/* ---------------- FORMULARIO DE LEAD (/empezar) ---------------- */
+.mkt .lead-page {
+  min-height: 100vh;
+  display: flex; align-items: flex-start; justify-content: center;
+  background: var(--paper);
+  padding: 120px 20px 72px;
+}
+.mkt .lead-card {
+  width: 100%; max-width: 520px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 34px 30px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.06);
+}
+.mkt .lead-card h1, .mkt .lead-card h2 {
+  font-family: var(--display); text-transform: uppercase;
+  font-size: clamp(28px, 6vw, 40px); line-height: 1.02; margin: 0 0 10px;
+}
+.mkt .lead-intro { color: var(--mute-d); font-size: 15.5px; line-height: 1.55; margin: 0 0 24px; }
+
+.mkt .lead-card form { display: grid; gap: 15px; }
+.mkt .lead-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+@media (max-width: 520px) { .mkt .lead-row { grid-template-columns: 1fr; } }
+
+.mkt .lead-card label {
+  display: grid; gap: 6px;
+  font-family: var(--sans); text-transform: uppercase;
+  letter-spacing: .12em; font-size: 12px; color: var(--mute-d);
+}
+.mkt .lead-card input, .mkt .lead-card select {
+  width: 100%; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--white); color: var(--black);
+  font-family: var(--sans2); font-size: 16px; /* 16px evita el zoom automático en iOS */
+  text-transform: none; letter-spacing: 0;
+}
+.mkt .lead-card input:focus, .mkt .lead-card select:focus {
+  outline: none; border-color: var(--black);
+}
+/* Honeypot: fuera de vista para personas, presente para bots. */
+.mkt .lead-hp {
+  position: absolute !important; left: -9999px !important;
+  width: 1px !important; height: 1px !important; opacity: 0 !important;
+}
+.mkt .lead-error {
+  margin: 0; color: #c8493c; font-size: 14px;
+}
+.mkt .lead-submit {
+  margin-top: 6px; width: 100%; text-align: center; border-radius: 10px;
+}
+.mkt .lead-done p { color: var(--mute-d); font-size: 15.5px; line-height: 1.55; margin: 0 0 22px; }

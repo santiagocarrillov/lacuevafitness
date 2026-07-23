@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 
 const C = 220; // centro del viewBox 440x440
@@ -32,9 +33,9 @@ export function Closing() {
           <p className="eyebrow">Tu punto de partida</p>
           <h2>Tu viaje empieza con datos y objetivos</h2>
           <div>
-            <a className="btn btn-solid" href="#">
+            <Link className="btn btn-solid" href="/empezar">
               Agenda tu evaluación
-            </a>
+            </Link>
           </div>
           <div className="note">Prueba de 2 semanas · Cupos limitados por sede</div>
         </div>

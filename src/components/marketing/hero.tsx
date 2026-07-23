@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useRef } from "react";
 import { useSpotlight } from "./use-spotlight";
 
@@ -43,9 +45,9 @@ export function Hero() {
         <p className="hero-brush">Sé una persona más...</p>
         <p className="hero-lead">Más saludable. Más fit. Más longeva.</p>
         <div className="hero-cta">
-          <a className="btn btn-solid" href="#cierre">
+          <Link className="btn btn-solid" href="/empezar">
             Empieza por el Test
-          </a>
+          </Link>
           <a className="btn btn-ghost" href="#metodo">
             Ver el método
           </a>

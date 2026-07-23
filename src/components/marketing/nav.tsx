@@ -32,9 +32,9 @@ export function MarketingNav() {
         <Link className="plain nav-login" href="/login">
           Ingresar
         </Link>
-        <a className="btn btn-solid" href="#cierre">
+        <Link className="btn btn-solid" href="/empezar">
           Empieza el Test
-        </a>
+        </Link>
       </div>
     </nav>
   );
