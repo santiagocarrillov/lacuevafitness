@@ -18,6 +18,8 @@ import { getClinicalRecords } from "@/lib/actions/clinical-records";
 import { NutritionSection } from "./nutrition-section";
 import { getMemberMealPlans, getMemberMealLogs, getNutritionFocus } from "@/lib/actions/nutrition";
 import { TestResultsSection } from "./test-results-section";
+import { SelfEntriesSection } from "./self-entries-section";
+import { getMemberSelfEntries } from "@/lib/actions/self-log";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
 import { RenewMembershipDialog } from "./renew-membership-dialog";
@@ -94,12 +96,13 @@ export default async function MemberDetailPage({
 }) {
   const { id } = await params;
   const user = await requireAuth();
-  const [member, plans, notes, challenges, analytics] = await Promise.all([
+  const [member, plans, notes, challenges, analytics, selfEntries] = await Promise.all([
     getMember(id),
     getMembershipPlans(),
     getMemberNotes(id),
     getMemberChallenges(id),
     getMemberAnalytics(id),
+    getMemberSelfEntries(id),
   ]);
   if (!member) return notFound();
   const canEditHealth = user.role === "OWNER" || user.role === "NUTRITIONIST";
@@ -435,6 +438,18 @@ export default async function MemberDetailPage({
       {canEditHealth && (
         <NutritionSection memberId={member.id} plans={mealPlans} logs={mealLogs} focusMessage={nutritionFocus?.message ?? null} />
       )}
+
+      {/* Registros que el socio ingresó desde su app (pendientes de validar) */}
+      <SelfEntriesSection
+        memberId={member.id}
+        entries={selfEntries}
+        canValidate={
+          user.role === "OWNER" ||
+          user.role === "ADMIN" ||
+          user.role === "COACH" ||
+          user.role === "NUTRITIONIST"
+        }
+      />
 
       {/* Resultados de tests SRXFit */}
       <TestResultsSection

@@ -3,6 +3,7 @@ import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { WeightChart } from "@/components/portal/weight-chart";
+import { SelfLog } from "@/components/portal/self-log";
 import { FEATURED_PRS, TEST_LABELS } from "@/lib/portal/test-labels";
 import { compareEvaluations } from "@/lib/portal/eval-compare";
 import { shortDate } from "@/lib/portal/format";
@@ -164,6 +165,8 @@ export default async function ProgresoPage() {
           Mi <em>progreso</em>
         </h2>
       </div>
+
+      <SelfLog />
 
       {(!age || !sex) && (
         <div className="portal-callout warn">
