@@ -82,7 +82,20 @@
 .mkt .nav-links .plain { color: #e8e6df; transition: color .2s; }
 .mkt .nav-links .plain:hover { color: var(--cal-power); }
 .mkt .nav-links .btn-solid { background: var(--white); color: var(--black); border-color: var(--white); }
-@media (max-width: 820px) { .mkt .nav-links .plain { display: none; } }
+@media (max-width: 820px) {
+  /* Los anclas de sección son ruido en móvil, pero "Ingresar" NO se oculta:
+     los socios abren la web desde el teléfono para entrar a su app y ese es
+     su único punto de acceso visible. Se muestra como pill delineado. */
+  .mkt .nav-links .plain:not(.nav-login) { display: none; }
+  .mkt .nav-links { gap: 10px; font-size: 13px; }
+  .mkt .nav-links .nav-login {
+    display: inline-flex; align-items: center;
+    padding: 9px 15px; border-radius: 999px;
+    border: 1px solid rgba(232, 230, 223, .55);
+    white-space: nowrap;
+  }
+  .mkt .nav-links .btn-solid { padding: 9px 15px; white-space: nowrap; }
+}
 
 /* ---------------- HERO ---------------- */
 .mkt .hero {
