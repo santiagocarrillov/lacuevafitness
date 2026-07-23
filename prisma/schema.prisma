@@ -454,6 +454,15 @@ model Evaluation {
   @@index([memberId, startedAt])
 }
 
+/// Who entered a measurement. STAFF = taken by a coach/nutritionist under gym
+/// conditions (the official record). MEMBER = self-reported by the socio from
+/// their own app. Self-reported entries show in the socio's personal tracking
+/// immediately, but only count toward rankings/reports once a coach verifies them.
+enum EntrySource {
+  STAFF
+  MEMBER
+}
+
 enum TestKey {
   BACK_SQUAT_3RM
   DEADLIFT_3RM
@@ -482,6 +491,11 @@ model TestResult {
   recordedAt       DateTime    @default(now())
   recordedByUserId String?
   notes            String?
+  // Provenance + verification. Self-reported PRs stay out of rankings/reports
+  // until a coach verifies them (see EntrySource).
+  source           EntrySource @default(STAFF)
+  verifiedAt       DateTime?
+  verifiedByUserId String?
 
   @@index([memberId, test, recordedAt])
 }
@@ -508,6 +522,12 @@ model BodyComposition {
   notes           String?
   recordedById    String?
   recordedBy      User?       @relation("BodyCompositionRecordedBy", fields: [recordedById], references: [id])
+  // Provenance + verification. A socio weighing themselves at home records a
+  // MEMBER entry; it charts immediately for them but stays out of official
+  // body-fat reports and challenge rankings until a coach verifies it.
+  source           EntrySource @default(STAFF)
+  verifiedAt       DateTime?
+  verifiedByUserId String?
 
   @@index([memberId, measuredAt])
 }

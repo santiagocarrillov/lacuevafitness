@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { OFFICIAL_ENTRY_WHERE } from "@/lib/entry-source";
 import { Sede, ChallengeRuleType, TestKey } from "@/generated/prisma/client";
 import { TEST_LABELS } from "@/lib/portal/test-labels";
 import { isMetricRule, type MetricLeaderboard, type MetricLeaderboardEntry } from "@/lib/challenges/metrics";
@@ -356,6 +357,9 @@ export async function getMetricLeaderboard(
         memberId: { in: memberIds },
         measuredAt: { lte: end },
         ...(isWeight ? { weightKg: { not: null } } : { waistCm: { not: null } }),
+        // Self-reported entries only count once a coach verifies them, so the
+        // leaderboard can't be moved by an unchecked home measurement.
+        ...OFFICIAL_ENTRY_WHERE,
       },
       orderBy: { measuredAt: "asc" },
       select: { memberId: true, measuredAt: true, weightKg: true, waistCm: true },
@@ -396,6 +400,8 @@ export async function getMetricLeaderboard(
         memberId: { in: memberIds },
         recordedAt: { lte: end },
         ...(challenge.metricTest ? { test: challenge.metricTest } : {}),
+        // Same rule for PRs: unverified self-reported marks stay out of ranking.
+        ...OFFICIAL_ENTRY_WHERE,
       },
       orderBy: { recordedAt: "asc" },
       select: { memberId: true, test: true, valueNumeric: true, recordedAt: true },

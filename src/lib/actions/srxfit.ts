@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { OFFICIAL_ENTRY_WHERE } from "@/lib/entry-source";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { Sede, EvaluationType, TestKey } from "@/generated/prisma/client";
 
@@ -78,6 +79,7 @@ export async function getBodyFatMetrics(
       weightKg: { not: null },
       bodyFatPct: { not: null },
       member: memberFilter,
+      ...OFFICIAL_ENTRY_WHERE,
     },
     include: {
       member: { select: { id: true, firstName: true, lastName: true, sede: true } },
@@ -102,6 +104,7 @@ export async function getBodyFatMetrics(
         measuredAt: { lt: start },
         weightKg: { not: null },
         bodyFatPct: { not: null },
+        ...OFFICIAL_ENTRY_WHERE,
       },
       orderBy: { measuredAt: "desc" },
     });
@@ -516,6 +519,7 @@ export async function getSrxfitHubStats(sede: Sede | undefined) {
       where: {
         measuredAt: { gte: monthStart },
         member: sedeFilter,
+        ...OFFICIAL_ENTRY_WHERE,
       },
     }),
     prisma.evaluation.count({
