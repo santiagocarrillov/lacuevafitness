@@ -8,6 +8,8 @@ import {
   MONTH_NAMES_ES,
   SRXFIT_START,
   SRXFIT_END,
+  TOTAL_WEEKS,
+  getWeekNumberForDate,
 } from "@/lib/srxfit-calendar";
 import { CalendarGrid } from "./calendar-grid";
 
@@ -23,6 +25,7 @@ export default async function CalendarioPage({
   searchParams: Promise<{ year?: string; month?: string }>;
 }) {
   const user = await requireAuth();
+  const currentWeek = getWeekNumberForDate(new Date());
   const canEdit = user.role === "OWNER";
 
   const params = await searchParams;
@@ -62,7 +65,7 @@ export default async function CalendarioPage({
             <h1 className="text-2xl font-semibold">Calendario de Programación</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Plan de 18 semanas · 108 sesiones ·{" "}
+            Plan de {TOTAL_WEEKS} semanas · {TOTAL_WEEKS * 6} sesiones ·{" "}
             {isoDate(SRXFIT_START)} → {isoDate(SRXFIT_END)}
           </p>
         </div>
@@ -120,11 +123,13 @@ export default async function CalendarioPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-1">
-            {Array.from({ length: 18 }, (_, i) => i + 1).map((w) => (
+            {Array.from({ length: TOTAL_WEEKS }, (_, i) => i + 1).map((w) => (
               <Link
                 key={w}
                 href={`/dashboard/srxfit/calendario/semana/${w}`}
-                className="px-2.5 py-1 text-xs rounded-md border transition hover:bg-accent"
+                className={`px-2.5 py-1 text-xs rounded-md border transition hover:bg-accent ${
+                  w === currentWeek ? "border-foreground font-semibold" : ""
+                }`}
               >
                 Sem {w}
               </Link>

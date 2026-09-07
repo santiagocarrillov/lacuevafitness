@@ -2,9 +2,13 @@ import planData from "@/data/srxfit-plan.json";
 
 // Plan starts Monday May 4, 2026 (Week 1, Day 1)
 export const SRXFIT_START = new Date("2026-05-04T00:00:00");
+
+// Total weeks the plan covers. Derived from the data so adding a block
+// (e.g. Bloque 3 = weeks 19-27) does not require touching the guards below.
+export const TOTAL_WEEKS = (planData as { weeks: unknown[] }).weeks.length;
 export const SRXFIT_END = (() => {
   const d = new Date(SRXFIT_START);
-  d.setDate(d.getDate() + 18 * 7 - 1); // last Saturday of week 18
+  d.setDate(d.getDate() + TOTAL_WEEKS * 7 - 1); // last Saturday of the last week
   return d;
 })();
 
@@ -63,7 +67,7 @@ export function getSessionForDate(date: Date): SrxfitSession | null {
   if (days < 0) return null;
 
   const weekIdx = Math.floor(days / 7); // 0-indexed week (0 = week 1)
-  if (weekIdx >= 18) return null;
+  if (weekIdx >= TOTAL_WEEKS) return null;
 
   // day_index in plan: 1=Mon ... 6=Sat  (matches jsDay for Mon–Sat)
   const dayIndex = jsDay;
@@ -100,12 +104,12 @@ export function getSessionForDate(date: Date): SrxfitSession | null {
 
 // ─── Week helpers (for the week editor) ──────────────────────────────
 
-// The plan week number (1–18) a date falls in, or null if outside the program.
+// The plan week number a date falls in, or null if outside the program.
 export function getWeekNumberForDate(date: Date): number | null {
   const days = daysBetween(SRXFIT_START, date);
   if (days < 0) return null;
   const weekIdx = Math.floor(days / 7);
-  if (weekIdx >= 18) return null;
+  if (weekIdx >= TOTAL_WEEKS) return null;
   return weekIdx + 1;
 }
 

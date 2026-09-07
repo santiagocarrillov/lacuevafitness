@@ -42,6 +42,9 @@ export type WeekMeta = {
   block: number | null;
   weekSummary: string;
   breathingTechnique: string;
+  /** Weeks the plan covers. Passed from the server so the client bundle
+   *  never imports the plan JSON just to know where the calendar ends. */
+  totalWeeks: number;
 };
 
 // ─── Presentation constants ──────────────────────────────────────────
@@ -231,7 +234,7 @@ export function WeekEditor({ meta, days }: { meta: WeekMeta; days: WeekDayData[]
 
   const phaseBadge = PHASE_BADGE[meta.phase] ?? PHASE_BADGE["Aprender"];
   const prevWeek = meta.weekNumber > 1 ? meta.weekNumber - 1 : null;
-  const nextWeek = meta.weekNumber < 18 ? meta.weekNumber + 1 : null;
+  const nextWeek = meta.weekNumber < meta.totalWeeks ? meta.weekNumber + 1 : null;
 
   return (
     <div className="pb-28">
