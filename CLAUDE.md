@@ -84,8 +84,13 @@ Los admins ven los mismos campos al registrar un pago.
 - `MEMBER` — app móvil (Fase 3, no aún).
 
 ### Sedes (enum `Sede`)
-- `FITNESS_CENTER` — casa original (techado, mezzanine, fuerza). Test de empuje: bench press.
-- `XTREME` — nave abovedada abierta. Test de empuje: push press.
+- `FITNESS_CENTER` — casa original (techado, mezzanine, fuerza).
+- `XTREME` — nave abovedada abierta.
+
+> ⚠️ **Desde el Bloque 3 (sep 2026) las dos sedes miden bench press Y push press.**
+> El criterio viejo (Fitness = bench, Xtreme = push press) queda obsoleto: la serie
+> histórica ahora es comparable entre sedes. Xtreme necesita bancos para el martes
+> de la semana de re-evaluación.
 
 > ⚠️ **Las DOS sedes entrenan SRXFIT** (el mismo método). Los rótulos viejos
 > "Fitness Center = CrossFit" / "Xtreme = funcional" están **OBSOLETOS** — se

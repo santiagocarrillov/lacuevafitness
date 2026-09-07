@@ -51,12 +51,12 @@ export default async function SrxfitPage() {
         <ModuleCard
           href="/dashboard/srxfit/calendario"
           title="Calendario de Programación"
-          description="Visualiza las 108 sesiones del plan de 18 semanas. Click en cualquier día para ver la sesión completa con instrucciones para coaches."
+          description="Visualiza las 162 sesiones del plan de 27 semanas (bloques 1-3). Click en cualquier día para ver la sesión completa con instrucciones para coaches."
           badge="Parte 2"
           badgeColor="bg-purple-100 text-purple-800"
           stats={[
-            { label: "Semanas", value: 18 },
-            { label: "Sesiones", value: 108 },
+            { label: "Semanas", value: 27 },
+            { label: "Sesiones", value: 162 },
           ]}
           note="Inicia lunes 4 mayo 2026"
         />
@@ -121,7 +121,7 @@ export default async function SrxfitPage() {
           ))}
         </div>
         <p className="text-xs text-muted-foreground pt-1">
-          Re-evaluación grupal: semanas 9 y 18. La entrega de comparativas del Día 4 (Cooper) es la palanca de retención más fuerte del sistema.
+          Re-evaluación grupal: semanas 9, 18 y 27. Desde el Bloque 3 la batería de fuerza se reparte en cuatro días (squat+deadlift · bench+push press · clean &amp; jerk · snatch) y la entrega de comparativas cierra el sábado.
         </p>
       </section>
     </div>

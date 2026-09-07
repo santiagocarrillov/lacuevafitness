@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
-import { getWeekSessions } from "@/lib/srxfit-calendar";
+import { getWeekSessions, TOTAL_WEEKS } from "@/lib/srxfit-calendar";
 import {
   activacionToMd,
   fuerzaToMd,
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 function clampWeek(raw: string): number {
   const n = parseInt(raw, 10);
   if (Number.isNaN(n)) return 1;
-  return Math.min(18, Math.max(1, n));
+  return Math.min(TOTAL_WEEKS, Math.max(1, n));
 }
 
 export default async function WeekEditorPage({
@@ -77,6 +77,7 @@ export default async function WeekEditorPage({
     block: firstSession?.block ?? null,
     weekSummary: firstSession?.weekSummary ?? "",
     breathingTechnique: firstSession?.breathingTechnique ?? "",
+    totalWeeks: TOTAL_WEEKS,
   };
 
   return <WeekEditor meta={meta} days={days} />;
