@@ -37,8 +37,10 @@ export default async function UsuariosPage() {
   const user = await requireAuth();
   if (!can.manageUsers(user)) redirect("/dashboard?forbidden=1");
 
+  // Socios who claim the portal get a MEMBER User row — they belong in the
+  // socios CRM, not in this staff table. Their access is managed from their ficha.
   const users = await prisma.user.findMany({
-    where: { active: true },
+    where: { active: true, role: { not: "MEMBER" } },
     orderBy: [{ role: "asc" }, { fullName: "asc" }],
   });
 

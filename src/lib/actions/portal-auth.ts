@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma";
+import { createPasswordRecovery, throttleRecovery } from "@/lib/account/recovery";
 
 export type PortalSignupResult =
   | { ok: true }
@@ -55,7 +57,8 @@ export async function portalSignUp(formData: FormData): Promise<PortalSignupResu
   if (member.userId) {
     return {
       ok: false,
-      error: "Ya tienes una cuenta. Inicia sesión con tu correo y contraseña.",
+      error:
+        "Ya tienes una cuenta. Inicia sesión, o usa \u00bfOlvidaste tu contraseña? si no la recuerdas.",
     };
   }
 
@@ -186,4 +189,42 @@ export async function portalSignOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/portal/login");
+}
+
+/**
+ * "¿Olvidaste tu contraseña?" — public, unauthenticated.
+ *
+ * Always reports success: telling a stranger whether an address is registered
+ * would leak the member roster (socio emails are guessable). Real failures are
+ * logged, not surfaced. If the socio never claimed the app there is nothing to
+ * recover — the copy points them back to their admin, who can issue an invite.
+ */
+export async function requestPortalPasswordReset(
+  formData: FormData,
+): Promise<PortalSignupResult> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { ok: false, error: "Ingresa tu correo." };
+
+  const member = await prisma.member.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { firstName: true, lastName: true, userId: true },
+  });
+
+  // Nothing to recover for an address that never claimed the app, and nothing to
+  // send for a repeat request inside the throttle window. Both fall through to
+  // the same neutral "revisa tu correo" answer.
+  if (!member?.userId || !throttleRecovery(email)) return { ok: true };
+
+  const result = await createPasswordRecovery(email, {
+    origin: (await headers()).get("origin") ?? undefined,
+    memberName: member ? `${member.firstName} ${member.lastName}`.trim() : undefined,
+  });
+
+  if (!result.ok) {
+    console.warn("[portal-auth] recovery not sent for", email, "—", result.error);
+  } else if (!result.emailed) {
+    console.error("[portal-auth] recovery link generated but email failed:", result.emailError);
+  }
+
+  return { ok: true };
 }

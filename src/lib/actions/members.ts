@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Sede, MemberStatus, MembershipState, BillingCycle, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
+import { headers } from "next/headers";
 import { requireAuth, can } from "@/lib/auth";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createPasswordRecovery, sendPortalInviteEmail } from "@/lib/account/recovery";
 
 // ── List / Search ───────────────────────────────────────────────────
 
@@ -514,6 +517,163 @@ export async function revokePortalInvite(memberId: string): Promise<{ ok: boolea
     where: { id: memberId },
     data: { portalInviteCode: null, portalInviteCodeExpiresAt: null },
   });
+  revalidatePath(`/dashboard/socios/${memberId}`);
+  return { ok: true };
+}
+
+// ── Portal account troubleshooting (admin) ──────────────────────────
+
+/** Temporary password an admin hands over in person / by WhatsApp. Same
+ *  unambiguous alphabet as the invite code — it gets dictated out loud. */
+function randomTempPassword(): string {
+  let pw = "";
+  for (let i = 0; i < 10; i++) {
+    pw += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  }
+  return pw;
+}
+
+/**
+ * Email the socio their current invite code. The admin still sees the code on
+ * screen — WhatsApp is the channel that actually gets read — this is the
+ * "reenviar invitación" shortcut for socios who do check email.
+ */
+export async function emailPortalInvite(
+  memberId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireAuth();
+  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      email: true, firstName: true, lastName: true,
+      portalInviteCode: true, portalInviteCodeExpiresAt: true,
+    },
+  });
+  if (!member) return { ok: false, error: "Socio no encontrado." };
+  if (!member.email) return { ok: false, error: "El socio no tiene correo registrado." };
+  if (!member.portalInviteCode || !member.portalInviteCodeExpiresAt) {
+    return { ok: false, error: "Genera un código antes de enviarlo." };
+  }
+
+  const res = await sendPortalInviteEmail({
+    email: member.email,
+    code: member.portalInviteCode,
+    expiresAt: member.portalInviteCodeExpiresAt,
+    memberName: `${member.firstName} ${member.lastName}`.trim(),
+    origin: (await headers()).get("origin") ?? undefined,
+  });
+
+  if (!res.sent) return { ok: false, error: res.error ?? "No se pudo enviar el correo." };
+  return { ok: true };
+}
+
+export type MemberAccessResult =
+  | { ok: true; password: string }
+  | { ok: false; error: string };
+
+/**
+ * Set a temporary password on a socio's account so an admin can unblock them on
+ * the spot. Returns it once, to be read out or pasted into WhatsApp; the socio
+ * changes it later from Mi cuenta. Their previous password stops working.
+ */
+export async function resetMemberPassword(memberId: string): Promise<MemberAccessResult> {
+  const actor = await requireAuth();
+  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { user: { select: { id: true, role: true, supabaseUserId: true } } },
+  });
+  if (!member) return { ok: false, error: "Socio no encontrado." };
+  if (!member.user?.supabaseUserId) {
+    return { ok: false, error: "Este socio todavía no activó la app. Envíale una invitación." };
+  }
+  // Staff accounts are managed in Usuarios by the owner — never from a socio ficha.
+  if (member.user.role !== "MEMBER" && !can.manageUsers(actor)) {
+    return { ok: false, error: "Esta cuenta es de staff. Pide a Santiago que la resetee." };
+  }
+
+  const password = randomTempPassword();
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(member.user.supabaseUserId, {
+    password,
+    email_confirm: true,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  return { ok: true, password };
+}
+
+export type RecoveryLinkResult =
+  | { ok: true; link: string; emailed: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Send the socio a recovery link by email and hand the same link to the admin,
+ * so it can also go out by WhatsApp. Lets the socio pick their own password
+ * instead of receiving one — the preferred path when they do have email.
+ */
+export async function sendMemberRecoveryLink(memberId: string): Promise<RecoveryLinkResult> {
+  const actor = await requireAuth();
+  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      email: true, firstName: true, lastName: true,
+      user: { select: { role: true, supabaseUserId: true } },
+    },
+  });
+  if (!member) return { ok: false, error: "Socio no encontrado." };
+  if (!member.email) return { ok: false, error: "El socio no tiene correo registrado." };
+  if (!member.user?.supabaseUserId) {
+    return { ok: false, error: "Este socio todavía no activó la app. Envíale una invitación." };
+  }
+  if (member.user.role !== "MEMBER" && !can.manageUsers(actor)) {
+    return { ok: false, error: "Esta cuenta es de staff. Pide a Santiago que la resetee." };
+  }
+
+  const res = await createPasswordRecovery(member.email, {
+    origin: (await headers()).get("origin") ?? undefined,
+    memberName: `${member.firstName} ${member.lastName}`.trim(),
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+
+  return { ok: true, link: res.link, emailed: res.emailed };
+}
+
+/**
+ * Detach the socio's app account so a fresh invite code can be issued — the fix
+ * when the ficha was linked to the wrong email or the socio lost that inbox for
+ * good. The User row is deactivated (never deleted, per the soft-delete rule) so
+ * the stale login stops working; history stays attached to the Member.
+ */
+export async function unlinkMemberAccount(
+  memberId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireAuth();
+  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { user: { select: { id: true, role: true } } },
+  });
+  if (!member) return { ok: false, error: "Socio no encontrado." };
+  if (!member.user) return { ok: false, error: "Este socio no tiene cuenta vinculada." };
+  if (member.user.role !== "MEMBER") {
+    return { ok: false, error: "Es una cuenta de staff. Gestiónala en Usuarios." };
+  }
+
+  await prisma.$transaction([
+    prisma.member.update({
+      where: { id: memberId },
+      data: { userId: null, portalInviteCode: null, portalInviteCodeExpiresAt: null },
+    }),
+    prisma.user.update({ where: { id: member.user.id }, data: { active: false } }),
+  ]);
+
   revalidatePath(`/dashboard/socios/${memberId}`);
   return { ok: true };
 }
