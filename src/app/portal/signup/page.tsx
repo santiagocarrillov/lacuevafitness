@@ -64,6 +64,9 @@ export default function PortalSignupPage() {
         <p className="alt">
           ¿Ya tienes cuenta? <Link href="/portal/login">Iniciar sesión</Link>
         </p>
+        <p className="alt">
+          ¿Olvidaste tu contraseña? <Link href="/portal/recuperar">Recupérala</Link>
+        </p>
       </div>
     </main>
   );

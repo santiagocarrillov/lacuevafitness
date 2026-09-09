@@ -46,10 +46,14 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/api/whatsapp/webhook") || path.startsWith("/api/cron/");
   const isStaffProtected =
     !isPublicApi && (path.startsWith("/dashboard") || path.startsWith("/api/"));
+  // /portal/recuperar is public but deliberately NOT an "auth page": a socio with
+  // a stale session must still be able to ask for a recovery link instead of
+  // being bounced to /bienvenida.
   const isPortalProtected =
     path.startsWith("/portal") &&
     path !== "/portal/login" &&
-    path !== "/portal/signup";
+    path !== "/portal/signup" &&
+    path !== "/portal/recuperar";
   const isStaffAuthPage = path === "/login";
   const isPortalAuthPage = path === "/portal/login" || path === "/portal/signup";
 

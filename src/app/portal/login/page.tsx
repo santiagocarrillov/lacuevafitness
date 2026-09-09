@@ -64,6 +64,9 @@ function LoginForm() {
           </button>
         </form>
         <p className="alt">
+          <Link href="/portal/recuperar">¿Olvidaste tu contraseña?</Link>
+        </p>
+        <p className="alt">
           ¿Primera vez? <Link href="/portal/signup">Crear cuenta</Link>
         </p>
       </div>
