@@ -7,12 +7,17 @@
  * updates the Lead (stage/sede), and — only when auto-send is enabled and we're
  * inside Meta's 24h window — actually sends it. With auto-send off, the reply is
  * stored as a DRAFT (llmGenerated, no externalId, never sent) for staff to review.
+ *
+ * Every outbound row it writes carries Message.sendStatus ("DRAFT" → "SENT" |
+ * "FAILED") plus sendError/sendAttemptedAt on failure, so a rejected send stops
+ * looking identical to a draft in the inbox. Failures are still never thrown into
+ * the webhook — they are persisted, logged and reported through RunOutcome.
  */
 
 import { prisma } from "@/lib/prisma";
 import type { LeadStage, Sede } from "@/generated/prisma/client";
 import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
-import { sendText } from "./client";
+import { sendText, describeSendError } from "./client";
 import { scheduleTrialReminders } from "./sequences";
 import { adContextLine } from "./referral";
 
@@ -143,6 +148,8 @@ export async function respondToInboundConversation(conversationId: string): Prom
         body: finalReply,
         llmGenerated: true,
         // sentByUserId + externalId stay null: this is a bot draft until sent.
+        // Flipped to SENT/FAILED below if we actually attempt a send.
+        sendStatus: "DRAFT",
       },
     });
   });
@@ -178,12 +185,30 @@ export async function respondToInboundConversation(conversationId: string): Prom
   try {
     const sent = await sendText(conversation.externalId, finalReply);
     await prisma.$transaction([
-      prisma.message.update({ where: { id: draft.id }, data: { externalId: sent.messageId } }),
+      prisma.message.update({
+        where: { id: draft.id },
+        data: { externalId: sent.messageId, sendStatus: "SENT", sendAttemptedAt: new Date() },
+      }),
       prisma.conversation.update({ where: { id: conversation.id }, data: { lastOutboundAt: new Date() } }),
     ]);
     return forceHandoff ? { status: "handoff", sent: true } : { status: "sent" };
   } catch (err) {
-    console.error("[whatsapp-agent] send failed; reply left as draft", err);
+    const summary = describeSendError(err);
+    console.error("[whatsapp-agent] send failed; message marked FAILED", {
+      conversationId: conversation.id,
+      messageId: draft.id,
+      error: summary,
+    });
+    // Persist the failure on the row so staff see "No entregado" in the inbox.
+    // Best-effort: a DB hiccup here must not throw into the webhook's after().
+    try {
+      await prisma.message.update({
+        where: { id: draft.id },
+        data: { sendStatus: "FAILED", sendError: summary, sendAttemptedAt: new Date() },
+      });
+    } catch (dbErr) {
+      console.error("[whatsapp-agent] could not persist send failure", dbErr);
+    }
     return { status: "error", error: err instanceof Error ? err.message : "send error" };
   }
 }

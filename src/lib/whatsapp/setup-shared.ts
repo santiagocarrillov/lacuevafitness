@@ -124,6 +124,23 @@ export type SubscribedApp = {
   link: string | null;
 };
 
+/**
+ * Message.sendStatus, normalized for the UI. "UNKNOWN" covers NULL — rows written
+ * before the column existed. It is NOT a failure and must not be shown as one.
+ */
+export type OutboundSendStatus = "SENT" | "FAILED" | "DRAFT" | "UNKNOWN";
+
+export function normalizeSendStatus(raw: string | null): OutboundSendStatus {
+  return raw === "SENT" || raw === "FAILED" || raw === "DRAFT" ? raw : "UNKNOWN";
+}
+
+export const SEND_STATUS_LABEL: Record<OutboundSendStatus, string> = {
+  SENT: "ENVIADO",
+  FAILED: "NO ENTREGADO",
+  DRAFT: "BORRADOR (no se intentó enviar)",
+  UNKNOWN: "DESCONOCIDO (anterior al registro de estado)",
+};
+
 /** One OUTBOUND Message row, flattened for the diagnostics table. */
 export type OutboundMessageRow = {
   id: string;
@@ -133,8 +150,11 @@ export type OutboundMessageRow = {
   llmGenerated: boolean;
   sentByUserId: string | null;
   externalId: string | null;
-  /** True when externalId is set → Cloud API accepted and returned a wamid. */
-  delivered: boolean;
+  /** Persisted send outcome — no longer inferred from externalId. */
+  sendStatus: OutboundSendStatus;
+  /** Graph error summary, only present when sendStatus === "FAILED". */
+  sendError: string | null;
+  sendAttemptedAt: string | null;
 };
 
 export type OutboundDiagnostics = {
@@ -146,11 +166,6 @@ export type OutboundDiagnostics = {
     withinWindow: boolean;
     hoursSinceInbound: number | null;
   } | null;
-  /**
-   * Whether the Message model has a column where a send error could be stored.
-   * Today it does not — see the UI note.
-   */
-  hasErrorField: boolean;
   autoSend: boolean;
 };
 

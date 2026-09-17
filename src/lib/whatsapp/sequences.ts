@@ -9,6 +9,12 @@
  * an APPROVED template. Until templates are wired we send free text when we happen
  * to be inside the window, and mark out-of-window sends FAILED (to be re-sent as a
  * template once approved) instead of silently dropping them.
+ *
+ * Note: this module writes ScheduledFollowup rows, never Message rows — a
+ * followup's own outcome already lives in ScheduledFollowup.status/errorMessage,
+ * which is the same convention as Message.sendStatus/sendError. If followups ever
+ * start persisting Message rows, stamp sendStatus/sendError/sendAttemptedAt on
+ * them the way agent-runner.ts does.
  */
 
 import { prisma } from "@/lib/prisma";

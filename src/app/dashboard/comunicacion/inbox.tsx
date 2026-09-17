@@ -178,8 +178,12 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 </span>
                 <span className="text-[10px] text-muted-foreground shrink-0">{timeShort(c.lastInboundAt)}</span>
               </div>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
-                {c.lastMessageDirection === "OUTBOUND" ? "↩ " : ""}
+              <p
+                className={`text-xs truncate mt-0.5 ${
+                  c.lastMessageFailed ? "text-red-600 font-medium" : "text-muted-foreground"
+                }`}
+              >
+                {c.lastMessageFailed ? "⚠ No entregado · " : c.lastMessageDirection === "OUTBOUND" ? "↩ " : ""}
                 {c.lastMessageBody ?? "—"}
               </p>
               <div className="flex items-center gap-1.5 mt-1.5">
@@ -272,6 +276,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 const prev = thread.messages[i - 1];
                 const showDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
                 const outbound = m.direction === "OUTBOUND";
+                const failed = outbound && m.sendStatus === "FAILED";
                 return (
                   <div key={m.id}>
                     {showDay && (
@@ -284,15 +289,35 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                     <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                          !outbound
-                            ? "bg-background border border-border"
-                            : m.isBot
-                              ? "bg-sky-50 border border-sky-200"
-                              : "bg-emerald-50 border border-emerald-200"
+                          failed
+                            ? "bg-red-50 border-2 border-red-400"
+                            : !outbound
+                              ? "bg-background border border-border"
+                              : m.isBot
+                                ? "bg-sky-50 border border-sky-200"
+                                : "bg-emerald-50 border border-emerald-200"
                         }`}
                       >
                         <p className="text-[10px] text-muted-foreground mb-0.5">{m.senderLabel}</p>
                         {m.body}
+                        {failed && (
+                          <details className="mt-1.5 border-t border-red-300 pt-1.5">
+                            <summary
+                              className="cursor-pointer text-[11px] font-semibold text-red-700 list-none"
+                              title={m.sendError ?? "WhatsApp rechazó el envío."}
+                            >
+                              ⚠ No entregado — el cliente NO recibió este mensaje
+                            </summary>
+                            <p className="mt-1 text-[10px] font-mono text-red-700 whitespace-pre-wrap break-all">
+                              {m.sendError ?? "Sin detalle del error."}
+                            </p>
+                            {m.sendAttemptedAt && (
+                              <p className="text-[10px] text-red-700/80">
+                                Intento: {timeShort(m.sendAttemptedAt)}
+                              </p>
+                            )}
+                          </details>
+                        )}
                         <span className="block text-[10px] text-muted-foreground mt-1 text-right">
                           {timeShort(m.createdAt)}
                         </span>
