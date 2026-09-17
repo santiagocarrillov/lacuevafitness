@@ -11,6 +11,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Sede } from "@/generated/prisma/client";
 import { markAsRead } from "@/lib/whatsapp/client";
+import { parseReferral, leadAttributionUpdate } from "@/lib/whatsapp/referral";
 
 // ── Meta webhook payload types (subset we use) ─────────────────────────────
 
@@ -161,6 +162,8 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
   const waUserId = msg.from;
   const { body, mediaUrl } = extractBody(msg);
   const occurredAt = new Date(Number(msg.timestamp) * 1000);
+  // Click-to-WhatsApp ad/post referral (only present on the first message from an ad tap).
+  const referral = parseReferral(msg);
 
   // Idempotency short-circuit: if we've already stored this externalId, no-op.
   const existing = await prisma.message.findUnique({ where: { externalId: msg.id } });
@@ -184,6 +187,9 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
         phone: waUserId,
         source: "WHATSAPP",
         stage: "NEW",
+        ...(referral
+          ? leadAttributionUpdate({ source: "WHATSAPP", adSourceId: null, ctwaClid: null, adSourceUrl: null }, referral, occurredAt)
+          : {}),
       },
     });
 
@@ -196,6 +202,16 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
         lastInboundAt: occurredAt,
       },
     });
+  } else if (referral) {
+    // Existing lead tapped an ad: first touch wins (helper returns {} if already attributed).
+    const lead = await prisma.lead.findUnique({
+      where: { id: conversation.leadId },
+      select: { source: true, adSourceId: true, ctwaClid: true, adSourceUrl: true },
+    });
+    const data = lead ? leadAttributionUpdate(lead, referral, occurredAt) : {};
+    if (Object.keys(data).length > 0) {
+      await prisma.lead.update({ where: { id: conversation.leadId }, data });
+    }
   }
 
   await prisma.$transaction([
@@ -207,6 +223,7 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
         externalId: msg.id,
         body,
         mediaUrl,
+        ...(referral ? { referral } : {}),
         createdAt: occurredAt,
       },
     }),

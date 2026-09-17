@@ -11,7 +11,8 @@
     "db:studio": "prisma studio",
     "db:migrate": "prisma migrate dev",
     "import:hubspot": "tsx scripts/import-hubspot.ts",
-    "test:agent": "tsx scripts/test-agent.ts"
+    "test:agent": "tsx scripts/test-agent.ts",
+    "test:referral": "tsx scripts/test-referral.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

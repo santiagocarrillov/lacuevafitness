@@ -14,6 +14,7 @@ import type { LeadStage, Sede } from "@/generated/prisma/client";
 import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
 import { sendText } from "./client";
 import { scheduleTrialReminders } from "./sequences";
+import { adContextLine } from "./referral";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -81,9 +82,17 @@ export async function respondToInboundConversation(conversationId: string): Prom
     ? [conversation.lead.firstName, conversation.lead.lastName].filter(Boolean).join(" ") || null
     : null;
 
+  // Ad the lead came from (headline on Lead; body only lives in the raw Message.referral).
+  let adContext: string | null = null;
+  if (conversation.lead?.adHeadline || conversation.lead?.adSourceId) {
+    const refMsg = conversation.messages.find((m) => m.referral != null);
+    const refBody = (refMsg?.referral as { body?: unknown } | null)?.body;
+    adContext = adContextLine(conversation.lead, typeof refBody === "string" ? refBody : null);
+  }
+
   let result;
   try {
-    result = await runAgent(history, { knownSede: null, leadName });
+    result = await runAgent(history, { knownSede: null, leadName, adContext });
   } catch (err) {
     console.error("[whatsapp-agent] runAgent failed", err);
     return { status: "error", error: err instanceof Error ? err.message : "agent error" };

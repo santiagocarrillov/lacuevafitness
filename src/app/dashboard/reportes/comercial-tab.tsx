@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
-import { getCommercialReport, getCommercialPipeline } from "@/lib/actions/reports";
+import { getCommercialReport, getCommercialPipeline, getAdAttributionReport } from "@/lib/actions/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DailyLeadsChart } from "./daily-leads-chart";
@@ -39,9 +39,10 @@ export async function ComercialTab({
   to: string;
   buildUrl: (updates: Record<string, string>) => string;
 }) {
-  const [data, pipeline] = await Promise.all([
+  const [data, pipeline, ads] = await Promise.all([
     getCommercialReport(sede, from, to),
     getCommercialPipeline(sede, from, to),
+    getAdAttributionReport(sede, from, to),
   ]);
 
   const { totalLeads, evaluaciones, convertidos, leadsToEvaluacionesPct, leadsToConvertidosPct, evaluacionesToConvertidosPct } = pipeline;
@@ -186,6 +187,48 @@ export async function ComercialTab({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Leads por anuncio (WhatsApp)</CardTitle>
+          <CardDescription>
+            Leads que llegaron desde un anuncio de Meta (Click-to-WhatsApp), por ID de anuncio
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {ads.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin leads atribuidos a anuncios en el período.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground">
+                    <th className="py-1.5 pr-3 font-medium">Anuncio</th>
+                    <th className="py-1.5 px-2 font-medium text-right">Leads</th>
+                    <th className="py-1.5 px-2 font-medium text-right">Agendados</th>
+                    <th className="py-1.5 px-2 font-medium text-right">Asistieron</th>
+                    <th className="py-1.5 pl-2 font-medium text-right">Cerrados</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ads.map((a) => (
+                    <tr key={a.adSourceId} className="border-b last:border-0">
+                      <td className="py-1.5 pr-3">
+                        <div className="max-w-[320px] truncate">{a.headline ?? "(sin título)"}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground">ID {a.adSourceId}</div>
+                      </td>
+                      <td className="py-1.5 px-2 text-right tabular-nums">{a.leads}</td>
+                      <td className="py-1.5 px-2 text-right tabular-nums">{a.scheduled}</td>
+                      <td className="py-1.5 px-2 text-right tabular-nums">{a.attended}</td>
+                      <td className="py-1.5 pl-2 text-right tabular-nums">{a.closed}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {data.daily.length > 0 && (
         <Card>

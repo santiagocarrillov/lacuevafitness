@@ -533,6 +533,46 @@ export async function getCommercialReport(
   };
 }
 
+// ── Click-to-WhatsApp ad attribution breakdown ──────────────────────
+
+const SCHEDULED_OR_LATER = ["SCHEDULED_TRIAL", "TRIAL_ATTENDED", "TRIAL_NO_SHOW", "NEGOTIATING", "CONVERTED"];
+const ATTENDED_OR_LATER = ["TRIAL_ATTENDED", "NEGOTIATING", "CONVERTED"];
+
+/** Leads → agendados → asistieron → cerrados per Meta ad (leads created in range). */
+export async function getAdAttributionReport(
+  sede: Sede | undefined,
+  from: string,
+  to: string,
+) {
+  const { start, end } = rangeBounds(from, to);
+  const sedeFilter = sede ? { sede } : {};
+
+  const leads = await prisma.lead.findMany({
+    where: { ...sedeFilter, createdAt: { gte: start, lte: end }, adSourceId: { not: null } },
+    select: {
+      adSourceId: true,
+      adHeadline: true,
+      stage: true,
+      trialScheduledAt: true,
+      trialAttended: true,
+      member: { select: { id: true } },
+    },
+  });
+
+  const byAd = new Map<string, { adSourceId: string; headline: string | null; leads: number; scheduled: number; attended: number; closed: number }>();
+  for (const l of leads) {
+    const id = l.adSourceId!;
+    const row = byAd.get(id) ?? { adSourceId: id, headline: null, leads: 0, scheduled: 0, attended: 0, closed: 0 };
+    row.headline = row.headline ?? l.adHeadline;
+    row.leads++;
+    if (l.trialScheduledAt || SCHEDULED_OR_LATER.includes(l.stage)) row.scheduled++;
+    if (l.trialAttended === true || ATTENDED_OR_LATER.includes(l.stage)) row.attended++;
+    if (l.stage === "CONVERTED" || l.member) row.closed++;
+    byAd.set(id, row);
+  }
+  return [...byAd.values()].sort((a, b) => b.leads - a.leads);
+}
+
 // ── Upsert monthly target ───────────────────────────────────────────
 
 export async function upsertMonthlyTarget(data: {
