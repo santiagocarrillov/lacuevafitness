@@ -7,7 +7,7 @@ import {
   getWhatsappDiagnostics,
   listWabaPhoneNumbers,
 } from "@/lib/actions/whatsapp-setup";
-import { DEFAULT_WABA_ID, isNumericId } from "@/lib/whatsapp/setup-shared";
+import { DEFAULT_WABA_ID, isNumericId, SEND_STATUS_LABEL } from "@/lib/whatsapp/setup-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -342,15 +342,13 @@ export default async function WhatsappSetupPage({
             </div>
           )}
 
-          {!outbound.hasErrorField && (
-            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-              El modelo <code className="font-mono">Message</code> no tiene ningún campo de error ni de
-              estado, así que un envío fallido no deja rastro en la base: hoy solo se registra con
-              <code className="font-mono"> console.error</code> en{" "}
-              <code className="font-mono">agent-runner.ts</code> y la fila queda igual que un borrador.
-              Para verlo en la app haría falta una migración (columna de error/estado).
-            </p>
-          )}
+          <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+            El estado viene de las columnas <code className="font-mono">sendStatus</code> /{" "}
+            <code className="font-mono">sendError</code> de <code className="font-mono">Message</code>:
+            un envío rechazado por Graph queda como <strong>NO ENTREGADO</strong> con el error guardado.
+            Los mensajes anteriores a esta migración no tienen estado y aparecen como{" "}
+            <strong>DESCONOCIDO</strong> — eso no significa que hayan fallado.
+          </p>
 
           {outbound.messages.length === 0 ? (
             <p className="text-sm text-muted-foreground">Todavía no hay mensajes salientes.</p>
@@ -359,8 +357,16 @@ export default async function WhatsappSetupPage({
               {outbound.messages.map((m) => (
                 <div key={m.id} className="rounded-lg border border-border p-3 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={m.delivered ? "default" : "destructive"}>
-                      {m.delivered ? "ENVIADO" : "BORRADOR/NO ENVIADO"}
+                    <Badge
+                      variant={
+                        m.sendStatus === "SENT"
+                          ? "default"
+                          : m.sendStatus === "FAILED"
+                            ? "destructive"
+                            : "secondary"
+                      }
+                    >
+                      {SEND_STATUS_LABEL[m.sendStatus]}
                     </Badge>
                     {m.llmGenerated && <Badge variant="secondary">llmGenerated</Badge>}
                     <span className="font-mono text-xs break-all">{m.waPhone}</span>
@@ -372,8 +378,20 @@ export default async function WhatsappSetupPage({
                     <dd className="break-all">{m.externalId ?? "—"}</dd>
                     <dt className="text-muted-foreground">sentByUserId</dt>
                     <dd className="break-all">{m.sentByUserId ?? "— (bot)"}</dd>
-                    <dt className="text-muted-foreground">error / status</dt>
-                    <dd>sin columna en el modelo Message</dd>
+                    <dt className="text-muted-foreground">sendStatus</dt>
+                    <dd className="break-all">{m.sendStatus}</dd>
+                    <dt className="text-muted-foreground">sendAttemptedAt</dt>
+                    <dd className="break-all">
+                      {m.sendAttemptedAt ? fmtDate(m.sendAttemptedAt) : "—"}
+                    </dd>
+                    <dt className="text-muted-foreground">sendError</dt>
+                    <dd
+                      className={`break-all whitespace-pre-wrap ${
+                        m.sendError ? "text-destructive" : ""
+                      }`}
+                    >
+                      {m.sendError ?? "—"}
+                    </dd>
                   </dl>
                 </div>
               ))}

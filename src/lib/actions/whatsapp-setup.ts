@@ -30,6 +30,7 @@ import {
   type ActionResult,
   type Diagnostics,
   type GraphResult,
+  normalizeSendStatus,
   type OutboundDiagnostics,
   type OutboundMessageRow,
   type SubscribedApp,
@@ -263,13 +264,6 @@ export async function subscribeAppToWaba(wabaId?: string | null): Promise<Action
   return res;
 }
 
-/**
- * The Message model (prisma/schema.prisma) has NO error/status column today —
- * a failed send is only console.error'd in agent-runner.ts and the row stays as
- * an indistinguishable draft. Adding one needs a migration, out of scope here.
- */
-const MESSAGE_ERROR_FIELD: string | null = null;
-
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Last 10 OUTBOUND messages + 24h-window status of the newest one. */
@@ -291,7 +285,11 @@ export async function getOutboundDiagnostics(): Promise<OutboundDiagnostics> {
     llmGenerated: m.llmGenerated,
     sentByUserId: m.sentByUserId,
     externalId: m.externalId,
-    delivered: !!m.externalId,
+    // Read the stored outcome instead of guessing from externalId: a send that
+    // Graph rejected now says so, and legacy NULL rows say "desconocido".
+    sendStatus: normalizeSendStatus(m.sendStatus),
+    sendError: m.sendError,
+    sendAttemptedAt: m.sendAttemptedAt ? m.sendAttemptedAt.toISOString() : null,
   }));
 
   const first = rows[0];
@@ -310,7 +308,6 @@ export async function getOutboundDiagnostics(): Promise<OutboundDiagnostics> {
   return {
     messages,
     newest,
-    hasErrorField: MESSAGE_ERROR_FIELD !== null,
     autoSend: process.env.WHATSAPP_AGENT_AUTOSEND === "true",
   };
 }

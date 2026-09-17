@@ -766,6 +766,18 @@ model Message {
   llmGenerated   Boolean             @default(false)
   createdAt      DateTime            @default(now())
 
+  // Outbound send lifecycle. Kept as a String (not an enum) on purpose: these are
+  // operational breadcrumbs, not domain state, and we want to add values without a
+  // migration. Allowed values:
+  //   "SENT"   — the Cloud API accepted it; externalId holds the returned wamid.
+  //   "FAILED" — a send was attempted and rejected; sendError has the Graph summary.
+  //   "DRAFT"  — generated but deliberately not sent (autosend off, or outside the 24h window).
+  // NULL = unknown: every INBOUND row, plus OUTBOUND rows written before this column
+  // existed. The UI must render NULL as "desconocido", never as a failure.
+  sendStatus      String?
+  sendError       String? // Graph error summary (message / code / error_subcode / fbtrace_id), truncated to 1000 chars
+  sendAttemptedAt DateTime?
+
   @@index([conversationId, createdAt])
 }
 

@@ -58,9 +58,18 @@ export async function POST(request: Request) {
       after(async () => {
         for (const id of result.conversationIds) {
           try {
-            await respondToInboundConversation(id);
+            // The runner never throws on a failed send — it reports it here.
+            // Dropping this outcome is how two silent failures reached prod.
+            const outcome = await respondToInboundConversation(id);
+            if (outcome.status === "error") {
+              console.error("[whatsapp-agent] run failed", { conversationId: id, ...outcome });
+            } else if (outcome.status === "handoff" && !outcome.sent) {
+              console.warn("[whatsapp-agent] handoff without send", { conversationId: id, ...outcome });
+            } else if (process.env.NODE_ENV !== "production") {
+              console.log("[whatsapp-agent] run outcome", { conversationId: id, ...outcome });
+            }
           } catch (err) {
-            console.error("[whatsapp-agent] runner error", err);
+            console.error("[whatsapp-agent] runner error", { conversationId: id, err });
           }
         }
       });

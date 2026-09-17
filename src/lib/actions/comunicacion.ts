@@ -43,6 +43,8 @@ export type ConversationRow = {
   ownerName: string | null;
   lastMessageBody: string | null;
   lastMessageDirection: MessageDirection | null;
+  /** Last message is an outbound that WhatsApp rejected (Message.sendStatus = "FAILED"). */
+  lastMessageFailed: boolean;
   /** Customer wrote last and nobody has replied → needs attention. */
   needsAttention: boolean;
   /** WhatsApp 24h service window still open (free-text replies allowed). */
@@ -89,6 +91,7 @@ export async function getConversations(filter: InboxFilter = "all"): Promise<Con
       ownerName: c.lead.owner?.fullName ?? null,
       lastMessageBody: last?.body ?? null,
       lastMessageDirection: last?.direction ?? null,
+      lastMessageFailed: last?.sendStatus === "FAILED",
       needsAttention: inboundMs > outboundMs,
       windowOpen: inboundMs > 0 && now - inboundMs < WINDOW_MS,
     };
@@ -104,6 +107,14 @@ export type ThreadMessage = {
   senderLabel: string;
   isBot: boolean;
   isStaff: boolean;
+  /**
+   * "SENT" | "FAILED" | "DRAFT", or null for inbound and for legacy rows written
+   * before the column existed. null means unknown — never render it as a failure.
+   */
+  sendStatus: string | null;
+  /** Graph error summary, only set when sendStatus === "FAILED". */
+  sendError: string | null;
+  sendAttemptedAt: string | null;
 };
 
 export type ThreadData = {
@@ -172,6 +183,9 @@ export async function getConversationThread(conversationId: string): Promise<Thr
         senderLabel,
         isBot,
         isStaff,
+        sendStatus: m.sendStatus,
+        sendError: m.sendError,
+        sendAttemptedAt: m.sendAttemptedAt ? m.sendAttemptedAt.toISOString() : null,
       };
     }),
   };
@@ -250,6 +264,11 @@ export async function sendManualReply(conversationId: string, body: string): Pro
           body: text,
           sentByUserId: user.id,
           llmGenerated: false,
+          // Only reached when sendText resolved, so this row is always SENT. A
+          // failed manual send never creates a Message — the error is surfaced
+          // to the sender synchronously below.
+          sendStatus: "SENT",
+          sendAttemptedAt: new Date(),
         },
       }),
       // Sending manually = taking over: pause the bot and stamp the outbound time.

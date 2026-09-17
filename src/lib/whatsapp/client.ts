@@ -27,6 +27,76 @@ export type SendResult = {
   raw: unknown;
 };
 
+/** The bits of a Graph error worth storing on the Message row. */
+export type GraphErrorSummary = {
+  httpStatus: number | null;
+  message: string | null;
+  code: number | null;
+  errorSubcode: number | null;
+  fbtraceId: string | null;
+};
+
+/**
+ * Thrown when the Cloud API rejects a send. Subclasses Error (so every existing
+ * `err instanceof Error` / `err.message` path keeps working unchanged) and adds
+ * the parsed Graph fields, which is what we persist on Message.sendError.
+ */
+export class WhatsAppSendError extends Error {
+  readonly graph: GraphErrorSummary;
+  constructor(message: string, graph: GraphErrorSummary) {
+    super(message);
+    this.name = "WhatsAppSendError";
+    this.graph = graph;
+  }
+}
+
+function num(v: unknown): number | null {
+  return typeof v === "number" ? v : null;
+}
+function str(v: unknown): string | null {
+  return typeof v === "string" ? v : null;
+}
+
+function summarizeGraph(httpStatus: number | null, json: unknown): GraphErrorSummary {
+  const err =
+    json && typeof json === "object" && "error" in json
+      ? ((json as { error: unknown }).error as Record<string, unknown> | null)
+      : null;
+  if (!err || typeof err !== "object") {
+    return { httpStatus, message: null, code: null, errorSubcode: null, fbtraceId: null };
+  }
+  return {
+    httpStatus,
+    message: str(err.message) ?? str(err.error_user_msg),
+    code: num(err.code),
+    errorSubcode: num(err.error_subcode),
+    fbtraceId: str(err.fbtrace_id),
+  };
+}
+
+/** Max length we store in Message.sendError — keeps the column bounded. */
+export const SEND_ERROR_MAX = 1000;
+
+/**
+ * One-line, storable summary of a failed send. Accepts anything thrown by
+ * sendText/sendTemplate/... including plain Errors (missing env vars, network).
+ */
+export function describeSendError(err: unknown): string {
+  const parts: string[] = [];
+  if (err instanceof WhatsAppSendError) {
+    const g = err.graph;
+    if (g.message) parts.push(`message=${g.message}`);
+    if (g.code !== null) parts.push(`code=${g.code}`);
+    if (g.errorSubcode !== null) parts.push(`error_subcode=${g.errorSubcode}`);
+    if (g.fbtraceId) parts.push(`fbtrace_id=${g.fbtraceId}`);
+    if (g.httpStatus !== null) parts.push(`http=${g.httpStatus}`);
+  }
+  if (parts.length === 0) {
+    parts.push(err instanceof Error ? err.message : String(err));
+  }
+  return parts.join(" | ").slice(0, SEND_ERROR_MAX);
+}
+
 async function postGraph(body: unknown): Promise<SendResult> {
   const res = await fetch(endpoint(), {
     method: "POST",
@@ -36,10 +106,18 @@ async function postGraph(body: unknown): Promise<SendResult> {
   const json = await res.json();
   if (!res.ok) {
     const detail = typeof json === "object" ? JSON.stringify(json) : String(json);
-    throw new Error(`WhatsApp API ${res.status}: ${detail}`);
+    throw new WhatsAppSendError(
+      `WhatsApp API ${res.status}: ${detail}`,
+      summarizeGraph(res.status, json),
+    );
   }
   const messageId: string | undefined = json?.messages?.[0]?.id;
-  if (!messageId) throw new Error(`WhatsApp API: no message id in response — ${JSON.stringify(json)}`);
+  if (!messageId) {
+    throw new WhatsAppSendError(
+      `WhatsApp API: no message id in response — ${JSON.stringify(json)}`,
+      summarizeGraph(res.status, json),
+    );
+  }
   return { messageId, raw: json };
 }
 
