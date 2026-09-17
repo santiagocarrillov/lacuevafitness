@@ -358,6 +358,13 @@ model Lead {
   lostReason       String?
   convertedAt      DateTime?
   notes            String?
+  // Click-to-WhatsApp ad attribution (first touch wins — never overwritten).
+  adSourceId       String? // Meta ad id (referral.source_id)
+  adSourceType     String? // "ad" | "post"
+  adSourceUrl      String?
+  adHeadline       String?
+  ctwaClid         String?
+  adReferredAt     DateTime?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
@@ -367,6 +374,7 @@ model Lead {
 
   @@index([sede, stage])
   @@index([source])
+  @@index([adSourceId])
 }
 
 model LeadInteraction {
@@ -753,6 +761,7 @@ model Message {
   externalId     String?             @unique // WA msg id — idempotency for inbound; null for outbound bot messages with no upstream id
   body           String
   mediaUrl       String?
+  referral       Json? // raw Meta CTWA referral object (inbound from an ad/post), else null
   sentByUserId   String? // null when bot or customer
   llmGenerated   Boolean             @default(false)
   createdAt      DateTime            @default(now())

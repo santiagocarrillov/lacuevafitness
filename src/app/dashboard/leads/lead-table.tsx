@@ -24,6 +24,8 @@ type LeadRow = {
   sede: string;
   source: string;
   stage: string;
+  adSourceId: string | null;
+  adHeadline: string | null;
   createdAt: Date;
   owner: { fullName: string } | null;
   interactions: { summary: string; occurredAt: Date }[];
@@ -170,6 +172,18 @@ export function LeadTable({
                     <Badge variant="outline" className="text-xs">
                       {sourceLabels[l.source] ?? l.source}
                     </Badge>
+                    {(l.adSourceId || l.adHeadline) && (
+                      <div
+                        className="mt-1 max-w-[220px] text-xs text-muted-foreground"
+                        title={l.adSourceId ? `Anuncio ID ${l.adSourceId}` : undefined}
+                      >
+                        <span className="font-medium text-foreground">Anuncio:</span>{" "}
+                        <span className="truncate">{l.adHeadline ?? "(sin título)"}</span>
+                        {l.adSourceId && (
+                          <div className="font-mono text-[10px] truncate">ID {l.adSourceId}</div>
+                        )}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <select

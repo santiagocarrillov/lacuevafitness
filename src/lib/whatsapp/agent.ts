@@ -123,7 +123,7 @@ export type AgentTurn = { role: "user" | "assistant"; text: string };
  */
 export async function runAgent(
   history: AgentTurn[],
-  opts: { knownSede?: Sede | null; leadName?: string | null } = {},
+  opts: { knownSede?: Sede | null; leadName?: string | null; adContext?: string | null } = {},
 ): Promise<AgentResult> {
   const client = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
@@ -148,7 +148,8 @@ export async function runAgent(
   const contextBlock =
     `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}. Úsala para resolver "hoy", "mañana", "pasado mañana".\n\n` +
     `Horarios de evaluación disponibles (L–V, hora Ecuador):\n${slotsContext}` +
-    (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "");
+    (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "") +
+    (opts.adContext ? `\n\n${opts.adContext}` : "");
 
   const messages = [
     { role: "user", content: contextBlock },
