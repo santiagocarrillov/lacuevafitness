@@ -59,11 +59,11 @@ export async function scheduleTrialReminders(
 
   await scheduleFollowup(
     conversationId, "TRIAL_REMINDER_24H", new Date(when.getTime() - 24 * 60 * 60 * 1000),
-    `¡Hola ${name}! 👋 Te recordamos tu evaluación en ${sedeName} mañana a las ${hora}. Llega 15 min antes. ¿Confirmas que vienes? 💪`,
+    `¡Hola ${name}! 👋 Mañana arrancas tus dos semanas de evaluación en ${sedeName} a las ${hora}. Llega 15 min antes. ¿Confirmas que vienes? 💪`,
   );
   await scheduleFollowup(
     conversationId, "TRIAL_REMINDER_2H", new Date(when.getTime() - 2 * 60 * 60 * 1000),
-    `¡Hola ${name}! En un par de horas es tu evaluación en ${sedeName} (${hora}). ¡Te esperamos! 📍💪`,
+    `¡Hola ${name}! En un par de horas es tu primera sesión en ${sedeName} (${hora}). ¡Arrancas tus dos semanas! Te esperamos 📍💪`,
   );
 }
 
