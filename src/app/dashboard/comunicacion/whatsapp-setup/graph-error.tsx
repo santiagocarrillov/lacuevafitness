@@ -7,6 +7,7 @@ export function GraphErrorBox({ error, title }: { error: GraphError; title?: str
     ["type", error.type],
     ["code", error.code],
     ["error_subcode", error.error_subcode],
+    ["error_data.details", error.error_data_details],
     ["error_user_title", error.error_user_title],
     ["error_user_msg", error.error_user_msg],
     ["fbtrace_id", error.fbtrace_id],
@@ -25,6 +26,14 @@ export function GraphErrorBox({ error, title }: { error: GraphError; title?: str
             </div>
           ))}
       </dl>
+      {error.raw !== undefined && error.raw !== null && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground">Respuesta cruda de Graph</summary>
+          <pre className="mt-1 whitespace-pre-wrap break-words font-mono">
+            {JSON.stringify(error.raw, null, 2)}
+          </pre>
+        </details>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import {
+  getOutboundDiagnostics,
   getSubscribedApps,
   getWhatsappDiagnostics,
   listWabaPhoneNumbers,
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { GraphErrorBox } from "./graph-error";
-import { RegisterNumberForm, SubscribeAppButton } from "./setup-actions";
+import { RegisterNumberForm, SubscribeAppButton, TestSendForm } from "./setup-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,10 @@ function statusVariant(status: string | null): "default" | "secondary" | "destru
   }
 }
 
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleString("es-EC", { timeZone: "America/Guayaquil" });
+}
+
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
@@ -70,10 +75,11 @@ export default async function WhatsappSetupPage({
       ? requested
       : process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || DEFAULT_WABA_ID;
 
-  const [diag, numbers, apps] = await Promise.all([
+  const [diag, numbers, apps, outbound] = await Promise.all([
     getWhatsappDiagnostics(),
     listWabaPhoneNumbers(wabaId),
     getSubscribedApps(wabaId),
+    getOutboundDiagnostics(),
   ]);
 
   return (
@@ -100,10 +106,22 @@ export default async function WhatsappSetupPage({
             {diag.env.map((v) => (
               <li key={v.name} className="flex items-center justify-between gap-2 border-b border-border/50 py-1">
                 <span className="font-mono text-xs">{v.name}</span>
-                <Badge variant={v.set ? "default" : "outline"}>{v.set ? "definida" : "no definida"}</Badge>
+                {!v.set ? (
+                  <Badge variant="outline">no definida</Badge>
+                ) : v.secret ? (
+                  <Badge variant="default">definida (secreto oculto)</Badge>
+                ) : (
+                  <span className="font-mono text-xs break-all text-right">{v.value}</span>
+                )}
               </li>
             ))}
           </ul>
+          <p className="text-xs text-muted-foreground">
+            De WHATSAPP_TOKEN, WHATSAPP_APP_SECRET y WHATSAPP_VERIFY_TOKEN solo se muestra si están
+            definidas. El resto no son secretos y se muestra su valor: un valor equivocado ahí (por
+            ejemplo WHATSAPP_AGENT_AUTOSEND distinto de <code>true</code>) explica que el agente
+            genere respuestas que nunca salen.
+          </p>
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Token (debug_token)</h3>
@@ -199,11 +217,35 @@ export default async function WhatsappSetupPage({
         <CardHeader>
           <CardTitle>2. Números del WABA</CardTitle>
           <CardDescription>
-            GET /{wabaId}/phone_numbers. El número marcado como “en uso” es WHATSAPP_PHONE_ID
-            {diag.envPhoneId ? ` (${diag.envPhoneId})` : " (no definida)"}.
+            GET /{wabaId}/phone_numbers. Se marca “en uso” el número cuyo id coincide con
+            WHATSAPP_PHONE_ID, hoy configurado como{" "}
+            {diag.envPhoneId ? (
+              <code className="font-mono">{diag.envPhoneId}</code>
+            ) : (
+              <span className="font-medium">(no definida)</span>
+            )}
+            .
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {diag.envPhoneId && !diag.envPhoneIdLooksValid && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+              <p className="font-medium text-destructive">WHATSAPP_PHONE_ID no es un id válido</p>
+              <p className="text-xs mt-1">
+                El valor configurado es <code className="font-mono">{diag.envPhoneId}</code>, que no es
+                un id numérico de Graph. Todos los envíos van a
+                https://graph.facebook.com/{diag.graphVersion}/{diag.envPhoneId}/messages y fallan.
+                Debe ser el <span className="font-medium">Phone number ID</span> (columna “id” de abajo),
+                no el número telefónico ni el nombre de la variable.
+              </p>
+            </div>
+          )}
+          {!diag.envPhoneId && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+              <p className="font-medium text-destructive">WHATSAPP_PHONE_ID no está definida</p>
+              <p className="text-xs mt-1">Sin esa variable no se puede enviar ningún mensaje.</p>
+            </div>
+          )}
           {!numbers.ok ? (
             <GraphErrorBox error={numbers.error} />
           ) : numbers.data.length === 0 ? (
@@ -260,6 +302,98 @@ export default async function WhatsappSetupPage({
             </ul>
           )}
           <SubscribeAppButton wabaId={wabaId} />
+        </CardContent>
+      </Card>
+
+      {/* 5. Mensajes salientes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>5. Últimos mensajes salientes</CardTitle>
+          <CardDescription>
+            Los 10 Message OUTBOUND más recientes (más nuevo primero). “ENVIADO” = la fila tiene
+            externalId, es decir Cloud API devolvió un wamid. “BORRADOR/NO ENVIADO” = nunca se
+            entregó a Meta: o el auto-envío está apagado, o el envío falló.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground">WHATSAPP_AGENT_AUTOSEND:</span>
+            <Badge variant={outbound.autoSend ? "default" : "destructive"}>
+              {outbound.autoSend ? "true (el agente envía)" : "apagado (todo queda en borrador)"}
+            </Badge>
+          </div>
+
+          {outbound.newest && (
+            <div className="rounded-lg border border-border p-3 text-xs space-y-1">
+              <p className="font-medium text-sm">Ventana de 24 h del mensaje más reciente</p>
+              <p className="font-mono break-all">{outbound.newest.waPhone}</p>
+              <p>
+                Último inbound:{" "}
+                {outbound.newest.lastInboundAt ? fmtDate(outbound.newest.lastInboundAt) : "—"}
+                {outbound.newest.hoursSinceInbound !== null
+                  ? ` (hace ${outbound.newest.hoursSinceInbound} h)`
+                  : ""}
+              </p>
+              <Badge variant={outbound.newest.withinWindow ? "default" : "destructive"}>
+                {outbound.newest.withinWindow
+                  ? "dentro de la ventana de 24 h"
+                  : "fuera de la ventana de 24 h — el texto libre se rechaza"}
+              </Badge>
+            </div>
+          )}
+
+          {!outbound.hasErrorField && (
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+              El modelo <code className="font-mono">Message</code> no tiene ningún campo de error ni de
+              estado, así que un envío fallido no deja rastro en la base: hoy solo se registra con
+              <code className="font-mono"> console.error</code> en{" "}
+              <code className="font-mono">agent-runner.ts</code> y la fila queda igual que un borrador.
+              Para verlo en la app haría falta una migración (columna de error/estado).
+            </p>
+          )}
+
+          {outbound.messages.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Todavía no hay mensajes salientes.</p>
+          ) : (
+            <div className="space-y-2">
+              {outbound.messages.map((m) => (
+                <div key={m.id} className="rounded-lg border border-border p-3 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={m.delivered ? "default" : "destructive"}>
+                      {m.delivered ? "ENVIADO" : "BORRADOR/NO ENVIADO"}
+                    </Badge>
+                    {m.llmGenerated && <Badge variant="secondary">llmGenerated</Badge>}
+                    <span className="font-mono text-xs break-all">{m.waPhone}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{fmtDate(m.createdAt)}</span>
+                  </div>
+                  <p className="text-xs whitespace-pre-wrap break-words">{m.body}</p>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 text-xs font-mono">
+                    <dt className="text-muted-foreground">externalId</dt>
+                    <dd className="break-all">{m.externalId ?? "—"}</dd>
+                    <dt className="text-muted-foreground">sentByUserId</dt>
+                    <dd className="break-all">{m.sentByUserId ?? "— (bot)"}</dd>
+                    <dt className="text-muted-foreground">error / status</dt>
+                    <dd>sin columna en el modelo Message</dd>
+                  </dl>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 6. Envío de prueba */}
+      <Card>
+        <CardHeader>
+          <CardTitle>6. Enviar mensaje de prueba</CardTitle>
+          <CardDescription>
+            POST /{diag.envPhoneId ?? "WHATSAPP_PHONE_ID"}/messages con un texto plano. Muestra la
+            respuesta cruda de Graph o el error completo (code, error_subcode, error_data.details,
+            error_user_msg, fbtrace_id).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TestSendForm phoneId={diag.envPhoneId} />
         </CardContent>
       </Card>
     </div>
