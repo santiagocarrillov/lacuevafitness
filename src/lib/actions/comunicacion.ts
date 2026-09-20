@@ -115,6 +115,13 @@ export type ThreadMessage = {
   /** Graph error summary, only set when sendStatus === "FAILED". */
   sendError: string | null;
   sendAttemptedAt: string | null;
+  /** Inbound media the lead sent: "audio" | "image" | "video" | "document" | "sticker". */
+  mediaKind: string | null;
+  /** Streamed from /api/whatsapp/media/[mediaId]; null when the message has no file. */
+  mediaUrl: string | null;
+  mediaMimeType: string | null;
+  /** true = recorded voice note (vs. an attached audio file). */
+  mediaVoice: boolean;
 };
 
 export type ThreadData = {
@@ -186,6 +193,10 @@ export async function getConversationThread(conversationId: string): Promise<Thr
         sendStatus: m.sendStatus,
         sendError: m.sendError,
         sendAttemptedAt: m.sendAttemptedAt ? m.sendAttemptedAt.toISOString() : null,
+        mediaKind: m.mediaKind,
+        mediaUrl: m.mediaId ? `/api/whatsapp/media/${encodeURIComponent(m.mediaId)}` : null,
+        mediaMimeType: m.mediaMimeType,
+        mediaVoice: m.mediaVoice === true,
       };
     }),
   };

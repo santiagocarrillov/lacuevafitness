@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import type { Sede } from "@/generated/prisma/client";
 import { markAsRead } from "@/lib/whatsapp/client";
 import { parseReferral, leadAttributionUpdate } from "@/lib/whatsapp/referral";
+import { mediaPlaceholder } from "@/lib/whatsapp/media";
 
 // ── Meta webhook payload types (subset we use) ─────────────────────────────
 
@@ -40,12 +41,22 @@ type WaInteractiveReply = {
   };
 };
 
+type WaMediaKind = "image" | "audio" | "video" | "document" | "sticker";
+
+type WaMediaObject = {
+  id?: string;
+  mime_type?: string;
+  /** Only on audio: true = recorded voice note, false/absent = attached audio file. */
+  voice?: boolean;
+  caption?: string;
+  filename?: string;
+};
+
 type WaMediaMessage = {
   id: string;
   from: string;
   timestamp: string;
-  type: "image" | "audio" | "video" | "document" | "sticker";
-  // We don't fetch media in Sem 1 — just record that something arrived.
+  type: WaMediaKind;
   [k: string]: unknown;
 };
 
@@ -92,15 +103,49 @@ function defaultSede(): Sede {
   return v === "XTREME" ? "XTREME" : "FITNESS_CENTER";
 }
 
-function extractBody(msg: WaMessage): { body: string; mediaUrl: string | null } {
-  if (msg.type === "text") return { body: (msg as WaTextMessage).text.body, mediaUrl: null };
+const MEDIA_KINDS: readonly string[] = ["image", "audio", "video", "document", "sticker"];
+
+type ExtractedMessage = {
+  body: string;
+  mediaUrl: string | null;
+  mediaId: string | null;
+  mediaMimeType: string | null;
+  mediaKind: string | null;
+  mediaVoice: boolean | null;
+};
+
+const NO_MEDIA = { mediaUrl: null, mediaId: null, mediaMimeType: null, mediaKind: null, mediaVoice: null };
+
+function extractBody(msg: WaMessage): ExtractedMessage {
+  if (msg.type === "text") return { body: (msg as WaTextMessage).text.body, ...NO_MEDIA };
   if (msg.type === "interactive") {
     const inter = (msg as WaInteractiveReply).interactive;
     const reply = inter.button_reply ?? inter.list_reply;
-    return { body: reply ? `[${reply.id}] ${reply.title}` : "[interactive]", mediaUrl: null };
+    return { body: reply ? `[${reply.id}] ${reply.title}` : "[interactive]", ...NO_MEDIA };
   }
-  // Media / unsupported — record type as placeholder. Sem 2+ may fetch media URLs.
-  return { body: `[${msg.type}]`, mediaUrl: null };
+
+  // Media: keep the id so the inbox can stream the file and the agent can be told
+  // what it is. Before this we stored only "[audio]" and dropped the id — which is
+  // why voice notes were unplayable in the app and invisible to the bot.
+  if (MEDIA_KINDS.includes(msg.type)) {
+    const kind = msg.type as WaMediaKind;
+    const media = (msg as Record<string, unknown>)[kind] as WaMediaObject | undefined;
+    const caption = typeof media?.caption === "string" ? media.caption.trim() : "";
+    const voice = media?.voice === true;
+    return {
+      // A caption is real text from the lead — keep it as the body so search and the
+      // conversation list read naturally; the media badge carries the rest.
+      body: caption || mediaPlaceholder(kind, voice),
+      mediaUrl: null,
+      mediaId: typeof media?.id === "string" ? media.id : null,
+      mediaMimeType: typeof media?.mime_type === "string" ? media.mime_type : null,
+      mediaKind: kind,
+      mediaVoice: kind === "audio" ? voice : null,
+    };
+  }
+
+  // Unsupported (reactions, orders, system events…) — record that something arrived.
+  return { body: `[${msg.type}]`, ...NO_MEDIA };
 }
 
 // ── Main entry ─────────────────────────────────────────────────────────────
@@ -111,11 +156,18 @@ export type ProcessResult = {
   statuses: number;
   /** Conversation ids that received a NEW inbound message (for the agent to answer). */
   conversationIds: string[];
+  /**
+   * Per conversation, the id of the LAST inbound message this delivery stored.
+   * The agent uses it to tell "I am the newest trigger" from "a later message
+   * already arrived", which is how a burst of messages collapses into one reply.
+   */
+  inbound: Array<{ conversationId: string; messageId: string }>;
 };
 
 export async function processWebhookPayload(payload: unknown): Promise<ProcessResult> {
-  const result: ProcessResult = { processed: 0, skipped: 0, statuses: 0, conversationIds: [] };
-  const inboundConversationIds = new Set<string>();
+  const result: ProcessResult = { processed: 0, skipped: 0, statuses: 0, conversationIds: [], inbound: [] };
+  // Last stored message id per conversation — later entries overwrite earlier ones.
+  const lastInboundByConversation = new Map<string, string>();
   const wp = payload as WaWebhookPayload;
   if (!wp?.entry?.length) return result;
 
@@ -132,8 +184,8 @@ export async function processWebhookPayload(payload: unknown): Promise<ProcessRe
 
       for (const msg of value.messages ?? []) {
         try {
-          const convId = await ingestInbound(msg, contactName.get(msg.from));
-          if (convId) inboundConversationIds.add(convId);
+          const stored = await ingestInbound(msg, contactName.get(msg.from));
+          if (stored) lastInboundByConversation.set(stored.conversationId, stored.messageId);
           result.processed += 1;
         } catch (err) {
           // Idempotency collision (duplicate externalId) is the most common case.
@@ -153,14 +205,21 @@ export async function processWebhookPayload(payload: unknown): Promise<ProcessRe
     }
   }
 
-  result.conversationIds = [...inboundConversationIds];
+  result.conversationIds = [...lastInboundByConversation.keys()];
+  result.inbound = [...lastInboundByConversation].map(([conversationId, messageId]) => ({
+    conversationId,
+    messageId,
+  }));
   return result;
 }
 
-/** Returns the conversation id when a NEW inbound was stored, else null (duplicate). */
-async function ingestInbound(msg: WaMessage, profileName: string | undefined): Promise<string | null> {
+/** Returns the conversation + stored message id for a NEW inbound, else null (duplicate). */
+async function ingestInbound(
+  msg: WaMessage,
+  profileName: string | undefined,
+): Promise<{ conversationId: string; messageId: string } | null> {
   const waUserId = msg.from;
-  const { body, mediaUrl } = extractBody(msg);
+  const { body, mediaUrl, mediaId, mediaMimeType, mediaKind, mediaVoice } = extractBody(msg);
   const occurredAt = new Date(Number(msg.timestamp) * 1000);
   // Click-to-WhatsApp ad/post referral (only present on the first message from an ad tap).
   const referral = parseReferral(msg);
@@ -214,7 +273,7 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
     }
   }
 
-  await prisma.$transaction([
+  const [stored] = await prisma.$transaction([
     prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -223,6 +282,10 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
         externalId: msg.id,
         body,
         mediaUrl,
+        mediaId,
+        mediaMimeType,
+        mediaKind,
+        mediaVoice,
         ...(referral ? { referral } : {}),
         createdAt: occurredAt,
       },
@@ -236,5 +299,5 @@ async function ingestInbound(msg: WaMessage, profileName: string | undefined): P
   // Best-effort blue ticks. Non-critical.
   await markAsRead(msg.id);
 
-  return conversation.id;
+  return { conversationId: conversation.id, messageId: stored.id };
 }

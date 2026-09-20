@@ -20,8 +20,54 @@ import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
 import { sendText, describeSendError } from "./client";
 import { scheduleTrialReminders } from "./sequences";
 import { adContextLine } from "./referral";
+import { mediaTurnMarker } from "./media";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How long we wait before answering an inbound.
+ *
+ * Meta delivers every message as its own webhook POST, so a lead who fires off
+ * three photos (or "hola" / "buenas" / "quiero info") used to trigger three
+ * independent agent runs — each blind to the others. On 19 sep one lead got four
+ * near-identical greetings inside 1.5s. During this window later messages land,
+ * and only the newest trigger survives the check below, so the burst collapses
+ * into a single reply that has read everything.
+ */
+const DEBOUNCE_MS = Number(process.env.WHATSAPP_AGENT_DEBOUNCE_MS ?? 4000);
+
+/** A claimed run older than this is treated as crashed and can be re-claimed. */
+const LOCK_STALE_MS = 2 * 60 * 1000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Claim the conversation for this run. Atomic: the WHERE clause is evaluated by
+ * Postgres, so exactly one of N concurrent runs gets count === 1.
+ */
+async function claimAgentLock(conversationId: string): Promise<boolean> {
+  const staleBefore = new Date(Date.now() - LOCK_STALE_MS);
+  const { count } = await prisma.conversation.updateMany({
+    where: {
+      id: conversationId,
+      OR: [{ agentLockedAt: null }, { agentLockedAt: { lt: staleBefore } }],
+    },
+    data: { agentLockedAt: new Date() },
+  });
+  return count === 1;
+}
+
+async function releaseAgentLock(conversationId: string): Promise<void> {
+  try {
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: { agentLockedAt: null },
+    });
+  } catch (err) {
+    // Never let lock bookkeeping break a run that already answered the lead.
+    console.error("[whatsapp-agent] could not release lock", { conversationId, err });
+  }
+}
 
 /**
  * Build the map link(s) the agent asked to share. We attach these in code (never
@@ -35,6 +81,11 @@ function locationSuffix(share: AgentResult["shareLocation"], sede: Sede | null):
     return `\n\n${line("FITNESS_CENTER")}\n${line("XTREME")}`;
   }
   return "";
+}
+
+/** A media row's body is either the lead's caption or our "[kind]" placeholder. */
+function mediaCaption(body: string): string | null {
+  return /^\[[a-z ]+\]$/i.test(body.trim()) ? null : body;
 }
 
 export function agentEnabled(): boolean {
@@ -60,9 +111,40 @@ export type RunOutcome =
  * Generate + persist (and maybe send) the agent's reply for one conversation.
  * Safe to call unconditionally — it no-ops when the agent is disabled or paused.
  */
-export async function respondToInboundConversation(conversationId: string): Promise<RunOutcome> {
+export async function respondToInboundConversation(
+  conversationId: string,
+  opts: { triggerMessageId?: string } = {},
+): Promise<RunOutcome> {
   if (!agentEnabled()) return { status: "skipped", reason: "agent disabled" };
 
+  // Let a burst settle, then answer it once (see DEBOUNCE_MS).
+  if (DEBOUNCE_MS > 0) await sleep(DEBOUNCE_MS);
+
+  if (opts.triggerMessageId) {
+    const newest = await prisma.message.findFirst({
+      where: { conversationId, direction: "INBOUND" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    // A newer message arrived while we waited: its own run will answer, and it
+    // will see this message in the history. Standing down avoids a double reply.
+    if (newest && newest.id !== opts.triggerMessageId) {
+      return { status: "skipped", reason: "superseded by a newer inbound" };
+    }
+  }
+
+  if (!(await claimAgentLock(conversationId))) {
+    return { status: "skipped", reason: "another agent run holds this conversation" };
+  }
+  try {
+    return await runLocked(conversationId);
+  } finally {
+    await releaseAgentLock(conversationId);
+  }
+}
+
+/** The actual run. Called only while this process holds the conversation lock. */
+async function runLocked(conversationId: string): Promise<RunOutcome> {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
@@ -81,7 +163,12 @@ export async function respondToInboundConversation(conversationId: string): Prom
 
   const history: AgentTurn[] = conversation.messages.map((m) => ({
     role: m.direction === "INBOUND" ? "user" : "assistant",
-    text: m.body,
+    // A file the model cannot open is announced as such. Storing "[audio]" as if it
+    // were the lead's words is how voice notes got answered blind (18 sep).
+    text:
+      m.direction === "INBOUND" && m.mediaKind
+        ? mediaTurnMarker(m.mediaKind, m.mediaVoice === true, m.mediaKind === "audio" ? null : mediaCaption(m.body))
+        : m.body,
   }));
   const leadName = conversation.lead
     ? [conversation.lead.firstName, conversation.lead.lastName].filter(Boolean).join(" ") || null

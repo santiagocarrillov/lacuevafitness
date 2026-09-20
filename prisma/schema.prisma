@@ -740,6 +740,10 @@ model Conversation {
   channel        ConversationChannel @default(WHATSAPP)
   externalId     String // wa user id (phone wa_id) / IG user id
   botPaused      Boolean             @default(false)
+  // Single-flight guard for the agent. Claimed atomically before a run and cleared
+  // after, so two webhook deliveries arriving together (a lead firing off 3 photos)
+  // can't each generate and send their own reply. Stale locks expire by age.
+  agentLockedAt  DateTime?
   lastInboundAt  DateTime?
   lastOutboundAt DateTime?
   createdAt      DateTime            @default(now())
@@ -761,6 +765,14 @@ model Message {
   externalId     String?             @unique // WA msg id — idempotency for inbound; null for outbound bot messages with no upstream id
   body           String
   mediaUrl       String?
+  // Inbound media (voice notes, photos, documents). We store Meta's media id, not
+  // the file: /api/whatsapp/media/[mediaId] resolves + streams it on demand behind
+  // dashboard auth. Meta keeps the binary ~30 days, after which the id 404s and the
+  // inbox shows "ya no disponible" — the transcript row itself never disappears.
+  mediaId        String? // Meta media id (messages[].{audio|image|...}.id)
+  mediaMimeType  String? // e.g. "audio/ogg; codecs=opus", "image/jpeg"
+  mediaKind      String? // "audio" | "image" | "video" | "document" | "sticker"
+  mediaVoice     Boolean? // true when WhatsApp flags it as a voice note (not an audio file)
   referral       Json? // raw Meta CTWA referral object (inbound from an ad/post), else null
   sentByUserId   String? // null when bot or customer
   llmGenerated   Boolean             @default(false)

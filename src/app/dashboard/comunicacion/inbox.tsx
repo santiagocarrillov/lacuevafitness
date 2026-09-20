@@ -47,6 +47,74 @@ function dayLabel(iso: string): string {
   return new Intl.DateTimeFormat("es-EC", { day: "numeric", month: "short" }).format(new Date(iso));
 }
 
+/**
+ * Inbound file the lead sent. The <audio>/<img> src hits our authenticated proxy —
+ * WhatsApp media is never a public URL. Meta drops the file after ~30 days, so an
+ * old voice note fails to load; we say so instead of showing a broken control.
+ */
+function MediaAttachment({
+  url,
+  kind,
+  mimeType,
+  voice,
+}: {
+  url: string;
+  kind: string;
+  mimeType: string | null;
+  voice: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <p className="text-[11px] text-muted-foreground italic mt-1">
+        {voice ? "🎤 Nota de voz" : kind === "image" ? "🖼 Imagen" : "📎 Archivo"} ya no disponible
+        (WhatsApp la borra a los 30 días).
+      </p>
+    );
+  }
+
+  if (kind === "audio") {
+    return (
+      <div className="mt-1 space-y-1">
+        <p className="text-[11px] text-muted-foreground">{voice ? "🎤 Nota de voz" : "🎵 Audio"}</p>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <audio controls preload="none" src={url} onError={() => setFailed(true)} className="w-56 max-w-full" />
+      </div>
+    );
+  }
+
+  if (kind === "image" || kind === "sticker") {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
+        {/* Not next/image: the bytes come from an authenticated proxy, not a known host. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt={kind === "sticker" ? "Sticker del cliente" : "Imagen del cliente"}
+          onError={() => setFailed(true)}
+          className="rounded-lg max-h-56 w-auto border border-border"
+        />
+      </a>
+    );
+  }
+
+  if (kind === "video") {
+    return <video controls preload="none" src={url} onError={() => setFailed(true)} className="mt-1 rounded-lg max-h-56 w-auto" />;
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-1 inline-block text-xs text-primary underline"
+    >
+      📎 Abrir archivo{mimeType ? ` (${mimeType.split(";")[0]})` : ""}
+    </a>
+  );
+}
+
 type Props = {
   initialConversations: ConversationRow[];
   staff: Array<{ id: string; name: string }>;
@@ -299,7 +367,20 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                         }`}
                       >
                         <p className="text-[10px] text-muted-foreground mb-0.5">{m.senderLabel}</p>
-                        {m.body}
+                        {m.mediaKind && m.mediaUrl ? (
+                          <>
+                            {/* Placeholder bodies ("[nota de voz]") are redundant next to the player. */}
+                            {!/^\[[a-zá-ú ]+\]$/i.test(m.body.trim()) && m.body}
+                            <MediaAttachment
+                              url={m.mediaUrl}
+                              kind={m.mediaKind}
+                              mimeType={m.mediaMimeType}
+                              voice={m.mediaVoice}
+                            />
+                          </>
+                        ) : (
+                          m.body
+                        )}
                         {failed && (
                           <details className="mt-1.5 border-t border-red-300 pt-1.5">
                             <summary
