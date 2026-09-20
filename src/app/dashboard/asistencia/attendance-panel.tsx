@@ -14,6 +14,9 @@ import {
   removeAttendance,
   confirmCoachCount,
   searchMembersAllSedes,
+  getTodayTrialLeads,
+  recordTrialAttendance,
+  type TrialLeadRow,
 } from "@/lib/actions/attendance";
 
 type Member = {
@@ -48,6 +51,7 @@ export function AttendancePanel({
   const [search, setSearch] = useState("");
   const [coachCount, setCoachCount] = useState("");
   const [crossResults, setCrossResults] = useState<CrossMember[] | null>(null);
+  const [trialLeads, setTrialLeads] = useState<TrialLeadRow[]>([]);
   const [isPending, startTransition] = useTransition();
 
   function updateSearch(v: string) {
@@ -64,10 +68,14 @@ export function AttendancePanel({
 
   useEffect(() => {
     startTransition(async () => {
-      const s = await getOrCreateTodaySession(scheduleId);
+      const [s, leads] = await Promise.all([
+        getOrCreateTodaySession(scheduleId),
+        getTodayTrialLeads(sede as "FITNESS_CENTER" | "XTREME").catch(() => [] as TrialLeadRow[]),
+      ]);
       setSession(s);
+      setTrialLeads(leads);
     });
-  }, [scheduleId]);
+  }, [scheduleId, sede]);
 
   if (!session) {
     return (
@@ -102,6 +110,25 @@ export function AttendancePanel({
       setSession(s);
       setSearch("");
       setCrossResults(null);
+    });
+  }
+
+  /** Register a booked lead's evaluation: attendance + funnel in one click. */
+  async function handleAddTrialLead(leadId: string, name: string) {
+    startTransition(async () => {
+      try {
+        await recordTrialAttendance(scheduleId, leadId);
+        toast.success(`${name} registrada: asistió a su evaluación ✅`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "No se pudo registrar.");
+        return;
+      }
+      const [s, leads] = await Promise.all([
+        getOrCreateTodaySession(scheduleId),
+        getTodayTrialLeads(sede as "FITNESS_CENTER" | "XTREME").catch(() => [] as TrialLeadRow[]),
+      ]);
+      setSession(s);
+      setTrialLeads(leads);
     });
   }
 
@@ -148,6 +175,56 @@ export function AttendancePanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* ── Evaluaciones de hoy (leads del embudo) ──────────────── */}
+        {trialLeads.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Evaluaciones de hoy ({trialLeads.filter((l) => !l.attended).length} por registrar)
+            </label>
+            <div className="rounded-md border border-sky-200 bg-sky-50/60 divide-y divide-sky-100">
+              {trialLeads.map((l) => (
+                <div key={l.leadId} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">
+                      {l.name}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        {new Intl.DateTimeFormat("es-EC", {
+                          timeZone: "America/Guayaquil",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }).format(new Date(l.scheduledAt))}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {l.phone ?? "sin teléfono"}
+                      {l.adHeadline ? ` · vino de: ${l.adHeadline}` : ""}
+                    </p>
+                  </div>
+                  {l.attended ? (
+                    <Badge variant="outline" className="text-emerald-600 border-emerald-300 shrink-0">
+                      ✅ Asistió
+                    </Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddTrialLead(l.leadId, l.name)}
+                      disabled={isPending || !windowOpen}
+                      title={!windowOpen ? "Ventana de registro cerrada (después de las 9:30pm)" : undefined}
+                      className="shrink-0"
+                    >
+                      Registrar asistencia
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Al registrarla queda en esta clase como cualquier atleta y el embudo pasa a
+              &laquo;Asistió&raquo; al instante.
+            </p>
+          </div>
+        )}
+
         {/* ── Add member ─────────────────────────────────────────── */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground">

@@ -1,4 +1,5 @@
 import { processDueFollowups } from "@/lib/whatsapp/sequences";
+import { markMissedTrials } from "@/lib/leads/trial-attendance";
 
 // Runs on Node (Prisma + crypto) and must never be cached.
 export const runtime = "nodejs";
@@ -21,8 +22,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    // DB-only sweep: appointments nobody registered become TRIAL_NO_SHOW, so the
+    // funnel stops showing stale "Agendado" for visits that already passed.
+    const noShows = await markMissedTrials();
     const summary = await processDueFollowups();
-    return Response.json({ ok: true, ...summary });
+    return Response.json({ ok: true, ...summary, noShows });
   } catch (err) {
     console.error("[cron/followups] error", err);
     return Response.json(
