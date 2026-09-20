@@ -283,7 +283,17 @@ export async function endShiftReturnToBot(
   const { count } = await prisma.conversation.updateMany({
     where: {
       botPaused: true,
-      ...(scope === "mine" ? { lead: { ownerUserId: user.id } } : {}),
+      // "Mías" = las que me asignaron O las que respondí yo. Lo segundo importa:
+      // en la práctica el staff contesta conversaciones sin dueño asignado, así
+      // que filtrar solo por ownerUserId dejaría el botón sin efecto.
+      ...(scope === "mine"
+        ? {
+            OR: [
+              { lead: { ownerUserId: user.id } },
+              { messages: { some: { sentByUserId: user.id } } },
+            ],
+          }
+        : {}),
     },
     data: resumeAt ? { botResumeAt: resumeAt } : { botPaused: false, botResumeAt: null },
   });
