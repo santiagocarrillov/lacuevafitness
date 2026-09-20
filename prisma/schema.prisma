@@ -740,6 +740,11 @@ model Conversation {
   channel        ConversationChannel @default(WHATSAPP)
   externalId     String // wa user id (phone wa_id) / IG user id
   botPaused      Boolean             @default(false)
+  // When a paused conversation goes back to the bot on its own. Set by staff
+  // ("devolver al bot el lunes 8am") so a hand-off at the end of a shift doesn't
+  // leave the lead unanswered until someone remembers. null = paused until a
+  // human un-pauses it. Honored on the next inbound and swept by the cron.
+  botResumeAt    DateTime?
   // Single-flight guard for the agent. Claimed atomically before a run and cleared
   // after, so two webhook deliveries arriving together (a lead firing off 3 photos)
   // can't each generate and send their own reply. Stale locks expire by age.
@@ -754,6 +759,7 @@ model Conversation {
 
   @@unique([channel, externalId])
   @@index([sede])
+  @@index([botResumeAt])
 }
 
 model Message {
