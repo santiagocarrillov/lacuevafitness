@@ -7,11 +7,14 @@ import {
   assignConversation,
   takeOverConversation,
   resumeBot,
+  scheduleBotResume,
+  endShiftReturnToBot,
   sendManualReply,
   type ConversationRow,
   type ThreadData,
   type InboxFilter,
 } from "@/lib/actions/comunicacion";
+import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 
 const SEDE_LABEL: Record<string, string> = {
   FITNESS_CENTER: "Fitness",
@@ -130,6 +133,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [sending, setSending] = useState(false);
+  const [shiftNotice, setShiftNotice] = useState<string | null>(null);
 
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
@@ -191,6 +195,22 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     });
   }
 
+  /** End of shift: give every conversation I am holding back to the bot. */
+  function onEndShift(preset: ResumePreset) {
+    startTransition(async () => {
+      const res = await endShiftReturnToBot(preset);
+      setShiftNotice(
+        res.count === 0
+          ? "No tienes conversaciones en control humano."
+          : res.resumeAt
+            ? `${res.count} conversación(es) vuelven al bot el ${formatResumeAt(res.resumeAt)}.`
+            : `${res.count} conversación(es) devueltas al bot.`,
+      );
+      await refreshList(filterRef.current);
+      if (selectedRef.current) await refreshThread(selectedRef.current);
+    });
+  }
+
   async function onSend() {
     if (!thread || !reply.trim() || sending) return;
     setSending(true);
@@ -227,6 +247,31 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
             </button>
           ))}
         </div>
+        {/* End of shift — hand back everything this user took over today. */}
+        <div className="px-2 py-2 border-b border-border shrink-0 space-y-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground shrink-0">Fin de turno:</span>
+            <select
+              value=""
+              disabled={pending}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v) onEndShift(v as ResumePreset);
+              }}
+              title="Devolver al bot todas mis conversaciones en control humano"
+              className="flex-1 text-xs border border-border rounded-md px-2 py-1 bg-background"
+            >
+              <option value="">Devolver mis conversaciones al bot…</option>
+              {RESUME_PRESETS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {shiftNotice && <p className="text-[11px] text-sky-700 px-0.5">{shiftNotice}</p>}
+        </div>
+
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
             <p className="p-4 text-sm text-muted-foreground">No hay conversaciones en este filtro.</p>
@@ -266,7 +311,11 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                     c.botPaused ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
                   }`}
                 >
-                  {c.botPaused ? "🙋 Humano" : "🤖 Bot"}
+                  {c.botPaused
+                    ? c.botResumeAt
+                      ? `🙋 → 🤖 ${formatResumeAt(c.botResumeAt)}`
+                      : "🙋 Humano"
+                    : "🤖 Bot"}
                 </span>
                 {c.ownerName && (
                   <span className="text-[10px] text-muted-foreground truncate">· {c.ownerName}</span>
@@ -299,6 +348,11 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                   {SEDE_LABEL[thread.sede] ?? thread.sede} · {STAGE_LABEL[thread.stage] ?? thread.stage}
                   {thread.leadPhone ? ` · ${thread.leadPhone}` : ""}
                 </p>
+                {thread.botPaused && thread.botResumeAt && (
+                  <p className="text-[11px] text-sky-700">
+                    🤖 El bot la retoma el {formatResumeAt(thread.botResumeAt)}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <select
@@ -319,13 +373,35 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                   ))}
                 </select>
                 {thread.botPaused ? (
-                  <button
-                    onClick={() => withRefresh(() => resumeBot(thread.conversationId))}
-                    disabled={pending}
-                    className="text-xs font-medium px-3 py-1.5 rounded-md bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
-                  >
-                    Devolver al bot
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => withRefresh(() => resumeBot(thread.conversationId))}
+                      disabled={pending}
+                      className="text-xs font-medium px-3 py-1.5 rounded-md bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
+                    >
+                      Devolver al bot
+                    </button>
+                    {/* Hand it back later — the Friday-afternoon case: nobody is here
+                        until Monday, but the lead may write on Saturday. */}
+                    <select
+                      value=""
+                      disabled={pending}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (!v) return;
+                        withRefresh(() => scheduleBotResume(thread.conversationId, v as ResumePreset));
+                      }}
+                      title="Programar la devolución al bot"
+                      className="text-xs border border-border rounded-md px-2 py-1.5 bg-background"
+                    >
+                      <option value="">⏱ Devolver…</option>
+                      {RESUME_PRESETS.filter((r) => r.value !== "now").map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 ) : (
                   <button
                     onClick={() => withRefresh(() => takeOverConversation(thread.conversationId))}

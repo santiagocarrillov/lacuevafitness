@@ -73,11 +73,37 @@ export async function scheduleTrialReminders(
   );
 }
 
-export type ProcessSummary = { due: number; sent: number; failed: number; skipped: number };
+export type ProcessSummary = {
+  due: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  /** Conversations whose scheduled hand-back to the bot came due. */
+  botResumed: number;
+};
+
+/**
+ * Un-pause conversations whose scheduled hand-back has come due.
+ *
+ * Purely a DB sweep — it sends nothing. The runner also releases a due hold when
+ * an inbound arrives (that is what answers the lead in real time); this keeps the
+ * inbox honest for conversations where nobody wrote, so staff see "🤖 Bot" on
+ * Monday morning instead of a human badge nobody owns.
+ */
+export async function releaseDueBotHolds(now: Date = new Date()): Promise<number> {
+  const { count } = await prisma.conversation.updateMany({
+    where: { botPaused: true, botResumeAt: { lte: now } },
+    data: { botPaused: false, botResumeAt: null },
+  });
+  return count;
+}
 
 /** Send every followup whose fireAt has passed. Called by the cron endpoint. */
 export async function processDueFollowups(limit = 100): Promise<ProcessSummary> {
   const now = new Date();
+  // Before sending anything: give back the conversations whose hold expired, so a
+  // followup for one of them isn't skipped as "paused" a second later.
+  const botResumed = await releaseDueBotHolds(now);
   const due = await prisma.scheduledFollowup.findMany({
     where: { status: "PENDING", fireAt: { lte: now } },
     orderBy: { fireAt: "asc" },
@@ -85,7 +111,7 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     include: { conversation: true },
   });
 
-  const summary: ProcessSummary = { due: due.length, sent: 0, failed: 0, skipped: 0 };
+  const summary: ProcessSummary = { due: due.length, sent: 0, failed: 0, skipped: 0, botResumed };
 
   for (const f of due) {
     const conv = f.conversation;

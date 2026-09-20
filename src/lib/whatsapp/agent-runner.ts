@@ -153,6 +153,19 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     },
   });
   if (!conversation) return { status: "skipped", reason: "conversation not found" };
+
+  // A human may have handed the conversation back with a timer ("devolver al bot
+  // el lunes 8am"). If that moment has passed, the bot takes it from here — this
+  // is the path that actually answers the lead who writes on a Saturday.
+  if (conversation.botPaused && conversation.botResumeAt && conversation.botResumeAt <= new Date()) {
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { botPaused: false, botResumeAt: null },
+    });
+    conversation.botPaused = false;
+    conversation.botResumeAt = null;
+  }
+
   if (conversation.botPaused) return { status: "skipped", reason: "bot paused (human owns it)" };
 
   // Only reply if the most recent message is inbound (avoid replying to our own tail).

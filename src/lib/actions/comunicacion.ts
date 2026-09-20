@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { sendText } from "@/lib/whatsapp/client";
+import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import type { LeadStage, MessageDirection, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -34,6 +35,8 @@ export type ConversationRow = {
   leadId: string;
   sede: Sede;
   botPaused: boolean;
+  /** ISO time when the bot takes this conversation back on its own, or null. */
+  botResumeAt: string | null;
   lastInboundAt: string | null;
   lastOutboundAt: string | null;
   leadName: string;
@@ -82,6 +85,7 @@ export async function getConversations(filter: InboxFilter = "all"): Promise<Con
       leadId: c.leadId,
       sede: c.sede,
       botPaused: c.botPaused,
+      botResumeAt: c.botResumeAt ? c.botResumeAt.toISOString() : null,
       lastInboundAt: c.lastInboundAt ? c.lastInboundAt.toISOString() : null,
       lastOutboundAt: c.lastOutboundAt ? c.lastOutboundAt.toISOString() : null,
       leadName: [c.lead.firstName, c.lead.lastName].filter(Boolean).join(" ") || "Sin nombre",
@@ -132,6 +136,7 @@ export type ThreadData = {
   sede: Sede;
   stage: LeadStage;
   botPaused: boolean;
+  botResumeAt: string | null;
   ownerUserId: string | null;
   ownerName: string | null;
   windowOpen: boolean;
@@ -170,6 +175,7 @@ export async function getConversationThread(conversationId: string): Promise<Thr
     sede: conversation.sede,
     stage: conversation.lead.stage,
     botPaused: conversation.botPaused,
+    botResumeAt: conversation.botResumeAt ? conversation.botResumeAt.toISOString() : null,
     ownerUserId: conversation.lead.ownerUserId,
     ownerName: conversation.lead.owner?.fullName ?? null,
     windowOpen: inboundMs > 0 && Date.now() - inboundMs < WINDOW_MS,
@@ -223,18 +229,67 @@ export async function assignConversation(leadId: string, userId: string | null):
   revalidatePath("/dashboard/comunicacion");
 }
 
-/** Pause the bot so a human owns the conversation. */
+/** Pause the bot so a human owns the conversation. Clears any pending hand-back. */
 export async function takeOverConversation(conversationId: string): Promise<void> {
   await requireInboxAccess();
-  await prisma.conversation.update({ where: { id: conversationId }, data: { botPaused: true } });
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { botPaused: true, botResumeAt: null },
+  });
   revalidatePath("/dashboard/comunicacion");
 }
 
-/** Hand the conversation back to the agent. */
+/** Hand the conversation back to the agent right now. */
 export async function resumeBot(conversationId: string): Promise<void> {
   await requireInboxAccess();
-  await prisma.conversation.update({ where: { id: conversationId }, data: { botPaused: false } });
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { botPaused: false, botResumeAt: null },
+  });
   revalidatePath("/dashboard/comunicacion");
+}
+
+/**
+ * Hand the conversation back to the agent at a chosen moment ("el lunes 8am").
+ * It stays paused — and visibly so in the inbox — until then; the runner
+ * releases it on the next inbound, and the cron sweeps it even if nobody writes.
+ */
+export async function scheduleBotResume(
+  conversationId: string,
+  preset: ResumePreset,
+): Promise<{ resumeAt: string | null }> {
+  await requireInboxAccess();
+  const resumeAt = resolveResumeAt(preset);
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: resumeAt ? { botPaused: true, botResumeAt: resumeAt } : { botPaused: false, botResumeAt: null },
+  });
+  revalidatePath("/dashboard/comunicacion");
+  return { resumeAt: resumeAt ? resumeAt.toISOString() : null };
+}
+
+/**
+ * End of shift: hand every conversation I am holding back to the bot, now or at
+ * a chosen time. This is the Friday-evening button — one click instead of
+ * remembering each thread you took over during the day.
+ */
+export async function endShiftReturnToBot(
+  preset: ResumePreset,
+  scope: "mine" | "all" = "mine",
+): Promise<{ count: number; resumeAt: string | null }> {
+  const user = await requireInboxAccess();
+  const resumeAt = resolveResumeAt(preset);
+
+  const { count } = await prisma.conversation.updateMany({
+    where: {
+      botPaused: true,
+      ...(scope === "mine" ? { lead: { ownerUserId: user.id } } : {}),
+    },
+    data: resumeAt ? { botResumeAt: resumeAt } : { botPaused: false, botResumeAt: null },
+  });
+
+  revalidatePath("/dashboard/comunicacion");
+  return { count, resumeAt: resumeAt ? resumeAt.toISOString() : null };
 }
 
 export type SendReplyResult =
