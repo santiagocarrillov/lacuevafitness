@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Sede, MembershipState } from "@/generated/prisma/client";
 import { updateChallengeProgress } from "./challenges";
 import { requireAuth, can } from "@/lib/auth";
+import { markLeadAttended } from "@/lib/leads/trial-attendance";
 import {
   todayDateUtc, todayDayOfWeekEcuador, ecuadorDateAt as ecuadorDateAtTz,
   isAttendanceWindowOpen,
@@ -152,6 +153,139 @@ export async function searchMembersAllSedes(query: string) {
   });
 }
 
+// ── Evaluaciones de hoy (leads del embudo) ──────────────────────────
+
+export type TrialLeadRow = {
+  leadId: string;
+  name: string;
+  phone: string | null;
+  /** Booked time, ISO. */
+  scheduledAt: string;
+  stage: string;
+  /** Ad that brought them in, when the lead came from a click-to-WhatsApp ad. */
+  adHeadline: string | null;
+  /** Already registered today — kept in the list so staff can see it landed. */
+  attended: boolean;
+};
+
+/**
+ * Leads booked for an evaluation today at this sede.
+ *
+ * This is the missing link staff kept asking about: the bot books the
+ * appointment, and until now the person at the counter had no way to say
+ * "she came" without opening the CRM separately.
+ */
+export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
+  const user = await requireAuth();
+  if (user.role === "MEMBER") throw new Error("Sin permisos");
+
+  const dayStart = ecuadorDateAt(todayDate(), 0, 0);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const leads = await prisma.lead.findMany({
+    where: {
+      sede,
+      trialScheduledAt: { gte: dayStart, lt: dayEnd },
+      stage: { notIn: ["LOST"] },
+    },
+    orderBy: { trialScheduledAt: "asc" },
+    select: {
+      id: true, firstName: true, lastName: true, phone: true,
+      trialScheduledAt: true, stage: true, adHeadline: true, trialAttended: true,
+    },
+  });
+
+  return leads.map((l) => ({
+    leadId: l.id,
+    name: [l.firstName, l.lastName].filter(Boolean).join(" ") || "Sin nombre",
+    phone: l.phone,
+    scheduledAt: l.trialScheduledAt!.toISOString(),
+    stage: l.stage,
+    adHeadline: l.adHeadline,
+    attended: l.trialAttended === true,
+  }));
+}
+
+/**
+ * Register a lead's evaluation visit.
+ *
+ * One click does three things that used to be three systems: it creates (or
+ * reuses) the Member row that links lead → socio, writes the visit into the same
+ * Attendance table as every other athlete, and moves the funnel to
+ * TRIAL_ATTENDED. The member is status TRIAL, so from tomorrow they show up in
+ * the normal attendance search for the rest of their two weeks.
+ */
+export async function recordTrialAttendance(
+  scheduleId: string,
+  leadId: string,
+): Promise<{ memberId: string; memberName: string }> {
+  const user = await requireAuth();
+  if (!can.recordAttendance(user)) {
+    throw new Error("No tienes permiso para registrar asistencia.");
+  }
+  if (!isAttendanceWindowOpen()) {
+    throw new Error("La ventana de registro está cerrada (cierra a las 9:30pm Ecuador). El siguiente día empieza a las 12:00 AM.");
+  }
+
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: { member: true },
+  });
+  if (!lead) throw new Error("Lead no encontrado.");
+
+  const session = await getOrCreateTodaySession(scheduleId);
+
+  const memberId = await prisma.$transaction(async (tx) => {
+    // The lead may already be a socio (came back, or was converted earlier).
+    let member = lead.member;
+    if (!member) {
+      member = await tx.member.create({
+        data: {
+          firstName: lead.firstName,
+          // Member.lastName is required; leads often arrive with only a first name.
+          lastName: lead.lastName?.trim() || "(evaluación)",
+          phone: lead.phone,
+          sede: lead.sede,
+          status: "TRIAL",
+          leadId: lead.id,
+          notes: "Creado al registrar su evaluación de 2 semanas ($9).",
+        },
+      });
+    }
+
+    await tx.attendance.upsert({
+      where: { memberId_classSessionId: { memberId: member.id, classSessionId: session.id } },
+      update: {},
+      // Not an expired membership — they are inside their paid evaluation.
+      create: { memberId: member.id, classSessionId: session.id, expiredMembershipAlert: false, recordedByUserId: user.id },
+    });
+
+    await markLeadAttended(tx, lead.id, {
+      userId: user.id,
+      note: `Asistió a su evaluación (${session.schedule?.name ?? "clase"}), registrado en asistencia.`,
+    });
+
+    return member.id;
+  });
+
+  // Session counters, outside the transaction (same as recordAttendance).
+  const totalAttendance = await prisma.attendance.count({ where: { classSessionId: session.id } });
+  await prisma.classSession.update({
+    where: { id: session.id },
+    data: {
+      adminCount: totalAttendance,
+      discrepancy: session.coachConfirmation ? totalAttendance !== session.coachConfirmation.count : false,
+    },
+  });
+
+  revalidatePath("/dashboard/asistencia");
+  revalidatePath("/dashboard/leads");
+  revalidatePath("/dashboard");
+
+  const memberName = [lead.firstName, lead.lastName].filter(Boolean).join(" ");
+  return { memberId, memberName };
+}
+
 // ── Record attendance ───────────────────────────────────────────────
 
 export async function recordAttendance(
@@ -177,6 +311,7 @@ export async function recordAttendance(
         orderBy: { endsAt: "desc" },
         take: 1,
       },
+      lead: { select: { id: true, stage: true, trialAttended: true } },
     },
   });
 
@@ -186,7 +321,10 @@ export async function recordAttendance(
   const records = memberIds.map((memberId) => {
     const member = members.find((m) => m.id === memberId);
     const activeMembership = member?.memberships[0];
-    const isExpired = !activeMembership || activeMembership.endsAt < now;
+    // Someone inside their paid 2-week evaluation has no Membership row yet —
+    // flagging them "Vencida" every single day is a false alarm, not a warning.
+    const inTrial = member?.status === "TRIAL" || member?.status === "LEAD";
+    const isExpired = !inTrial && (!activeMembership || activeMembership.endsAt < now);
 
     if (isExpired && member) {
       expiredAlerts.push(`${member.firstName} ${member.lastName}`);
@@ -231,6 +369,17 @@ export async function recordAttendance(
   // Update challenge progress for each member
   for (const memberId of memberIds) {
     await updateChallengeProgress(memberId).catch(() => {});
+  }
+
+  // Funnel write-back: registering a booked lead from the normal search counts as
+  // their evaluation too, so the embudo doesn't depend on which box staff used.
+  for (const member of members) {
+    const lead = member.lead;
+    if (!lead || lead.trialAttended === true) continue;
+    if (lead.stage !== "SCHEDULED_TRIAL" && lead.stage !== "TRIAL_NO_SHOW") continue;
+    await prisma
+      .$transaction((tx) => markLeadAttended(tx, lead.id, { userId: user.id }))
+      .catch((err) => console.error("[attendance] no se pudo marcar el lead", { leadId: lead.id, err }));
   }
 
   revalidatePath("/dashboard/asistencia");
