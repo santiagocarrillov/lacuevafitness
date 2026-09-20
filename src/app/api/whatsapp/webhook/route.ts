@@ -54,13 +54,15 @@ export async function POST(request: Request) {
     }
     // Run the sales agent AFTER acking Meta, so the Claude round-trip never
     // delays the 200. No-ops when the agent is disabled (default).
-    if (agentEnabled() && result.conversationIds.length) {
+    if (agentEnabled() && result.inbound.length) {
       after(async () => {
-        for (const id of result.conversationIds) {
+        // One run per conversation, each carrying the message that triggered it:
+        // the runner stands down if a newer inbound arrives while it debounces.
+        const runs = result.inbound.map(async ({ conversationId: id, messageId }) => {
           try {
             // The runner never throws on a failed send — it reports it here.
             // Dropping this outcome is how two silent failures reached prod.
-            const outcome = await respondToInboundConversation(id);
+            const outcome = await respondToInboundConversation(id, { triggerMessageId: messageId });
             if (outcome.status === "error") {
               console.error("[whatsapp-agent] run failed", { conversationId: id, ...outcome });
             } else if (outcome.status === "handoff" && !outcome.sent) {
@@ -71,7 +73,8 @@ export async function POST(request: Request) {
           } catch (err) {
             console.error("[whatsapp-agent] runner error", { conversationId: id, err });
           }
-        }
+        });
+        await Promise.all(runs);
       });
     }
   } catch (err) {
