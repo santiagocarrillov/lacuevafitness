@@ -38,9 +38,12 @@ export async function scheduleFollowup(
 }
 
 /**
- * (Re)schedule the 24h + 2h anti-no-show reminders for a booked evaluation.
- * Cancels any prior pending trial reminders on the conversation first, so a
- * reschedule doesn't leave stale reminders.
+ * (Re)schedule the 24h + 1h anti-no-show reminders for a booked evaluation.
+ *
+ * The close-in reminder was 2h; Santiago moved it to 1h (21 sep 2026) — cerca
+ * suficiente para que la persona ya esté decidiendo si sale de casa. Cancels any
+ * prior pending trial reminders on the conversation first (including legacy 2h
+ * ones), so a reschedule doesn't leave stale reminders.
  */
 export async function scheduleTrialReminders(
   conversationId: string,
@@ -51,7 +54,7 @@ export async function scheduleTrialReminders(
   await prisma.scheduledFollowup.updateMany({
     where: {
       conversationId,
-      kind: { in: ["TRIAL_REMINDER_24H", "TRIAL_REMINDER_2H"] },
+      kind: { in: ["TRIAL_REMINDER_24H", "TRIAL_REMINDER_2H", "TRIAL_REMINDER_1H"] },
       status: "PENDING",
     },
     data: { status: "CANCELED" },
@@ -68,8 +71,8 @@ export async function scheduleTrialReminders(
     `¡Hola ${name}! 👋 Mañana arrancas tus dos semanas de evaluación en ${sedeName} a las ${hora}. Llega 15 min antes. ¿Confirmas que vienes? 💪`,
   );
   await scheduleFollowup(
-    conversationId, "TRIAL_REMINDER_2H", new Date(when.getTime() - 2 * 60 * 60 * 1000),
-    `¡Hola ${name}! En un par de horas es tu primera sesión en ${sedeName} (${hora}). ¡Arrancas tus dos semanas! Te esperamos 📍💪`,
+    conversationId, "TRIAL_REMINDER_1H", new Date(when.getTime() - 60 * 60 * 1000),
+    `¡Hola ${name}! En una hora es tu primera sesión en ${sedeName} (${hora}). Llega 15 min antes para tomarte los datos de tu evaluación. ¡Te esperamos! 📍💪`,
   );
 }
 
