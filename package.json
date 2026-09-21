@@ -13,7 +13,8 @@
     "import:hubspot": "tsx scripts/import-hubspot.ts",
     "test:agent": "tsx scripts/test-agent.ts",
     "test:referral": "tsx scripts/test-referral.ts",
-    "test:registro": "tsx scripts/test-registro.ts"
+    "test:registro": "tsx scripts/test-registro.ts",
+    "test:busqueda": "tsx scripts/test-busqueda.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

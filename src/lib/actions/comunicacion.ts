@@ -16,7 +16,15 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { sendText } from "@/lib/whatsapp/client";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
-import type { LeadStage, MessageDirection, Prisma, Sede } from "@/generated/prisma/client";
+import {
+  MIN_QUERY_LENGTH,
+  SQL_ACCENTS_FROM,
+  SQL_ACCENTS_TO,
+  likePattern,
+  normalizeQuery,
+} from "@/lib/whatsapp/search";
+import { Prisma } from "@/generated/prisma/client";
+import type { LeadStage, MessageDirection, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -77,6 +85,41 @@ export async function countWaitingForHuman(): Promise<number> {
   return prisma.conversation.count({ where: waitingForHuman() });
 }
 
+/** Lo que necesita una fila del inbox. Compartido entre el listado y la búsqueda. */
+const CONVERSATION_ROW_INCLUDE = {
+  lead: { include: { owner: { select: { fullName: true } } } },
+  messages: { orderBy: { createdAt: "desc" as const }, take: 1 },
+};
+
+type ConversationWithRow = Prisma.ConversationGetPayload<{
+  include: typeof CONVERSATION_ROW_INCLUDE;
+}>;
+
+function toConversationRow(c: ConversationWithRow, now: number): ConversationRow {
+  const last = c.messages[0] ?? null;
+  const inboundMs = c.lastInboundAt ? new Date(c.lastInboundAt).getTime() : 0;
+  const outboundMs = c.lastOutboundAt ? new Date(c.lastOutboundAt).getTime() : 0;
+  return {
+    id: c.id,
+    leadId: c.leadId,
+    sede: c.sede,
+    botPaused: c.botPaused,
+    botResumeAt: c.botResumeAt ? c.botResumeAt.toISOString() : null,
+    lastInboundAt: c.lastInboundAt ? c.lastInboundAt.toISOString() : null,
+    lastOutboundAt: c.lastOutboundAt ? c.lastOutboundAt.toISOString() : null,
+    leadName: [c.lead.firstName, c.lead.lastName].filter(Boolean).join(" ") || "Sin nombre",
+    leadPhone: c.lead.phone,
+    stage: c.lead.stage,
+    ownerUserId: c.lead.ownerUserId,
+    ownerName: c.lead.owner?.fullName ?? null,
+    lastMessageBody: last?.body ?? null,
+    lastMessageDirection: last?.direction ?? null,
+    lastMessageFailed: last?.sendStatus === "FAILED",
+    needsAttention: inboundMs > outboundMs,
+    windowOpen: inboundMs > 0 && now - inboundMs < WINDOW_MS,
+  };
+}
+
 /** List conversations for the shared inbox, newest activity first. */
 export async function getConversations(filter: InboxFilter = "all"): Promise<ConversationRow[]> {
   const user = await requireInboxAccess();
@@ -92,37 +135,199 @@ export async function getConversations(filter: InboxFilter = "all"): Promise<Con
     where: { lead: { is: leadWhere }, ...(filter === "waiting" ? waitingForHuman() : {}) },
     orderBy: { updatedAt: "desc" },
     take: 200,
-    include: {
-      lead: { include: { owner: { select: { fullName: true } } } },
-      messages: { orderBy: { createdAt: "desc" }, take: 1 },
-    },
+    include: CONVERSATION_ROW_INCLUDE,
   });
 
   const now = Date.now();
-  return conversations.map((c) => {
-    const last = c.messages[0] ?? null;
-    const inboundMs = c.lastInboundAt ? new Date(c.lastInboundAt).getTime() : 0;
-    const outboundMs = c.lastOutboundAt ? new Date(c.lastOutboundAt).getTime() : 0;
-    return {
-      id: c.id,
-      leadId: c.leadId,
-      sede: c.sede,
-      botPaused: c.botPaused,
-      botResumeAt: c.botResumeAt ? c.botResumeAt.toISOString() : null,
-      lastInboundAt: c.lastInboundAt ? c.lastInboundAt.toISOString() : null,
-      lastOutboundAt: c.lastOutboundAt ? c.lastOutboundAt.toISOString() : null,
-      leadName: [c.lead.firstName, c.lead.lastName].filter(Boolean).join(" ") || "Sin nombre",
-      leadPhone: c.lead.phone,
-      stage: c.lead.stage,
-      ownerUserId: c.lead.ownerUserId,
-      ownerName: c.lead.owner?.fullName ?? null,
-      lastMessageBody: last?.body ?? null,
-      lastMessageDirection: last?.direction ?? null,
-      lastMessageFailed: last?.sendStatus === "FAILED",
-      needsAttention: inboundMs > outboundMs,
-      windowOpen: inboundMs > 0 && now - inboundMs < WINDOW_MS,
-    };
-  });
+  return conversations.map((c) => toConversationRow(c, now));
+}
+
+// ── Búsqueda ────────────────────────────────────────────────────────────────
+//
+// Dos búsquedas, como WhatsApp: una global sobre todo el inbox (pestaña de la
+// izquierda) y otra dentro de la conversación abierta. Las dos comparten el
+// mismo plegado de acentos de `@/lib/whatsapp/search`, en SQL vía `translate()`
+// para no depender de la extensión `unaccent` — cero migraciones.
+
+const CHAT_HITS_LIMIT = 30;
+const MESSAGE_HITS_LIMIT = 60;
+/** Tope de coincidencias dentro de un chat. Más que esto ya no se navega a mano. */
+const THREAD_HITS_LIMIT = 300;
+
+/** `translate(lower(<col>), …)` — el plegado de acentos del lado de Postgres. */
+function foldedSql(column: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`translate(lower(${column}), ${SQL_ACCENTS_FROM}, ${SQL_ACCENTS_TO})`;
+}
+
+/**
+ * Variantes del número a buscar. En Ecuador el mismo celular se escribe
+ * `0996615383` (local) y se guarda `+593996615383` (internacional): buscar el
+ * local no puede fallar solo por el 0 de más.
+ */
+function phonePatterns(query: string): [string | null, string | null] {
+  const digits = query.replace(/\D/g, "");
+  if (digits.length < 6) return [null, null];
+  const primary = `%${digits}%`;
+  const alt = digits.startsWith("0") ? `%${digits.slice(1)}%` : primary;
+  return [primary, alt];
+}
+
+export type MessageHit = {
+  messageId: string;
+  conversationId: string;
+  leadId: string;
+  leadName: string;
+  sede: Sede;
+  direction: MessageDirection;
+  /** Cuerpo completo: el recorte y el resaltado se hacen en el cliente. */
+  body: string;
+  createdAt: string;
+  senderLabel: string;
+};
+
+export type InboxSearchResult = {
+  /** Conversaciones cuyo contacto (nombre o teléfono) coincide. */
+  chats: ConversationRow[];
+  /** Mensajes cuyo texto coincide, del más reciente al más viejo. */
+  messages: MessageHit[];
+  chatsTruncated: boolean;
+  messagesTruncated: boolean;
+};
+
+const EMPTY_SEARCH: InboxSearchResult = {
+  chats: [],
+  messages: [],
+  chatsTruncated: false,
+  messagesTruncated: false,
+};
+
+/**
+ * Búsqueda global del inbox: contactos por nombre/teléfono y mensajes por texto.
+ *
+ * Devuelve las dos listas por separado a propósito — "Andrea" como contacto y
+ * "Andrea" dicho dentro de un chat son dos resultados distintos y mezclarlos
+ * esconde el que la persona estaba buscando.
+ */
+export async function searchInbox(query: string): Promise<InboxSearchResult> {
+  await requireInboxAccess();
+
+  const folded = normalizeQuery(query);
+  if (folded.length < MIN_QUERY_LENGTH) return EMPTY_SEARCH;
+  const like = likePattern(folded);
+  const [phoneLike, phoneLikeAlt] = phonePatterns(query);
+
+  const [chatIdRows, messageIdRows] = await Promise.all([
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT c.id
+      FROM "Conversation" c
+      JOIN "Lead" l ON l.id = c."leadId"
+      WHERE ${foldedSql(Prisma.sql`coalesce(l."firstName", '') || ' ' || coalesce(l."lastName", '')`)} LIKE ${like}
+         OR (
+              ${phoneLike}::text IS NOT NULL
+              AND (
+                   regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g') LIKE ${phoneLike}::text
+                OR regexp_replace(coalesce(l.phone, ''), '[^0-9]', '', 'g') LIKE ${phoneLikeAlt}::text
+              )
+            )
+      ORDER BY c."updatedAt" DESC
+      LIMIT ${CHAT_HITS_LIMIT + 1}
+    `,
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT m.id
+      FROM "Message" m
+      WHERE ${foldedSql(Prisma.sql`m.body`)} LIKE ${like}
+      ORDER BY m."createdAt" DESC
+      LIMIT ${MESSAGE_HITS_LIMIT + 1}
+    `,
+  ]);
+
+  const chatsTruncated = chatIdRows.length > CHAT_HITS_LIMIT;
+  const messagesTruncated = messageIdRows.length > MESSAGE_HITS_LIMIT;
+  const chatIds = chatIdRows.slice(0, CHAT_HITS_LIMIT).map((r) => r.id);
+  const messageIds = messageIdRows.slice(0, MESSAGE_HITS_LIMIT).map((r) => r.id);
+
+  const [chatRows, messageRows] = await Promise.all([
+    chatIds.length
+      ? prisma.conversation.findMany({
+          where: { id: { in: chatIds } },
+          orderBy: { updatedAt: "desc" },
+          include: CONVERSATION_ROW_INCLUDE,
+        })
+      : Promise.resolve([]),
+    messageIds.length
+      ? prisma.message.findMany({
+          where: { id: { in: messageIds } },
+          orderBy: { createdAt: "desc" },
+          include: {
+            conversation: {
+              select: {
+                id: true,
+                sede: true,
+                leadId: true,
+                lead: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const staffName = await resolveStaffNames(messageRows.map((m) => m.sentByUserId));
+  const now = Date.now();
+
+  return {
+    chats: chatRows.map((c) => toConversationRow(c, now)),
+    messages: messageRows.map((m) => ({
+      messageId: m.id,
+      conversationId: m.conversation.id,
+      leadId: m.conversation.leadId,
+      leadName:
+        [m.conversation.lead.firstName, m.conversation.lead.lastName].filter(Boolean).join(" ") ||
+        "Sin nombre",
+      sede: m.conversation.sede,
+      direction: m.direction,
+      body: m.body,
+      createdAt: m.createdAt.toISOString(),
+      senderLabel: senderLabelFor(m, staffName),
+    })),
+    chatsTruncated,
+    messagesTruncated,
+  };
+}
+
+export type ConversationSearchResult = {
+  /** Ids de los mensajes que coinciden, del más reciente al más viejo. */
+  messageIds: string[];
+  truncated: boolean;
+};
+
+/**
+ * Búsqueda dentro de una conversación. Devuelve solo ids: el hilo abierto ya
+ * tiene el texto, y los que no estén cargados se traen anclando el hilo en ese
+ * mensaje (`getConversationThread(id, { aroundMessageId })`).
+ */
+export async function searchConversation(
+  conversationId: string,
+  query: string,
+): Promise<ConversationSearchResult> {
+  await requireInboxAccess();
+
+  const folded = normalizeQuery(query);
+  if (folded.length < MIN_QUERY_LENGTH) return { messageIds: [], truncated: false };
+
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT m.id
+    FROM "Message" m
+    WHERE m."conversationId" = ${conversationId}
+      AND ${foldedSql(Prisma.sql`m.body`)} LIKE ${likePattern(folded)}
+    ORDER BY m."createdAt" DESC
+    LIMIT ${THREAD_HITS_LIMIT + 1}
+  `;
+
+  return {
+    messageIds: rows.slice(0, THREAD_HITS_LIMIT).map((r) => r.id),
+    truncated: rows.length > THREAD_HITS_LIMIT,
+  };
 }
 
 export type ThreadMessage = {
@@ -163,30 +368,100 @@ export type ThreadData = {
   ownerUserId: string | null;
   ownerName: string | null;
   windowOpen: boolean;
+  /** Mensaje en el que se ancló la carga (resultado de búsqueda), o null. */
+  anchorMessageId: string | null;
+  /** Hay mensajes anteriores al primero cargado. */
+  hasOlder: boolean;
   messages: ThreadMessage[];
 };
 
-/** Full message history for one conversation. */
-export async function getConversationThread(conversationId: string): Promise<ThreadData> {
+/** Nombres del staff para los mensajes enviados a mano (el resto no los necesita). */
+async function resolveStaffNames(ids: Array<string | null>): Promise<Map<string, string>> {
+  const staffIds = [...new Set(ids.filter((v): v is string => !!v))];
+  if (staffIds.length === 0) return new Map();
+  const staff = await prisma.user.findMany({
+    where: { id: { in: staffIds } },
+    select: { id: true, fullName: true },
+  });
+  return new Map(staff.map((s) => [s.id, s.fullName]));
+}
+
+/** "Cliente" | "Agente IA" | nombre de quien lo escribió. */
+function senderLabelFor(
+  m: { direction: MessageDirection; llmGenerated: boolean; sentByUserId: string | null },
+  staffName: Map<string, string>,
+): string {
+  if (m.direction === "INBOUND") return "Cliente";
+  if (m.llmGenerated) return "Agente IA";
+  return m.sentByUserId ? staffName.get(m.sentByUserId) ?? "Staff" : "Staff";
+}
+
+/** Cuántos mensajes se cargan de una: la cola del hilo, o la ventana alrededor del ancla. */
+const THREAD_TAIL = 100;
+const THREAD_WINDOW = 60;
+
+/**
+ * Full message history for one conversation.
+ *
+ * Por defecto trae la cola (los últimos {@link THREAD_TAIL}). Con
+ * `aroundMessageId` trae una ventana alrededor de ese mensaje: es lo que hace
+ * falta para saltar a un resultado de búsqueda de hace tres meses, que por
+ * definición no está en la cola.
+ */
+export async function getConversationThread(
+  conversationId: string,
+  options?: { aroundMessageId?: string | null },
+): Promise<ThreadData> {
   await requireInboxAccess();
 
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: {
-      lead: { include: { owner: { select: { fullName: true } } } },
-      messages: { orderBy: { createdAt: "asc" }, take: 100 },
-    },
+    include: { lead: { include: { owner: { select: { fullName: true } } } } },
   });
   if (!conversation) throw new Error("Conversación no encontrada.");
 
-  // Resolve staff names for manually-sent outbound messages.
-  const staffIds = [
-    ...new Set(conversation.messages.map((m) => m.sentByUserId).filter((v): v is string => !!v)),
-  ];
-  const staff = staffIds.length
-    ? await prisma.user.findMany({ where: { id: { in: staffIds } }, select: { id: true, fullName: true } })
-    : [];
-  const staffName = new Map(staff.map((s) => [s.id, s.fullName]));
+  const anchor = options?.aroundMessageId
+    ? await prisma.message.findFirst({
+        where: { id: options.aroundMessageId, conversationId },
+        select: { id: true, createdAt: true },
+      })
+    : null;
+
+  // Sin ancla (o con un ancla que ya no existe) se cae a la cola de siempre.
+  const messages = anchor
+    ? [
+        ...(
+          await prisma.message.findMany({
+            where: { conversationId, createdAt: { lt: anchor.createdAt } },
+            orderBy: { createdAt: "desc" },
+            take: THREAD_WINDOW,
+          })
+        ).reverse(),
+        ...(await prisma.message.findMany({
+          where: { conversationId, createdAt: { gte: anchor.createdAt } },
+          orderBy: { createdAt: "asc" },
+          take: THREAD_WINDOW,
+        })),
+      ]
+    : (
+        await prisma.message.findMany({
+          where: { conversationId },
+          orderBy: { createdAt: "desc" },
+          take: THREAD_TAIL,
+        })
+      ).reverse();
+
+  // ¿Quedó historia por encima de lo cargado? Se avisa en el hilo para que nadie
+  // crea que la conversación empieza ahí.
+  const oldest = messages[0] ?? null;
+  const hasOlder = oldest
+    ? (await prisma.message.count({
+        where: { conversationId, createdAt: { lt: oldest.createdAt } },
+        take: 1,
+      })) > 0
+    : false;
+
+  const staffName = await resolveStaffNames(messages.map((m) => m.sentByUserId));
 
   const inboundMs = conversation.lastInboundAt ? new Date(conversation.lastInboundAt).getTime() : 0;
 
@@ -202,15 +477,12 @@ export async function getConversationThread(conversationId: string): Promise<Thr
     ownerUserId: conversation.lead.ownerUserId,
     ownerName: conversation.lead.owner?.fullName ?? null,
     windowOpen: inboundMs > 0 && Date.now() - inboundMs < WINDOW_MS,
-    messages: conversation.messages.map((m) => {
+    anchorMessageId: anchor?.id ?? null,
+    hasOlder,
+    messages: messages.map((m) => {
       const isBot = m.direction === "OUTBOUND" && m.llmGenerated;
       const isStaff = m.direction === "OUTBOUND" && !m.llmGenerated;
-      const senderLabel =
-        m.direction === "INBOUND"
-          ? "Cliente"
-          : isBot
-            ? "Agente IA"
-            : (m.sentByUserId ? staffName.get(m.sentByUserId) ?? "Staff" : "Staff");
+      const senderLabel = senderLabelFor(m, staffName);
       return {
         id: m.id,
         direction: m.direction,
