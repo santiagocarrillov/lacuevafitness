@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   getConversations,
   getConversationThread,
@@ -10,28 +10,19 @@ import {
   scheduleBotResume,
   endShiftReturnToBot,
   sendManualReply,
+  searchInbox,
+  searchConversation,
   type ConversationRow,
   type ThreadData,
   type InboxFilter,
+  type InboxSearchResult,
   countWaitingForHuman,
 } from "@/lib/actions/comunicacion";
 import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
-
-const SEDE_LABEL: Record<string, string> = {
-  FITNESS_CENTER: "Fitness",
-  XTREME: "Xtreme",
-};
-
-const STAGE_LABEL: Record<string, string> = {
-  NEW: "Nuevo",
-  CONTACTED: "Contactado",
-  SCHEDULED_TRIAL: "Agendado",
-  TRIAL_ATTENDED: "Asistió",
-  TRIAL_NO_SHOW: "No asistió",
-  NEGOTIATING: "Negociando",
-  CONVERTED: "Cerrado",
-  LOST: "Perdido",
-};
+import { isSearchable } from "@/lib/whatsapp/search";
+import { InboxSearchResults } from "./inbox-search";
+import { Highlight } from "./highlight";
+import { SEDE_LABEL, STAGE_LABEL, dayLabel, timeShort } from "./format";
 
 const FILTERS: Array<{ key: InboxFilter; label: string }> = [
   { key: "all", label: "Todas" },
@@ -41,16 +32,8 @@ const FILTERS: Array<{ key: InboxFilter; label: string }> = [
 ];
 
 const POLL_MS = 12_000;
-
-function timeShort(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return new Intl.DateTimeFormat("es-EC", { hour: "2-digit", minute: "2-digit", hour12: true }).format(d);
-}
-
-function dayLabel(iso: string): string {
-  return new Intl.DateTimeFormat("es-EC", { day: "numeric", month: "short" }).format(new Date(iso));
-}
+/** Lo que se espera a que dejen de escribir antes de ir a la base. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 /**
  * Inbound file the lead sent. The <audio>/<img> src hits our authenticated proxy —
@@ -139,11 +122,43 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
   const [sending, setSending] = useState(false);
   const [shiftNotice, setShiftNotice] = useState<string | null>(null);
 
+  // ── Búsqueda global (todo el inbox) ──────────────────────────────────────
+  const [query, setQuery] = useState("");
+  const [searchResult, setSearchResult] = useState<InboxSearchResult | null>(null);
+  const [searching, setSearching] = useState(false);
+  const searching$ = query.trim().length > 0;
+
+  // ── Búsqueda dentro del chat abierto ─────────────────────────────────────
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadQuery, setThreadQuery] = useState("");
+  const [hits, setHits] = useState<string[]>([]);
+  const [hitIndex, setHitIndex] = useState(0);
+  const [hitsTruncated, setHitsTruncated] = useState(false);
+  /**
+   * Mensaje en el que se ancla la carga del hilo. null = la cola (lo de siempre).
+   * Se usa para abrir un resultado de hace meses, que no está en los últimos 100.
+   */
+  const [anchorId, setAnchorId] = useState<string | null>(null);
+  /** Mensaje al que hay que saltar y destacar una vez pintado. */
+  const [focusId, setFocusId] = useState<string | null>(null);
+
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
   const filterRef = useRef<InboxFilter>(filter);
   filterRef.current = filter;
+  const anchorRef = useRef<string | null>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const threadSearchInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef(new Map<string, HTMLDivElement>());
+  /** Último mensaje al que ya saltamos: el poll de 12s no puede volver a arrastrarte ahí. */
+  const scrolledToRef = useRef<string | null>(null);
+
+  // El ancla vive también en un ref porque el poll corre fuera del render. Se
+  // escribe a mano en cada salto (para que el siguiente tick ya la vea) y se
+  // reconcilia aquí.
+  useEffect(() => {
+    anchorRef.current = anchorId;
+  }, [anchorId]);
 
   const refreshList = useCallback(async (f: InboxFilter) => {
     try {
@@ -153,9 +168,9 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     }
   }, []);
 
-  const refreshThread = useCallback(async (id: string) => {
+  const refreshThread = useCallback(async (id: string, aroundMessageId: string | null = null) => {
     try {
-      setThread(await getConversationThread(id));
+      setThread(await getConversationThread(id, { aroundMessageId }));
     } catch {
       /* keep last good thread */
     }
@@ -180,36 +195,148 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     refreshList(filter);
   }, [filter, refreshList]);
 
-  // Poll list + open thread.
+  // Poll list + open thread. El hilo se recarga respetando el ancla: si estás
+  // leyendo un resultado de hace tres meses, el poll no puede devolverte al final.
   useEffect(() => {
     const t = setInterval(() => {
       refreshList(filterRef.current);
-      if (selectedRef.current) refreshThread(selectedRef.current);
+      if (selectedRef.current) refreshThread(selectedRef.current, anchorRef.current);
     }, POLL_MS);
     return () => clearInterval(t);
   }, [refreshList, refreshThread]);
 
-  // Scroll to the newest message when the thread grows.
+  // Búsqueda global, con espera a que dejes de escribir.
   useEffect(() => {
+    const q = query.trim();
+    if (!isSearchable(q)) {
+      setSearchResult(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    let alive = true;
+    const t = setTimeout(() => {
+      searchInbox(q)
+        .then((r) => { if (alive) setSearchResult(r); })
+        .catch(() => { if (alive) setSearchResult(null); })
+        .finally(() => { if (alive) setSearching(false); });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => { alive = false; clearTimeout(t); };
+  }, [query]);
+
+  /**
+   * Lleva el hilo hasta `messageId`. Si ya está cargado basta con hacer scroll;
+   * si es más viejo que la ventana cargada, se vuelve a pedir el hilo anclado ahí
+   * (los resultados de búsqueda suelen quedar fuera de los últimos 100 mensajes).
+   */
+  const jumpTo = useCallback(
+    (messageId: string, conversationId: string) => {
+      scrolledToRef.current = null;
+      setFocusId(messageId);
+      if (messageRefs.current.has(messageId)) return;
+      setAnchorId(messageId);
+      anchorRef.current = messageId;
+      refreshThread(conversationId, messageId);
+    },
+    [refreshThread],
+  );
+
+  // Búsqueda dentro del chat: devuelve ids (del más nuevo al más viejo) y salta al primero.
+  useEffect(() => {
+    const q = threadQuery.trim();
+    const conversationId = selectedId;
+    if (!conversationId || !isSearchable(q)) {
+      setHits([]);
+      setHitIndex(0);
+      setHitsTruncated(false);
+      return;
+    }
+    let alive = true;
+    const t = setTimeout(() => {
+      searchConversation(conversationId, q)
+        .then((r) => {
+          if (!alive) return;
+          setHits(r.messageIds);
+          setHitsTruncated(r.truncated);
+          setHitIndex(0);
+          if (r.messageIds.length > 0) jumpTo(r.messageIds[0], conversationId);
+        })
+        .catch(() => undefined);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => { alive = false; clearTimeout(t); };
+  }, [threadQuery, selectedId, jumpTo]);
+
+  // Scroll al final cuando llegan mensajes nuevos — pero no si estás leyendo un
+  // resultado de búsqueda más arriba.
+  useEffect(() => {
+    if (anchorId || focusId) return;
     threadEndRef.current?.scrollIntoView({ block: "end" });
-  }, [thread?.messages.length, selectedId]);
+  }, [thread?.messages.length, selectedId, anchorId, focusId]);
+
+  // Saltar al mensaje buscado en cuanto esté pintado — una sola vez por salto,
+  // para que el refresco periódico no te devuelva ahí mientras lees alrededor.
+  useEffect(() => {
+    if (!focusId) {
+      scrolledToRef.current = null;
+      return;
+    }
+    if (scrolledToRef.current === focusId) return;
+    const el = messageRefs.current.get(focusId);
+    if (!el) return;
+    scrolledToRef.current = focusId;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusId, thread]);
 
   const openConversation = useCallback(
-    (id: string) => {
+    (id: string, aroundMessageId: string | null = null) => {
       setSelectedId(id);
       setThread(null);
       setError(null);
       setReply("");
-      refreshThread(id);
+      setThreadSearchOpen(false);
+      setThreadQuery("");
+      setHits([]);
+      setHitIndex(0);
+      messageRefs.current.clear();
+      scrolledToRef.current = null;
+      setAnchorId(aroundMessageId);
+      anchorRef.current = aroundMessageId;
+      setFocusId(aroundMessageId);
+      refreshThread(id, aroundMessageId);
     },
     [refreshThread],
   );
+
+  /** Volver al final del hilo: suelta el ancla y recarga la cola. */
+  const goToLatest = useCallback(() => {
+    if (!selectedId) return;
+    setAnchorId(null);
+    anchorRef.current = null;
+    setFocusId(null);
+    messageRefs.current.clear();
+    refreshThread(selectedId, null);
+  }, [selectedId, refreshThread]);
+
+  function goToHit(next: number) {
+    if (!selectedId || hits.length === 0) return;
+    const i = (next + hits.length) % hits.length;
+    setHitIndex(i);
+    jumpTo(hits[i], selectedId);
+  }
+
+  function closeThreadSearch() {
+    setThreadSearchOpen(false);
+    setThreadQuery("");
+    setHits([]);
+    setHitIndex(0);
+    setFocusId(null);
+  }
 
   function withRefresh(fn: () => Promise<unknown>) {
     startTransition(async () => {
       await fn();
       await refreshList(filterRef.current);
-      if (selectedRef.current) await refreshThread(selectedRef.current);
+      if (selectedRef.current) await refreshThread(selectedRef.current, anchorRef.current);
     });
   }
 
@@ -225,7 +352,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
             : `${res.count} conversación(es) devueltas al bot.`,
       );
       await refreshList(filterRef.current);
-      if (selectedRef.current) await refreshThread(selectedRef.current);
+      if (selectedRef.current) await refreshThread(selectedRef.current, anchorRef.current);
     });
   }
 
@@ -237,12 +364,21 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     setSending(false);
     if (res.ok) {
       setReply("");
-      await refreshThread(thread.conversationId);
+      // Contestar te devuelve al final: tu mensaje es el último y hay que verlo.
+      setAnchorId(null);
+      anchorRef.current = null;
+      setFocusId(null);
+      await refreshThread(thread.conversationId, null);
       await refreshList(filterRef.current);
     } else {
       setError(res.error);
     }
   }
+
+  const hitPosition = useMemo(
+    () => (hits.length === 0 ? "" : `${hitIndex + 1} de ${hits.length}${hitsTruncated ? "+" : ""}`),
+    [hitIndex, hits.length, hitsTruncated],
+  );
 
   return (
     <div className="flex-1 min-h-0 flex">
@@ -252,100 +388,147 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
           selectedId ? "hidden md:flex" : "flex"
         }`}
       >
-        <div className="flex gap-1 p-2 border-b border-border shrink-0">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                filter === f.key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
-              }`}
-            >
-              {f.label}
-              {f.key === "waiting" && waiting > 0 && (
-                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                  {waiting}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        {/* End of shift — hand back everything this user took over today. */}
-        <div className="px-2 py-2 border-b border-border shrink-0 space-y-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-muted-foreground shrink-0">Fin de turno:</span>
-            <select
-              value=""
-              disabled={pending}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v) onEndShift(v as ResumePreset);
+        {/* Buscador global */}
+        <div className="p-2 border-b border-border shrink-0">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+              🔍
+            </span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setQuery("");
               }}
-              title="Devolver al bot todas mis conversaciones en control humano"
-              className="flex-1 text-xs border border-border rounded-md px-2 py-1 bg-background"
-            >
-              <option value="">Devolver mis conversaciones al bot…</option>
-              {RESUME_PRESETS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              placeholder="Buscar nombre, teléfono o mensaje…"
+              aria-label="Buscar en todas las conversaciones"
+              className="w-full text-xs border border-border rounded-md pl-8 pr-8 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-search-cancel-button]:hidden"
+            />
+            {searching$ && (
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm leading-none"
+              >
+                ×
+              </button>
+            )}
           </div>
-          {shiftNotice && <p className="text-[11px] text-sky-700 px-0.5">{shiftNotice}</p>}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 && (
-            <p className="p-4 text-sm text-muted-foreground">No hay conversaciones en este filtro.</p>
-          )}
-          {conversations.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => openConversation(c.id)}
-              className={`w-full text-left px-3 py-3 border-b border-border/60 hover:bg-accent/40 transition ${
-                selectedId === c.id ? "bg-accent/60" : ""
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-sm truncate flex items-center gap-1.5">
-                  {c.needsAttention && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
-                  {c.leadName}
-                </span>
-                <span className="text-[10px] text-muted-foreground shrink-0">{timeShort(c.lastInboundAt)}</span>
-              </div>
-              <p
-                className={`text-xs truncate mt-0.5 ${
-                  c.lastMessageFailed ? "text-red-600 font-medium" : "text-muted-foreground"
-                }`}
-              >
-                {c.lastMessageFailed ? "⚠ No entregado · " : c.lastMessageDirection === "OUTBOUND" ? "↩ " : ""}
-                {c.lastMessageBody ?? "—"}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                  {SEDE_LABEL[c.sede] ?? c.sede}
-                </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                  {STAGE_LABEL[c.stage] ?? c.stage}
-                </span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded ${
-                    c.botPaused ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
+        {/* Con búsqueda activa las pestañas estorban: los resultados ya son el filtro. */}
+        {!searching$ && (
+          <>
+            <div className="flex gap-1 p-2 border-b border-border shrink-0">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                    filter === f.key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
                   }`}
                 >
-                  {c.botPaused
-                    ? c.botResumeAt
-                      ? `🙋 → 🤖 ${formatResumeAt(c.botResumeAt)}`
-                      : "🙋 Humano"
-                    : "🤖 Bot"}
-                </span>
-                {c.ownerName && (
-                  <span className="text-[10px] text-muted-foreground truncate">· {c.ownerName}</span>
-                )}
+                  {f.label}
+                  {f.key === "waiting" && waiting > 0 && (
+                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      {waiting}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {/* End of shift — hand back everything this user took over today. */}
+            <div className="px-2 py-2 border-b border-border shrink-0 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground shrink-0">Fin de turno:</span>
+                <select
+                  value=""
+                  disabled={pending}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v) onEndShift(v as ResumePreset);
+                  }}
+                  title="Devolver al bot todas mis conversaciones en control humano"
+                  className="flex-1 text-xs border border-border rounded-md px-2 py-1 bg-background"
+                >
+                  <option value="">Devolver mis conversaciones al bot…</option>
+                  {RESUME_PRESETS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </button>
-          ))}
+              {shiftNotice && <p className="text-[11px] text-sky-700 px-0.5">{shiftNotice}</p>}
+            </div>
+          </>
+        )}
+
+        <div className="flex-1 overflow-y-auto">
+          {searching$ ? (
+            <InboxSearchResults
+              query={query}
+              result={searchResult}
+              loading={searching}
+              selectedId={selectedId}
+              onOpenChat={(id) => openConversation(id)}
+              onOpenMessage={(id, messageId) => openConversation(id, messageId)}
+            />
+          ) : (
+            <>
+              {conversations.length === 0 && (
+                <p className="p-4 text-sm text-muted-foreground">No hay conversaciones en este filtro.</p>
+              )}
+              {conversations.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => openConversation(c.id)}
+                  className={`w-full text-left px-3 py-3 border-b border-border/60 hover:bg-accent/40 transition ${
+                    selectedId === c.id ? "bg-accent/60" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sm truncate flex items-center gap-1.5">
+                      {c.needsAttention && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
+                      {c.leadName}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{timeShort(c.lastInboundAt)}</span>
+                  </div>
+                  <p
+                    className={`text-xs truncate mt-0.5 ${
+                      c.lastMessageFailed ? "text-red-600 font-medium" : "text-muted-foreground"
+                    }`}
+                  >
+                    {c.lastMessageFailed ? "⚠ No entregado · " : c.lastMessageDirection === "OUTBOUND" ? "↩ " : ""}
+                    {c.lastMessageBody ?? "—"}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {SEDE_LABEL[c.sede] ?? c.sede}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {STAGE_LABEL[c.stage] ?? c.stage}
+                    </span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        c.botPaused ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
+                      }`}
+                    >
+                      {c.botPaused
+                        ? c.botResumeAt
+                          ? `🙋 → 🤖 ${formatResumeAt(c.botResumeAt)}`
+                          : "🙋 Humano"
+                        : "🤖 Bot"}
+                    </span>
+                    {c.ownerName && (
+                      <span className="text-[10px] text-muted-foreground truncate">· {c.ownerName}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
@@ -378,6 +561,25 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (threadSearchOpen) {
+                      closeThreadSearch();
+                    } else {
+                      setThreadSearchOpen(true);
+                      setTimeout(() => threadSearchInputRef.current?.focus(), 0);
+                    }
+                  }}
+                  aria-label="Buscar en esta conversación"
+                  title="Buscar en esta conversación"
+                  className={`text-sm px-2.5 py-1.5 rounded-md border transition ${
+                    threadSearchOpen
+                      ? "border-border bg-accent"
+                      : "border-transparent hover:bg-accent/60"
+                  }`}
+                >
+                  🔍
+                </button>
                 <select
                   value={thread.ownerUserId ?? "unassigned"}
                   disabled={pending}
@@ -437,15 +639,97 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
               </div>
             </div>
 
+            {/* Buscar dentro de esta conversación */}
+            {threadSearchOpen && (
+              <div className="px-4 py-2 border-b border-border shrink-0 flex items-center gap-2 bg-muted/30">
+                <input
+                  ref={threadSearchInputRef}
+                  type="search"
+                  value={threadQuery}
+                  onChange={(e) => setThreadQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") closeThreadSearch();
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      goToHit(e.shiftKey ? hitIndex - 1 : hitIndex + 1);
+                    }
+                  }}
+                  placeholder="Buscar en este chat…"
+                  aria-label="Buscar en este chat"
+                  className="flex-1 text-xs border border-border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-search-cancel-button]:hidden"
+                />
+                <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 min-w-[4.5rem] text-right">
+                  {isSearchable(threadQuery)
+                    ? hits.length === 0
+                      ? "sin resultados"
+                      : hitPosition
+                    : ""}
+                </span>
+                {/* ↑ va a mensajes más nuevos, ↓ a más viejos: los hits llegan del más reciente al más antiguo. */}
+                <button
+                  onClick={() => goToHit(hitIndex - 1)}
+                  disabled={hits.length === 0}
+                  aria-label="Coincidencia más reciente"
+                  title="Más reciente"
+                  className="text-xs px-2 py-1 rounded border border-border hover:bg-accent disabled:opacity-40"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => goToHit(hitIndex + 1)}
+                  disabled={hits.length === 0}
+                  aria-label="Coincidencia más antigua"
+                  title="Más antigua"
+                  className="text-xs px-2 py-1 rounded border border-border hover:bg-accent disabled:opacity-40"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={closeThreadSearch}
+                  aria-label="Cerrar búsqueda"
+                  className="text-sm px-2 py-1 text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {/* Estás leyendo historia vieja: dilo y ofrece la salida. */}
+            {anchorId && (
+              <div className="px-4 py-1.5 border-b border-border shrink-0 flex items-center justify-between gap-2 bg-amber-50 text-amber-900">
+                <span className="text-[11px]">
+                  Mostrando mensajes anteriores{thread.anchorMessageId ? "" : " (el mensaje ya no existe)"}.
+                </span>
+                <button
+                  onClick={goToLatest}
+                  className="text-[11px] font-medium underline shrink-0"
+                >
+                  Ir al final ↓
+                </button>
+              </div>
+            )}
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-muted/20">
+              {thread.hasOlder && (
+                <p className="text-center text-[10px] text-muted-foreground py-1">
+                  Hay mensajes más antiguos que no caben aquí — búscalos con 🔍.
+                </p>
+              )}
               {thread.messages.map((m, i) => {
                 const prev = thread.messages[i - 1];
                 const showDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
                 const outbound = m.direction === "OUTBOUND";
                 const failed = outbound && m.sendStatus === "FAILED";
+                const focused = m.id === focusId;
                 return (
-                  <div key={m.id}>
+                  <div
+                    key={m.id}
+                    ref={(el) => {
+                      if (el) messageRefs.current.set(m.id, el);
+                      else messageRefs.current.delete(m.id);
+                    }}
+                  >
                     {showDay && (
                       <div className="text-center my-3">
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
@@ -456,6 +740,8 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                     <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
+                          focused ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-background " : ""
+                        }${
                           failed
                             ? "bg-red-50 border-2 border-red-400"
                             : !outbound
@@ -469,7 +755,9 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                         {m.mediaKind && m.mediaUrl ? (
                           <>
                             {/* Placeholder bodies ("[nota de voz]") are redundant next to the player. */}
-                            {!/^\[[a-zá-ú ]+\]$/i.test(m.body.trim()) && m.body}
+                            {!/^\[[a-zá-ú ]+\]$/i.test(m.body.trim()) && (
+                              <Highlight text={m.body} query={threadQuery} />
+                            )}
                             <MediaAttachment
                               url={m.mediaUrl}
                               kind={m.mediaKind}
@@ -478,7 +766,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                             />
                           </>
                         ) : (
-                          m.body
+                          <Highlight text={m.body} query={threadQuery} />
                         )}
                         {failed && (
                           <details className="mt-1.5 border-t border-red-300 pt-1.5">
