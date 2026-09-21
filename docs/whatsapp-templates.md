@@ -5,9 +5,15 @@
 > `hello_world` (inglés) — ninguna se había llegado a crear, y por eso todo envío
 > fuera de la ventana de 24h fallaba.
 >
-> **Pendiente para que sirvan de algo:** `sequences.ts` todavía NO las usa. Hoy un
-> followup fuera de ventana se marca `FAILED` con "requiere template aprobada";
-> nadie llama a `sendTemplate()`. Ese cableado es trabajo aparte.
+> **CABLEADAS (21 sep 2026).** `processDueFollowups` ya las manda: fuera de la
+> ventana de 24h busca la plantilla del `FollowupKind` en
+> `src/lib/whatsapp/templates.ts` y la envía con `sendTemplate()`. El mapeo vive en
+> código, no en la tabla `MessageTemplate` (que sigue vacía y sin usar).
+>
+> **Techo diario:** `WHATSAPP_TEMPLATE_DAILY_LIMIT` (15 por defecto, hora de
+> Ecuador). Lo que pasa del techo se queda `PENDING` y sale al día siguiente — no
+> se pierde ni hay que reprogramarlo. Ponerlo en `0` apaga el canal de plantillas
+> sin desplegar nada.
 
 > Se someten en **WhatsApp Manager → Account tools → Message templates → Create**.
 > Idioma: **Español (es)**. Aprobación: ~1–2 días. Variables `{{n}}` deben ir en orden.
@@ -88,5 +94,18 @@ Marketing, reintentar como **Utility** (mensaje sobre su membresía/servicio vig
 - **Categoría correcta = aprobación más rápida.** Confirmado en la práctica: enviadas el 21 sep, `recordatorio_eval_1h`, `noshow_recuperacion` y `reengagement_no_reply` quedaron aprobadas en minutos. Los recordatorios (1, 2) son transaccionales sobre una cita que el lead agendó → **Utility**. Los que llevan la oferta "$9 por dos semanas de evaluación" (3, 4) son promocionales → **Marketing**.
 - **Sin botones por ahora:** el cliente (`sendTemplate`) hoy solo mete variables en el body. Si más adelante queremos botones "Sí, confirmo / Reagendar", se amplía el cliente y se re-somete la template.
 - **Números de teléfono / links** en el body pueden ralentizar la aprobación; por eso los mantengo fuera.
-- **El cableado sigue pendiente.** `client.ts` ya expone `sendTemplate(to, name, "es", [vars])`, pero `processDueFollowups` no lo llama: fuera de la ventana marca FAILED y punto. Mientras no se conecte, tener las plantillas aprobadas no cambia nada en producción.
+- **Mapeo `FollowupKind` → plantilla** (en `src/lib/whatsapp/templates.ts`):
+  `NO_REPLY_*` → `reengagement_no_reply` · `NOSHOW_RECOVERY_*` → `noshow_recuperacion` ·
+  `TRIAL_REMINDER_24H` → `recordatorio_eval_24h` · `TRIAL_REMINDER_1H` (y el legado `2H`) →
+  `recordatorio_eval_1h`. `ADMIN_ATTENDANCE_PING` y `TRIAL_CONFIRM` no tienen plantilla a
+  propósito: siempre salen dentro de la ventana.
+- **Nombres basura.** El `{{1}}` sale del perfil de WhatsApp y a veces es puro emoji
+  (`🌒..H..🪐⏳`). `templateName()` se queda con la primera palabra que tenga letras de
+  verdad; si no hay ninguna, manda `qué tal` → "¡Hola qué tal!". Meta además rechaza
+  parámetros con saltos de línea, así que se limpian.
+- **Recordatorio sin hora de cita no se manda.** Si el lead perdió su `trialScheduledAt`,
+  `templateForFollowup` devuelve null y el followup se marca FAILED en vez de mandar una
+  plantilla a medio llenar.
+- **`miembro_inasistencia` sigue sin poder usarse:** `Conversation` solo se ata a `Lead`,
+  no a `Member`. Es Fase 3.
 - **Gotcha del editor de Meta:** al escribir `{{` el editor inserta la variable completa (`{{1}}`) y deja el cursor después. Escribir `{{1}}` a mano produce `{{1}}}}`, y usar el botón "Add variable" recorta el espacio anterior (`¡Hola{{1}}`). Lo que funciona: escribir el texto de corrido y solo `{{` donde va cada variable.
