@@ -19,6 +19,7 @@ import type { LeadStage, Sede } from "@/generated/prisma/client";
 import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
 import { sendText, describeSendError } from "./client";
 import { scheduleTrialReminders } from "./sequences";
+import { notifyStaffOfBotHandoff } from "@/lib/push/notify-staff";
 import { adContextLine } from "./referral";
 import { mediaTurnMarker } from "./media";
 
@@ -99,6 +100,19 @@ const VALID_STAGES: LeadStage[] = [
   "NEW", "CONTACTED", "SCHEDULED_TRIAL", "TRIAL_ATTENDED", "TRIAL_NO_SHOW",
   "NEGOTIATING", "CONVERTED", "LOST",
 ];
+
+/**
+ * Cuánto espera un handoff del bot antes de que el bot lo retome.
+ *
+ * Cuando el bot escala solo, se pausaba SIN fecha de vuelta y sin avisar a
+ * nadie: el lead quedaba esperando indefinidamente (4 casos el 21 sep 2026, uno
+ * de 37 horas). Ahora la pausa caduca — si en este plazo ninguna persona
+ * contesta, el bot retoma y al menos el lead deja de estar en silencio.
+ *
+ * Si un humano SÍ entra, `sendManualMessage` limpia `botResumeAt` y la
+ * conversación queda suya hasta que la devuelva.
+ */
+const HANDOFF_RESUME_MINUTES = Number(process.env.WHATSAPP_HANDOFF_RESUME_MINUTES ?? 60);
 
 export type RunOutcome =
   | { status: "skipped"; reason: string }
@@ -238,7 +252,13 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
       await tx.conversation.update({ where: { id: conversation.id }, data: { sede: resolvedSede } });
     }
     if (forceHandoff) {
-      await tx.conversation.update({ where: { id: conversation.id }, data: { botPaused: true } });
+      await tx.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          botPaused: true,
+          botResumeAt: new Date(Date.now() + HANDOFF_RESUME_MINUTES * 60 * 1000),
+        },
+      });
     }
     return tx.message.create({
       data: {
@@ -253,6 +273,19 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
       },
     });
   });
+
+  // Avisar a quien atiende el inbox. Fuera de la transacción y sin await sobre su
+  // error: que falle un push no puede tumbar la respuesta al lead.
+  if (forceHandoff) {
+    const lastInbound = [...conversation.messages].reverse().find((m) => m.direction === "INBOUND");
+    await notifyStaffOfBotHandoff({
+      leadName: leadName ?? "Lead sin nombre",
+      sede: resolvedSede ?? conversation.sede,
+      lastMessage: lastInbound?.body ?? null,
+    }).catch((err) => {
+      console.error("[whatsapp-agent] no se pudo avisar del handoff", err);
+    });
+  }
 
   // If the agent booked an evaluation, record it and schedule anti-no-show reminders.
   if (result.scheduledAtISO) {
