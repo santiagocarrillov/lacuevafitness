@@ -28,6 +28,15 @@ Sigue viva, no se promociona fuerte pero **el agente la puede ofrecer** cuando e
 2. Si duda por precio: **hasta $40/mes** a cambio de firmar débito automático + prepago (trimestral/semestral/anual).
 3. **Nunca abrir en $60** (precio de lista). Nunca abrir con el $40.
 
+## Registro: tuteo ecuatoriano, nunca voseo ✅ (Santiago, 21 sep 2026)
+Santiago notó que el bot "hablaba con acento argentino". Medido: 8 de 226 mensajes del bot, **todos con "contame"** — cero casos de "vos", "tenés", "vení" u otras formas. Contra 104 mensajes con el "cuéntame" correcto.
+
+- **Siempre tuteo:** "cuéntame", "ven", "mira", "tienes", "quieres", "puedes", "eres".
+- **Nunca** voseo ni rioplatensismos, ni españolismos ("vale", "guay"), ni mexicanismos ("órale").
+- **Sí se conserva la calidez local:** "bacán", "chévere", "de una", "full", "pana" son parte de la voz aprobada y no se tocan. Neutral = que no suene de otro país, no que suene frío.
+
+Está resuelto en dos capas: una regla en el system prompt y `neutralizeVoseo()` en `agent.ts`, que corrige las formas con equivalente 1:1 antes de enviar. A propósito NO toca "vos" (cambiarlo obliga a reescribir el verbo) ni "dale", que aquí se usa con naturalidad. Se verifica con `npm run test:registro`.
+
 ## Posicionamiento SRXFIT (qué somos / vs CrossFit) — copy aprobado ✅
 > *"En La Cueva entrenamos con nuestro propio método, el SRXFIT: entrenamiento funcional y de fuerza, guiado y basado en ciencia, enfocado en tu salud, longevidad y figura. Si lo comparas con CrossFit, tiene algunas similitudes, pero el SRXFIT es mucho más planificado, adaptado a ti, y sin competitividad con riesgo de lesiones peligrosas. No es 'llegar y sufrir': es entrenar con datos y con seguimiento."*
 > *"De hecho contamos con una health app donde cada atleta ve su progreso, sus rutinas, su plan nutricional (tenemos nutricionista de planta), sus asistencias y muchos datos más."*
