@@ -39,10 +39,32 @@ const LIMIT = arg("--limit", 15);
 /** Hasta qué tan atrás vale la pena reenganchar. */
 const DIAS_ATRAS = arg("--dias", 30);
 
+/**
+ * Cuándo deben dispararse. Por defecto ya mismo, pero el techo diario de
+ * plantillas es COMPARTIDO con los recordatorios de evaluación: sembrar un lote
+ * grande "para ahora" puede comerse los cupos que necesitaban los recordatorios
+ * de citas de hoy, y esos sí caducan. Con --fire-at se programa para después.
+ *
+ *   --fire-at 2026-09-22T08:00    (hora de Ecuador)
+ */
+function fireAtArg(): Date {
+  const i = process.argv.indexOf("--fire-at");
+  if (i === -1) return new Date();
+  const raw = process.argv[i + 1];
+  const d = new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(raw) ? raw : `${raw}:00-05:00`);
+  if (isNaN(d.getTime())) throw new Error(`--fire-at inválido: ${raw}`);
+  return d;
+}
+const FIRE_AT = fireAtArg();
+
 async function main() {
   const now = new Date();
+  const cuando = new Intl.DateTimeFormat("es-EC", {
+    timeZone: "America/Guayaquil", dateStyle: "short", timeStyle: "short",
+  }).format(FIRE_AT);
   console.log(
-    `\n=== ${APPLY ? "APLICANDO" : "DRY-RUN"} · lote ${LIMIT} · últimos ${DIAS_ATRAS} días ===\n`,
+    `\n=== ${APPLY ? "APLICANDO" : "DRY-RUN"} · lote ${LIMIT} · últimos ${DIAS_ATRAS} días ` +
+      `· disparan ${cuando} (Ecuador) ===\n`,
   );
 
   const desde = new Date(now.getTime() - DIAS_ATRAS * 24 * 60 * 60 * 1000);
@@ -98,7 +120,7 @@ async function main() {
       data: {
         conversationId: conv.id,
         kind: "NO_REPLY_1D",
-        fireAt: now,
+        fireAt: FIRE_AT,
         payload: { message },
       },
     });

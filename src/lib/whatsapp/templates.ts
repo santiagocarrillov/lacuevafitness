@@ -71,16 +71,39 @@ export type TemplateContext = {
  */
 export function templateName(firstName: string | null, lastName?: string | null): string {
   const raw = [firstName, lastName].filter(Boolean).join(" ");
-  const token = raw
-    .replace(/[\r\n\t]+/g, " ")
-    .split(/\s+/)
-    .find((w) => /\p{L}{2,}/u.test(w));
-  if (!token) return "qué tal";
-  // Deja solo letras, guiones y apóstrofes: "kevin❤️" → "kevin".
-  const clean = token.replace(/[^\p{L}\p{M}'-]/gu, "");
-  if (clean.length < 2) return "qué tal";
-  return clean.charAt(0).toLocaleUpperCase("es-EC") + clean.slice(1);
+  const tokens = raw.replace(/[\r\n\t]+/g, " ").split(/\s+/);
+
+  for (const token of tokens) {
+    // Deja solo letras, guiones y apóstrofes: "kevin❤️" → "kevin".
+    // Los selectores de variación y el ZWJ son \p{M}, así que sobrevivían al
+    // filtro y dejaban un carácter invisible pegado al nombre ("Kevin\uFE0F").
+    const clean = token
+      .replace(/[\u200D\uFE00-\uFE0F\u20E3]/gu, "")
+      .replace(/[^\p{L}\p{M}'-]/gu, "");
+
+    // Puro emoji o puntuación: no es un intento de nombre, sigue buscando. Así
+    // "🩷 María" todavía saluda a María.
+    if (clean.length === 0) continue;
+
+    // Tiene letras pero no sirve → PARA aquí, no sigas pescando. El lead
+    // 0995513631 se llama "Te" / "Amo Mi Pichuris🥰💋": seguir buscando producía
+    // "¡Hola Amo!". Si la primera palabra con letras no es un nombre, es que el
+    // perfil no tiene nombre — es un estado de WhatsApp, no una persona.
+    if (clean.length < 3) break;
+    if (PLACEHOLDER_TOKENS.has(clean.toLocaleLowerCase("es-EC"))) break;
+
+    return clean.charAt(0).toLocaleUpperCase("es-EC") + clean.slice(1);
+  }
+  return "qué tal";
 }
+
+/**
+ * Palabras que el propio sistema escribe cuando no hay nombre. Sin esto, el
+ * lead guardado como "Sin nombre" recibía "¡Hola Sin!".
+ */
+const PLACEHOLDER_TOKENS = new Set([
+  "sin", "nombre", "contacto", "lead", "cliente", "usuario", "desconocido", "null", "undefined",
+]);
 
 const hhmm = (d: Date) =>
   new Intl.DateTimeFormat("es-EC", {
