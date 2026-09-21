@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { sendText } from "@/lib/whatsapp/client";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
-import type { LeadStage, MessageDirection, Sede } from "@/generated/prisma/client";
+import type { LeadStage, MessageDirection, Prisma, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -28,7 +28,7 @@ async function requireInboxAccess() {
   return user;
 }
 
-export type InboxFilter = "all" | "unassigned" | "mine";
+export type InboxFilter = "all" | "unassigned" | "mine" | "waiting";
 
 export type ConversationRow = {
   id: string;
@@ -54,6 +54,29 @@ export type ConversationRow = {
   windowOpen: boolean;
 };
 
+/**
+ * "Esperando a una persona": el bot está en pausa y el último que habló fue el
+ * lead. Es justo el hueco que dejaba el handoff automático — el bot decía "un
+ * asesor te atiende", se pausaba, y nadie sabía que esa conversación existía.
+ * El 21 sep 2026 había 4 así, la más vieja de 37 horas.
+ */
+function waitingForHuman(): Prisma.ConversationWhereInput {
+  return {
+    botPaused: true,
+    lastInboundAt: { not: null },
+    OR: [
+      { lastOutboundAt: null },
+      { lastOutboundAt: { lt: prisma.conversation.fields.lastInboundAt } },
+    ],
+  };
+}
+
+/** Cuántas conversaciones están esperando a que alguien las tome. */
+export async function countWaitingForHuman(): Promise<number> {
+  await requireInboxAccess();
+  return prisma.conversation.count({ where: waitingForHuman() });
+}
+
 /** List conversations for the shared inbox, newest activity first. */
 export async function getConversations(filter: InboxFilter = "all"): Promise<ConversationRow[]> {
   const user = await requireInboxAccess();
@@ -66,7 +89,7 @@ export async function getConversations(filter: InboxFilter = "all"): Promise<Con
         : {};
 
   const conversations = await prisma.conversation.findMany({
-    where: { lead: { is: leadWhere } },
+    where: { lead: { is: leadWhere }, ...(filter === "waiting" ? waitingForHuman() : {}) },
     orderBy: { updatedAt: "desc" },
     take: 200,
     include: {
@@ -348,9 +371,12 @@ export async function sendManualReply(conversationId: string, body: string): Pro
         },
       }),
       // Sending manually = taking over: pause the bot and stamp the outbound time.
+      // botResumeAt se limpia a propósito: el bot pone una fecha de vuelta cuando
+      // escala solo, y si no la borráramos aquí el bot se metería en medio de la
+      // conversación que esta persona acaba de tomar.
       prisma.conversation.update({
         where: { id: conversation.id },
-        data: { botPaused: true, lastOutboundAt: new Date() },
+        data: { botPaused: true, botResumeAt: null, lastOutboundAt: new Date() },
       }),
     ]);
     revalidatePath("/dashboard/comunicacion");

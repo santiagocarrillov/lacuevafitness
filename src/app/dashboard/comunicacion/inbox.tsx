@@ -13,6 +13,7 @@ import {
   type ConversationRow,
   type ThreadData,
   type InboxFilter,
+  countWaitingForHuman,
 } from "@/lib/actions/comunicacion";
 import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 
@@ -34,6 +35,7 @@ const STAGE_LABEL: Record<string, string> = {
 
 const FILTERS: Array<{ key: InboxFilter; label: string }> = [
   { key: "all", label: "Todas" },
+  { key: "waiting", label: "Esperando" },
   { key: "unassigned", label: "Sin asignar" },
   { key: "mine", label: "Mías" },
 ];
@@ -126,6 +128,8 @@ type Props = {
 
 export function Inbox({ initialConversations, staff, currentUserId }: Props) {
   const [filter, setFilter] = useState<InboxFilter>("all");
+  /** Cuántas esperan a una persona — se pinta en la pestaña para que no pasen desapercibidas. */
+  const [waiting, setWaiting] = useState(0);
   const [conversations, setConversations] = useState<ConversationRow[]>(initialConversations);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [thread, setThread] = useState<ThreadData | null>(null);
@@ -155,6 +159,20 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     } catch {
       /* keep last good thread */
     }
+  }, []);
+
+  // El contador de "esperando" se refresca con la lista, no solo al cambiar de
+  // pestaña: una conversación puede caer ahí mientras el inbox está abierto.
+  useEffect(() => {
+    let alive = true;
+    const tick = () => {
+      countWaitingForHuman()
+        .then((n) => { if (alive) setWaiting(n); })
+        .catch(() => undefined);
+    };
+    tick();
+    const id = setInterval(tick, POLL_MS);
+    return () => { alive = false; clearInterval(id); };
   }, []);
 
   // Refetch when the filter changes.
@@ -244,6 +262,11 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
               }`}
             >
               {f.label}
+              {f.key === "waiting" && waiting > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  {waiting}
+                </span>
+              )}
             </button>
           ))}
         </div>
