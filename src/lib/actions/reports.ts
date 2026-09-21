@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { Sede, ExpenseCategory, MemberStatus } from "@/generated/prisma/client";
+import { ACTIVE_BASE } from "@/lib/member-status";
+import { Sede, ExpenseCategory } from "@/generated/prisma/client";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -29,7 +30,8 @@ function prevMonth(year: number, month: number) {
 export async function getAttendanceReport(sede: Sede | undefined, from: string, to: string) {
   const { start, end } = rangeBounds(from, to);
   const now = new Date();
-  const activeStatus = { in: [MemberStatus.ACTIVE, MemberStatus.TRIAL] };
+  // Los socios en evaluación (TRIAL) no cuentan como base activa — ver ACTIVE_BASE.
+  const activeStatus = { in: ACTIVE_BASE };
   const memberSede = sede ? { sede } : {};
   const sessionInRange = { date: { gte: start, lte: end }, ...(sede ? { sede } : {}) };
 
@@ -158,9 +160,9 @@ export async function getManagementKPIs(
     priorMonthMembers,
     planBreakdown,
   ] = await Promise.all([
-    // Socios activos totales
+    // Socios activos totales (sin los de evaluación: solo cuentan al pagar)
     prisma.member.count({
-      where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
+      where: { ...sedeFilter, status: { in: ACTIVE_BASE } },
     }),
     // Ventas del mes = nuevas membresías activas (excluye pases diarios)
     prisma.membership.count({
@@ -226,7 +228,7 @@ export async function getManagementKPIs(
     prisma.member.count({
       where: {
         ...sedeFilter,
-        status: { in: ["ACTIVE", "TRIAL", "CHURNED"] },
+        status: { in: [...ACTIVE_BASE, "CHURNED"] },
         joinedAt: { lt: start },
       },
     }),
@@ -797,7 +799,7 @@ export async function getSalesDetail(
 export async function getActiveMembersDetail(sede: Sede | undefined) {
   const sedeFilter = sede ? { sede } : {};
   return prisma.member.findMany({
-    where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
+    where: { ...sedeFilter, status: { in: ACTIVE_BASE } },
     include: {
       memberships: {
         // Exclude one-time daily passes — those don't represent an active member plan
