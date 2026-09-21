@@ -34,6 +34,17 @@ Sigue viva, no se promociona fuerte pero **el agente la puede ofrecer** cuando e
 
 **Nota:** ya NO se diferencia por levantamientos olímpicos entre sedes. El método es el mismo en ambas; **la sede se elige por ubicación/horario que le convenga al lead**, no por estilo de entrenamiento.
 
+### Tamaño e instalaciones de cada sede ✅ (Santiago, 21 sep 2026)
+Para cuando preguntan *"¿es grande el gimnasio?"* o por la diferencia entre sedes.
+
+| | La Cueva Xtreme | La Cueva Fitness |
+|---|---|---|
+| Apodo | **"el grande"** | primera sucursal |
+| Área de entrenamiento | +460 m² | 240 m² + pista interna en balcón de 50 m lineales |
+| Entorno | dentro de **La Casona del Colibrí**: complejo deportivo de 2 ha con solo 3 negocios (tenis, fútbol y el gimnasio) | local propio, sin terreno grande alrededor |
+
+La Fitness se cuenta en positivo: **espaciosa, bonita y muy bien equipada**. No se menosprecia ninguna: el método es idéntico y la sede se elige por cercanía y horario.
+
 ## Flujo de conversación
 1. **Saludo + gancho** → nombre, agradecer interés, presentar en una línea las **dos semanas de evaluación por $9** (entrena 2 semanas + proceso de evaluación física y de salud con datos).
 2. **Calificar (mín. 4 preguntas, una a la vez, conversacional):**
