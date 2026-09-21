@@ -38,6 +38,10 @@ export const SEDE_INFO: Record<Sede, { name: string; maps: string; morning: stri
 // ── Persona / system prompt (canonical copy from the playbook) ──────────────
 export const SYSTEM_PROMPT = `Eres asesor(a) de ventas de La Cueva (dos sedes en Sangolquí, Ecuador: La Cueva Fitness y La Cueva Xtreme). Atiendes por WhatsApp. Respondes SIEMPRE en español ecuatoriano, cálido, cercano, directo y sin jerga. Nunca suenas a robot ni a formulario. Haces preguntas, no interrogas. Mensajes cortos, estilo WhatsApp (usa emojis con moderación).
 
+# Cómo hablas (registro)
+Tuteo ecuatoriano, siempre. NUNCA vosea ni uses formas rioplatenses: se te escapa "contame" y suena argentino. Es "cuéntame". Lo mismo con cualquier otra: "vení"→"ven", "mirá"→"mira", "tenés"→"tienes", "querés"→"quieres", "podés"→"puedes", "sos"→"eres", "fijate"→"fíjate", "escribime"→"escríbeme". Nada de "vos" ni "che". Tampoco españolismos ("vale", "guay", "tío") ni mexicanismos ("órale", "ándale").
+Sí conservas la calidez de aquí: "bacán", "chévere", "de una", "full", "pana" están bien y son parte de la voz de La Cueva. Neutral no significa frío ni acartonado — significa que no suenes de otro país.
+
 # La oferta irresistible (tu gancho por defecto)
 $9 por dos semanas de evaluación. Copy de Santiago: "Entrena dos semanas por tan solo $9 y aprovecha todo un proceso de evaluación de tu condición física y de salud con datos científicos para que puedas saber cómo es el mejor entrenamiento para ti."
 Es un PROCESO de 2 semanas: el lead entrena con nosotros dos semanas y en ese tiempo lo evaluamos a fondo (condición física y salud, con datos) para saber qué entrenamiento le conviene. NO es una sesión suelta de evaluación ni una clase de prueba: nunca lo presentes como una cita única de $9. La primera sesión se agenda en los horarios de la sede; ese día arranca sus dos semanas. Es el gancho, NO el precio. Siempre abres con esto ante interés o preguntas de precio; el descubrimiento va antes que el precio de mensualidad.
@@ -199,5 +203,58 @@ export async function runAgent(
   if (!toolUse || toolUse.type !== "tool_use") {
     throw new Error("El agente no devolvió la llamada a la herramienta 'responder'.");
   }
-  return toolUse.input as AgentResult;
+  const parsed = toolUse.input as AgentResult;
+  return { ...parsed, reply: neutralizeVoseo(parsed.reply ?? "") };
+}
+
+/**
+ * Red de seguridad para el registro: cambia formas rioplatenses por su
+ * equivalente ecuatoriano.
+ *
+ * El prompt ya lo pide, pero estos mensajes se envían solos y el modelo se
+ * escapaba en ~3.5% de los casos (8 de 226 al 21 sep 2026, siempre con
+ * "contame"). Una regla de prompt baja la frecuencia; esto la cierra.
+ *
+ * Solo formas con equivalente 1:1 que no obligan a reescribir la frase. A
+ * propósito NO toca "vos" (cambiarlo exige ajustar el verbo que lo acompaña) ni
+ * "dale", que en Ecuador se usa con toda naturalidad.
+ */
+const VOSEO_FIXES: ReadonlyArray<readonly [string, string]> = [
+  ["contame", "cuéntame"],
+  ["contanos", "cuéntanos"],
+  ["decime", "dime"],
+  ["escribime", "escríbeme"],
+  ["mandame", "mándame"],
+  ["acordate", "acuérdate"],
+  ["fijate", "fíjate"],
+  ["vení", "ven"],
+  ["venís", "vienes"],
+  ["mirá", "mira"],
+  ["tomá", "toma"],
+  ["tenés", "tienes"],
+  ["querés", "quieres"],
+  ["podés", "puedes"],
+  ["sabés", "sabes"],
+  ["hacés", "haces"],
+  ["decís", "dices"],
+  ["sos", "eres"],
+];
+
+/** Respeta la capitalización del original: "Contame" → "Cuéntame". */
+function matchCase(original: string, replacement: string): string {
+  if (original === original.toLocaleUpperCase("es-EC")) return replacement.toLocaleUpperCase("es-EC");
+  if (original[0] === original[0]?.toLocaleUpperCase("es-EC")) {
+    return replacement.charAt(0).toLocaleUpperCase("es-EC") + replacement.slice(1);
+  }
+  return replacement;
+}
+
+export function neutralizeVoseo(text: string): string {
+  let out = text;
+  for (const [from, to] of VOSEO_FIXES) {
+    // \p{L} en los bordes: así "sos" no toca "sosténme" ni "nosotros".
+    const re = new RegExp(`(?<!\\p{L})${from}(?!\\p{L})`, "giu");
+    out = out.replace(re, (m) => matchCase(m, to));
+  }
+  return out;
 }
