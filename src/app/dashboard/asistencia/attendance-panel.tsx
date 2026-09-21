@@ -17,7 +17,9 @@ import {
   getTodayTrialLeads,
   recordTrialAttendance,
   type TrialLeadRow,
+  type TrialMemberDraft,
 } from "@/lib/actions/attendance";
+import { TrialCheckinDialog } from "./trial-checkin-dialog";
 
 type Member = {
   id: string;
@@ -52,6 +54,8 @@ export function AttendancePanel({
   const [coachCount, setCoachCount] = useState("");
   const [crossResults, setCrossResults] = useState<CrossMember[] | null>(null);
   const [trialLeads, setTrialLeads] = useState<TrialLeadRow[]>([]);
+  /** Lead cuyo alta está abierta en el diálogo de check-in. */
+  const [checkinLead, setCheckinLead] = useState<TrialLeadRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function updateSearch(v: string) {
@@ -113,12 +117,18 @@ export function AttendancePanel({
     });
   }
 
-  /** Register a booked lead's evaluation: attendance + funnel in one click. */
-  async function handleAddTrialLead(leadId: string, name: string) {
+  /**
+   * Register a booked lead's evaluation: attendance + funnel + alta del socio.
+   *
+   * Los datos vienen del diálogo, no del perfil de WhatsApp: si falla (email
+   * repetido, apellido vacío) el diálogo se queda abierto para corregir.
+   */
+  async function handleAddTrialLead(leadId: string, draft: TrialMemberDraft) {
     startTransition(async () => {
       try {
-        await recordTrialAttendance(scheduleId, leadId);
-        toast.success(`${name} registrada: asistió a su evaluación ✅`);
+        const { memberName } = await recordTrialAttendance(scheduleId, leadId, draft);
+        toast.success(`${memberName} registrada: asistió a su evaluación ✅`);
+        setCheckinLead(null);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "No se pudo registrar.");
         return;
@@ -207,7 +217,7 @@ export function AttendancePanel({
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => handleAddTrialLead(l.leadId, l.name)}
+                      onClick={() => setCheckinLead(l)}
                       disabled={isPending || !windowOpen}
                       title={!windowOpen ? "Ventana de registro cerrada (después de las 9:30pm)" : undefined}
                       className="shrink-0"
@@ -219,11 +229,19 @@ export function AttendancePanel({
               ))}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Al registrarla queda en esta clase como cualquier atleta y el embudo pasa a
-              &laquo;Asistió&raquo; al instante.
+              Al registrarla se confirman sus datos reales, queda en esta clase como
+              cualquier atleta y el embudo pasa a &laquo;Asistió&raquo; al instante.
             </p>
           </div>
         )}
+
+        <TrialCheckinDialog
+          lead={checkinLead}
+          open={checkinLead !== null}
+          onOpenChange={(o) => !o && setCheckinLead(null)}
+          isPending={isPending}
+          onConfirm={(draft) => checkinLead && handleAddTrialLead(checkinLead.leadId, draft)}
+        />
 
         {/* ── Add member ─────────────────────────────────────────── */}
         <div className="space-y-2">

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Sede, MembershipState } from "@/generated/prisma/client";
 import { updateChallengeProgress } from "./challenges";
 import { requireAuth, can } from "@/lib/auth";
+import { ACTIVE_BASE, TRAINING_BASE } from "@/lib/member-status";
 import { markLeadAttended } from "@/lib/leads/trial-attendance";
 import {
   todayDateUtc, todayDayOfWeekEcuador, ecuadorDateAt as ecuadorDateAtTz,
@@ -101,7 +102,7 @@ export async function getActiveMembers(sede: Sede) {
       // A member can train at this sede as their primary OR secondary sede, so
       // staff at either location can register their attendance.
       OR: [{ sede }, { secondarySede: sede }],
-      status: { in: ["ACTIVE", "TRIAL"] },
+      status: { in: TRAINING_BASE },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     select: {
@@ -129,7 +130,7 @@ export async function searchMembersAllSedes(query: string) {
   if (q.length < 2) return [];
   return prisma.member.findMany({
     where: {
-      status: { in: ["ACTIVE", "TRIAL"] },
+      status: { in: TRAINING_BASE },
       OR: [
         { firstName: { contains: q, mode: "insensitive" } },
         { lastName: { contains: q, mode: "insensitive" } },
@@ -158,6 +159,10 @@ export async function searchMembersAllSedes(query: string) {
 export type TrialLeadRow = {
   leadId: string;
   name: string;
+  /** Datos crudos del lead, para precargar el alta y que se puedan corregir. */
+  firstName: string;
+  lastName: string | null;
+  email: string | null;
   phone: string | null;
   /** Booked time, ISO. */
   scheduledAt: string;
@@ -190,7 +195,7 @@ export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
     },
     orderBy: { trialScheduledAt: "asc" },
     select: {
-      id: true, firstName: true, lastName: true, phone: true,
+      id: true, firstName: true, lastName: true, email: true, phone: true,
       trialScheduledAt: true, stage: true, adHeadline: true, trialAttended: true,
     },
   });
@@ -198,6 +203,9 @@ export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
   return leads.map((l) => ({
     leadId: l.id,
     name: [l.firstName, l.lastName].filter(Boolean).join(" ") || "Sin nombre",
+    firstName: l.firstName,
+    lastName: l.lastName,
+    email: l.email,
     phone: l.phone,
     scheduledAt: l.trialScheduledAt!.toISOString(),
     stage: l.stage,
@@ -205,6 +213,18 @@ export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
     attended: l.trialAttended === true,
   }));
 }
+
+/** Datos con los que se da de alta al socio al registrar su evaluación. */
+export type TrialMemberDraft = {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  /** yyyy-mm-dd */
+  dateOfBirth?: string;
+};
+
+const clean = (v?: string | null) => v?.trim() || undefined;
 
 /**
  * Register a lead's evaluation visit.
@@ -214,10 +234,17 @@ export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
  * Attendance table as every other athlete, and moves the funnel to
  * TRIAL_ATTENDED. The member is status TRIAL, so from tomorrow they show up in
  * the normal attendance search for the rest of their two weeks.
+ *
+ * `draft` son los datos que el admin confirma en el mostrador. Sin él, el socio
+ * heredaba el nombre del perfil de WhatsApp — que suele ser basura ("🌒..H..🪐⏳")
+ * y se quedaba pegado en reportes, portal y facturación. Nombre y apellido son
+ * obligatorios; el resto se completa cuando cierre la venta. Los datos corregidos
+ * se copian también al Lead, para que el embudo deje de mostrar el alias.
  */
 export async function recordTrialAttendance(
   scheduleId: string,
   leadId: string,
+  draft: TrialMemberDraft,
 ): Promise<{ memberId: string; memberName: string }> {
   const user = await requireAuth();
   if (!can.recordAttendance(user)) {
@@ -227,24 +254,58 @@ export async function recordTrialAttendance(
     throw new Error("La ventana de registro está cerrada (cierra a las 9:30pm Ecuador). El siguiente día empieza a las 12:00 AM.");
   }
 
+  const firstName = draft.firstName?.trim() ?? "";
+  const lastName = draft.lastName?.trim() ?? "";
+  if (firstName.length < 2 || lastName.length < 2) {
+    throw new Error("Nombre y apellido son obligatorios para dar de alta al socio.");
+  }
+  const email = clean(draft.email);
+  const phone = clean(draft.phone);
+  const dateOfBirth = clean(draft.dateOfBirth);
+
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
     include: { member: true },
   });
   if (!lead) throw new Error("Lead no encontrado.");
 
+  // Member.email es @unique: se avisa antes de entrar a la transacción, para que
+  // el admin corrija el campo en vez de recibir un error de Prisma.
+  if (email) {
+    const taken = await prisma.member.findUnique({ where: { email } });
+    if (taken && taken.id !== lead.member?.id) {
+      throw new Error(
+        `Ya existe un socio con el email ${email} (${taken.firstName} ${taken.lastName}).`,
+      );
+    }
+  }
+
   const session = await getOrCreateTodaySession(scheduleId);
 
   const memberId = await prisma.$transaction(async (tx) => {
     // The lead may already be a socio (came back, or was converted earlier).
     let member = lead.member;
-    if (!member) {
+    if (member) {
+      // Ya era socio (volvió, o alguien lo creó antes): se le corrigen los datos
+      // con lo que el admin acaba de confirmar, sin pisar nada con vacío.
+      member = await tx.member.update({
+        where: { id: member.id },
+        data: {
+          firstName,
+          lastName,
+          email: email ?? undefined,
+          phone: phone ?? undefined,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        },
+      });
+    } else {
       member = await tx.member.create({
         data: {
-          firstName: lead.firstName,
-          // Member.lastName is required; leads often arrive with only a first name.
-          lastName: lead.lastName?.trim() || "(evaluación)",
-          phone: lead.phone,
+          firstName,
+          lastName,
+          email,
+          phone: phone ?? lead.phone,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           sede: lead.sede,
           status: "TRIAL",
           leadId: lead.id,
@@ -252,6 +313,17 @@ export async function recordTrialAttendance(
         },
       });
     }
+
+    // El embudo se queda con el nombre real, no con el alias de WhatsApp.
+    await tx.lead.update({
+      where: { id: lead.id },
+      data: {
+        firstName,
+        lastName,
+        email: email ?? lead.email ?? undefined,
+        phone: phone ?? lead.phone ?? undefined,
+      },
+    });
 
     await tx.attendance.upsert({
       where: { memberId_classSessionId: { memberId: member.id, classSessionId: session.id } },
@@ -280,10 +352,10 @@ export async function recordTrialAttendance(
 
   revalidatePath("/dashboard/asistencia");
   revalidatePath("/dashboard/leads");
+  revalidatePath("/dashboard/socios");
   revalidatePath("/dashboard");
 
-  const memberName = [lead.firstName, lead.lastName].filter(Boolean).join(" ");
-  return { memberId, memberName };
+  return { memberId, memberName: `${firstName} ${lastName}` };
 }
 
 // ── Record attendance ───────────────────────────────────────────────
@@ -526,7 +598,7 @@ export async function getDashboardStats(sede?: Sede) {
     todayRevenueAgg,
   ] = await Promise.all([
     prisma.member.count({
-      where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
+      where: { ...sedeFilter, status: { in: ACTIVE_BASE } },
     }),
     prisma.attendance.count({
       where: {
