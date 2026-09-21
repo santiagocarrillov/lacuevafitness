@@ -6,9 +6,10 @@
  *
  * Meta's 24h service window: free-text replies are only allowed within 24h of the
  * lead's last inbound. Reminders usually fire OUTSIDE that window, so they require
- * an APPROVED template. Until templates are wired we send free text when we happen
- * to be inside the window, and mark out-of-window sends FAILED (to be re-sent as a
- * template once approved) instead of silently dropping them.
+ * an APPROVED template. Inside the window we send the free text we scheduled;
+ * outside it we send the matching approved template (see ./templates.ts), rate
+ * limited by WHATSAPP_TEMPLATE_DAILY_LIMIT so a bad batch can't burn the number's
+ * quality rating. A followup with no template for its kind is still marked FAILED.
  *
  * Note: this module writes ScheduledFollowup rows, never Message rows — a
  * followup's own outcome already lives in ScheduledFollowup.status/errorMessage,
@@ -18,11 +19,56 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { sendText } from "./client";
+import { sendText, sendTemplate, describeSendError } from "./client";
+import { templateForFollowup } from "./templates";
 import { SEDE_INFO } from "./agent";
 import type { FollowupKind, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Techo de plantillas por día (hora de Ecuador). Cada plantilla cuesta y, si un
+ * lote grande genera bloqueos, Meta baja la calidad del número y se cae el canal
+ * entero. Santiago pidió arrancar con un lote chico y medir: 15/día. Ponerlo en 0
+ * apaga los envíos por plantilla sin tocar código.
+ */
+const TEMPLATE_DAILY_LIMIT = Number(process.env.WHATSAPP_TEMPLATE_DAILY_LIMIT ?? 15);
+
+/**
+ * Cuánto puede llegar tarde un followup antes de que mandarlo haga más daño que
+ * bien. Un recordatorio frenado (techo diario, cron caído) que sale 5 horas tarde
+ * diciendo "en una hora es tu sesión" queda ridículo y quema confianza; un
+ * reenganche que sale un día tarde da igual.
+ */
+function maxLateMs(kind: FollowupKind): number {
+  switch (kind) {
+    case "TRIAL_REMINDER_1H":
+    case "TRIAL_REMINDER_2H":
+      return 90 * 60 * 1000; // hora y media
+    case "TRIAL_REMINDER_24H":
+      return 12 * 60 * 60 * 1000;
+    default:
+      return 7 * 24 * 60 * 60 * 1000;
+  }
+}
+
+/** Ecuador es UTC-5 todo el año (no hay horario de verano). */
+function startOfEcuadorDay(now: Date): Date {
+  const local = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+  local.setUTCHours(0, 0, 0, 0);
+  return new Date(local.getTime() + 5 * 60 * 60 * 1000);
+}
+
+/** Cuántas plantillas se enviaron hoy, para no pasarse del techo diario. */
+async function templatesSentToday(now: Date): Promise<number> {
+  return prisma.scheduledFollowup.count({
+    where: {
+      status: "SENT",
+      sentAt: { gte: startOfEcuadorDay(now) },
+      payload: { path: ["sentVia"], equals: "template" },
+    },
+  });
+}
 
 /** Create a followup unless its fire time is already in the past. */
 export async function scheduleFollowup(
@@ -81,6 +127,10 @@ export type ProcessSummary = {
   sent: number;
   failed: number;
   skipped: number;
+  /** De los `sent`, cuántos salieron como plantilla (fuera de la ventana de 24h). */
+  sentAsTemplate: number;
+  /** Fuera de ventana pero frenados por el techo diario: siguen PENDING. */
+  templateThrottled: number;
   /** Conversations whose scheduled hand-back to the bot came due. */
   botResumed: number;
 };
@@ -111,10 +161,21 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     where: { status: "PENDING", fireAt: { lte: now } },
     orderBy: { fireAt: "asc" },
     take: limit,
-    include: { conversation: true },
+    include: { conversation: { include: { lead: true } } },
   });
 
-  const summary: ProcessSummary = { due: due.length, sent: 0, failed: 0, skipped: 0, botResumed };
+  const summary: ProcessSummary = {
+    due: due.length,
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    sentAsTemplate: 0,
+    templateThrottled: 0,
+    botResumed,
+  };
+
+  // Presupuesto de plantillas de la corrida: lo que queda del techo del día.
+  let templateBudget = Math.max(0, TEMPLATE_DAILY_LIMIT - (await templatesSentToday(now)));
 
   for (const f of due) {
     const conv = f.conversation;
@@ -130,30 +191,50 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
       summary.skipped += 1;
       continue;
     }
+    if (now.getTime() - f.fireAt.getTime() > maxLateMs(f.kind)) {
+      await mark(f.id, "CANCELED", `vencido: debía salir ${f.fireAt.toISOString()}`);
+      summary.skipped += 1;
+      continue;
+    }
 
     const withinWindow =
       conv.lastInboundAt != null &&
       now.getTime() - new Date(conv.lastInboundAt).getTime() < WINDOW_MS;
 
     if (!withinWindow) {
-      await mark(f.id, "FAILED", "fuera de ventana 24h — requiere template aprobada");
-      summary.failed += 1;
+      const spec = templateForFollowup(f.kind, conv.lead);
+      if (!spec) {
+        await mark(f.id, "FAILED", `fuera de ventana 24h y ${f.kind} no tiene plantilla aplicable`);
+        summary.failed += 1;
+        continue;
+      }
+      if (templateBudget <= 0) {
+        // Se queda PENDING a propósito: lo toma la corrida de mañana, cuando el
+        // techo diario se reinicia. Nada que reprogramar a mano.
+        summary.templateThrottled += 1;
+        continue;
+      }
+      try {
+        await sendTemplate(conv.externalId, spec.name, spec.language, spec.variables);
+        await markSent(f.id, f.payload, spec.name);
+        await touchOutbound(conv.id);
+        templateBudget -= 1;
+        summary.sent += 1;
+        summary.sentAsTemplate += 1;
+      } catch (err) {
+        await mark(f.id, "FAILED", `plantilla ${spec.name}: ${describeSendError(err)}`);
+        summary.failed += 1;
+      }
       continue;
     }
 
     try {
       await sendText(conv.externalId, message);
-      await prisma.scheduledFollowup.update({
-        where: { id: f.id },
-        data: { status: "SENT", sentAt: new Date() },
-      });
-      await prisma.conversation.update({
-        where: { id: conv.id },
-        data: { lastOutboundAt: new Date() },
-      });
+      await markSent(f.id, f.payload, null);
+      await touchOutbound(conv.id);
       summary.sent += 1;
     } catch (err) {
-      await mark(f.id, "FAILED", err instanceof Error ? err.message : "error al enviar");
+      await mark(f.id, "FAILED", describeSendError(err));
       summary.failed += 1;
     }
   }
@@ -163,4 +244,30 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
 
 async function mark(id: string, status: "CANCELED" | "FAILED", errorMessage: string) {
   await prisma.scheduledFollowup.update({ where: { id }, data: { status, errorMessage } });
+}
+
+/**
+ * Marca el followup como enviado, dejando anotado en el payload si salió por
+ * plantilla. Ese `sentVia` es lo que cuenta `templatesSentToday()` para el techo
+ * diario, y de paso deja rastro de qué plantilla se usó cuando haya que auditar.
+ */
+async function markSent(id: string, payload: unknown, template: string | null) {
+  const base = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  await prisma.scheduledFollowup.update({
+    where: { id },
+    data: {
+      status: "SENT",
+      sentAt: new Date(),
+      payload: template
+        ? { ...base, sentVia: "template", template }
+        : { ...base, sentVia: "text" },
+    },
+  });
+}
+
+async function touchOutbound(conversationId: string) {
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { lastOutboundAt: new Date() },
+  });
 }
