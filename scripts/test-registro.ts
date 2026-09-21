@@ -10,6 +10,7 @@
  */
 
 import { neutralizeVoseo } from "../src/lib/whatsapp/agent";
+import { templateName } from "../src/lib/whatsapp/templates";
 
 const casos: Array<[string, string]> = [
   // Los casos reales que salieron en producción
@@ -36,5 +37,35 @@ for (const [entrada, esperado] of casos) {
   console.log(`${ok ? "✅" : "❌"} ${entrada}`);
   if (!ok) console.log(`   esperaba: ${esperado}\n   obtuvo:   ${real}`);
 }
-console.log(`\n${casos.length - fallos}/${casos.length} correctos`);
-process.exit(fallos > 0 ? 1 : 0);
+console.log(`\n${casos.length - fallos}/${casos.length} correctos (registro)`);
+
+// ── Nombres que van dentro de las plantillas ─────────────────────────────
+// Vienen del perfil de WhatsApp y son basura con frecuencia. Lo que NO puede
+// pasar es mandar "¡Hola Sin!" o "¡Hola Te!" a un cliente real.
+const nombres: Array<[string, string | null, string]> = [
+  ["Nadia", null, "Nadia"],
+  ["kevin❤️", null, "Kevin"],
+  ["🌒..H..🪐⏳", null, "qué tal"],
+  ["666", null, "qué tal"],
+  ["Sin nombre", null, "qué tal"],
+  ["Te", "Amo Mi Pichuris🥰💋", "qué tal"],
+  ["🩷", "María", "María"],
+  ["R.C.", null, "qué tal"],
+  ["👹👹Nelson", null, "Nelson"],
+  ["📝", "contacto sin nombre", "qué tal"],
+  ["𝓛𝓲𝔃𝓮𝓽𝓽𝓮", null, "𝓛𝓲𝔃𝓮𝓽𝓽𝓮"],
+  ["ricardoalexdelgado", null, "Ricardoalexdelgado"],
+  [" ", "Arcos", "Arcos"],
+];
+
+let fallosN = 0;
+for (const [first, last, esperado] of nombres) {
+  const real = templateName(first, last);
+  const ok = real === esperado;
+  if (!ok) fallosN++;
+  console.log(`${ok ? "✅" : "❌"} templateName(${JSON.stringify(first)}, ${JSON.stringify(last)}) → "${real}"`);
+  if (!ok) console.log(`   esperaba: "${esperado}"`);
+}
+console.log(`\n${nombres.length - fallosN}/${nombres.length} correctos (nombres)`);
+
+process.exit(fallos + fallosN > 0 ? 1 : 0);
