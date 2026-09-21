@@ -1,5 +1,14 @@
 # Templates de WhatsApp para aprobación (Meta)
 
+> **ESTADO (21 sep 2026): las 5 fueron CREADAS y ENVIADAS A REVISIÓN** en la WABA
+> 1409189890114741, idioma **Spanish (`es`)**. Antes de esto la cuenta solo tenía
+> `hello_world` (inglés) — ninguna se había llegado a crear, y por eso todo envío
+> fuera de la ventana de 24h fallaba.
+>
+> **Pendiente para que sirvan de algo:** `sequences.ts` todavía NO las usa. Hoy un
+> followup fuera de ventana se marca `FAILED` con "requiere template aprobada";
+> nadie llama a `sendTemplate()`. Ese cableado es trabajo aparte.
+
 > Se someten en **WhatsApp Manager → Account tools → Message templates → Create**.
 > Idioma: **Español (es)**. Aprobación: ~1–2 días. Variables `{{n}}` deben ir en orden.
 > El código las envía con `sendTemplate(to, name, "es", [var1, var2, ...])` — el ORDEN de
@@ -22,12 +31,13 @@ Recordatorio 24h antes de la primera sesión agendada (arranque de las dos seman
 
 ---
 
-## 2. `recordatorio_eval_2h` — Categoría: **Utility**
-Recordatorio 2h antes.
+## 2. `recordatorio_eval_1h` — Categoría: **Utility**
+Recordatorio **1 hora** antes (era 2h; Santiago lo movió a 1h el 21 sep 2026 —
+más cerca del momento en que la persona decide si sale de casa).
 
-**Body:**
+**Body:** (idéntico al texto que arma `scheduleTrialReminders`)
 ```
-¡Hola {{1}}! En un par de horas es tu primera sesión en {{2}} ({{3}}). ¡Arrancas tus dos semanas! Te esperamos 📍💪
+¡Hola {{1}}! En una hora es tu primera sesión en {{2}} ({{3}}). Llega 15 min antes para tomarte los datos de tu evaluación. ¡Te esperamos! 📍💪
 ```
 **Variables:** `{{1}}` = nombre · `{{2}}` = sede · `{{3}}` = hora
 **Ejemplo:** Andrea · La Cueva Xtreme · 7:00
@@ -75,7 +85,8 @@ Marketing, reintentar como **Utility** (mensaje sobre su membresía/servicio vig
 ---
 
 ## Notas
-- **Categoría correcta = aprobación más rápida.** Los recordatorios (1, 2) son transaccionales sobre una cita que el lead agendó → **Utility**. Los que llevan la oferta "$9 por dos semanas de evaluación" (3, 4) son promocionales → **Marketing**.
+- **Categoría correcta = aprobación más rápida.** Confirmado en la práctica: enviadas el 21 sep, `recordatorio_eval_1h`, `noshow_recuperacion` y `reengagement_no_reply` quedaron aprobadas en minutos. Los recordatorios (1, 2) son transaccionales sobre una cita que el lead agendó → **Utility**. Los que llevan la oferta "$9 por dos semanas de evaluación" (3, 4) son promocionales → **Marketing**.
 - **Sin botones por ahora:** el cliente (`sendTemplate`) hoy solo mete variables en el body. Si más adelante queremos botones "Sí, confirmo / Reagendar", se amplía el cliente y se re-somete la template.
 - **Números de teléfono / links** en el body pueden ralentizar la aprobación; por eso los mantengo fuera.
-- Tras aprobación, el motor de secuencias (`sequences.ts`) las usará automáticamente para envíos fuera de la ventana de 24h (hoy esos marcan FAILED a la espera de estas templates).
+- **El cableado sigue pendiente.** `client.ts` ya expone `sendTemplate(to, name, "es", [vars])`, pero `processDueFollowups` no lo llama: fuera de la ventana marca FAILED y punto. Mientras no se conecte, tener las plantillas aprobadas no cambia nada en producción.
+- **Gotcha del editor de Meta:** al escribir `{{` el editor inserta la variable completa (`{{1}}`) y deja el cursor después. Escribir `{{1}}` a mano produce `{{1}}}}`, y usar el botón "Add variable" recorta el espacio anterior (`¡Hola{{1}}`). Lo que funciona: escribir el texto de corrido y solo `{{` donde va cada variable.
