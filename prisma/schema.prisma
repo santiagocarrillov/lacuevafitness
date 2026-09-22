@@ -334,11 +334,13 @@ enum LeadSource {
 enum LeadStage {
   NEW
   CONTACTED
+  QUALIFIED // encaja con lo que ofrecemos, todavía no agenda
   SCHEDULED_TRIAL
-  TRIAL_ATTENDED
+  TRIAL_ATTENDED // está viviendo sus dos semanas de evaluación
   TRIAL_NO_SHOW
   NEGOTIATING
-  CONVERTED
+  CONVERTED // paga mensualidad: socio activo. El trial de $9 NO cuenta.
+  DISQUALIFIED // nunca iba a encajar (horarios, ubicación) — distinto de LOST
   LOST
 }
 

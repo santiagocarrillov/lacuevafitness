@@ -13,6 +13,13 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { updateLeadStage, convertLeadToMember } from "@/lib/actions/leads";
+import { LEAD_STAGES as allStages, STAGE_COLOR, STAGE_LABEL } from "@/lib/leads/stages";
+import type { LeadStage } from "@/generated/prisma/client";
+
+// La fila llega con `stage: string` (viene serializada del servidor), así que se
+// indexa con un cast controlado en vez de ensuciar los mapas con index signatures.
+const stageLabels = (s: string) => STAGE_LABEL[s as LeadStage] ?? s;
+const stageColors = (s: string) => STAGE_COLOR[s as LeadStage] ?? "";
 import { getMembershipPlans } from "@/lib/actions/members";
 
 type LeadRow = {
@@ -39,28 +46,6 @@ type Plan = {
   durationDays: number;
 };
 
-const stageColors: Record<string, string> = {
-  NEW: "text-blue-700 bg-blue-50 border-blue-200",
-  CONTACTED: "text-indigo-700 bg-indigo-50 border-indigo-200",
-  SCHEDULED_TRIAL: "text-purple-700 bg-purple-50 border-purple-200",
-  TRIAL_ATTENDED: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  TRIAL_NO_SHOW: "text-amber-700 bg-amber-50 border-amber-200",
-  NEGOTIATING: "text-orange-700 bg-orange-50 border-orange-200",
-  CONVERTED: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  LOST: "text-red-700 bg-red-50 border-red-200",
-};
-
-const stageLabels: Record<string, string> = {
-  NEW: "Nuevo",
-  CONTACTED: "Contactado",
-  SCHEDULED_TRIAL: "C.P. agendada",
-  TRIAL_ATTENDED: "C.P. asistió",
-  TRIAL_NO_SHOW: "No asistió",
-  NEGOTIATING: "Negociando",
-  CONVERTED: "Convertido",
-  LOST: "Perdido",
-};
-
 const sourceLabels: Record<string, string> = {
   INSTAGRAM: "Instagram",
   FACEBOOK: "Facebook",
@@ -73,10 +58,7 @@ const sourceLabels: Record<string, string> = {
   OTHER: "Otro",
 };
 
-const allStages = [
-  "NEW", "CONTACTED", "SCHEDULED_TRIAL", "TRIAL_ATTENDED",
-  "TRIAL_NO_SHOW", "NEGOTIATING", "CONVERTED", "LOST",
-];
+
 
 export function LeadTable({
   leads,
@@ -111,8 +93,8 @@ export function LeadTable({
     }
 
     startTransition(async () => {
-      await updateLeadStage(lead.id, newStage as any);
-      toast.success(`Etapa actualizada a ${stageLabels[newStage] ?? newStage}`);
+      await updateLeadStage(lead.id, newStage as LeadStage);
+      toast.success(`Etapa actualizada a ${stageLabels(newStage)}`);
       router.refresh();
     });
   }
@@ -190,11 +172,11 @@ export function LeadTable({
                       value={l.stage}
                       onChange={(e) => handleStageChange(l, e.target.value)}
                       disabled={isPending}
-                      className={`text-xs rounded-md border px-2 py-1 ${stageColors[l.stage] ?? ""}`}
+                      className={`text-xs rounded-md border px-2 py-1 ${stageColors(l.stage)}`}
                     >
                       {allStages.map((s) => (
                         <option key={s} value={s}>
-                          {stageLabels[s] ?? s}
+                          {stageLabels(s)}
                         </option>
                       ))}
                     </select>

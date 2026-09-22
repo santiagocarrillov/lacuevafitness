@@ -1,19 +1,12 @@
-/** Etiquetas y formatos que comparten el listado del inbox y los resultados de búsqueda. */
+/**
+ * Formatos del inbox. Las etiquetas del ciclo de vida NO viven aquí: están en
+ * `@/lib/leads/stages` porque las comparte con la tabla de Leads, y tenerlas
+ * duplicadas ya las había desincronizado ("Cerrado" aquí, "Convertido" allá).
+ */
 
 export const SEDE_LABEL: Record<string, string> = {
   FITNESS_CENTER: "Fitness",
   XTREME: "Xtreme",
-};
-
-export const STAGE_LABEL: Record<string, string> = {
-  NEW: "Nuevo",
-  CONTACTED: "Contactado",
-  SCHEDULED_TRIAL: "Agendado",
-  TRIAL_ATTENDED: "Asistió",
-  TRIAL_NO_SHOW: "No asistió",
-  NEGOTIATING: "Negociando",
-  CONVERTED: "Cerrado",
-  LOST: "Perdido",
 };
 
 /** Solo la hora: para la fila de una conversación de hoy. */
