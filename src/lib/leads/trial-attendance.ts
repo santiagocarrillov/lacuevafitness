@@ -16,30 +16,94 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { nextSendableAt, scheduleFollowup } from "@/lib/whatsapp/sequences";
+import { templateName } from "@/lib/whatsapp/templates";
 import type { Prisma } from "@/generated/prisma/client";
 
 /** Grace period after a booked slot before we call it a no-show. */
 export const NO_SHOW_GRACE_MS = 3 * 60 * 60 * 1000;
 
 /**
- * Move past-due appointments nobody registered to TRIAL_NO_SHOW.
- *
- * DB only — it sends nothing. Without it the funnel can't tell "didn't come"
- * from "came but nobody wrote it down", and both look like a silent SCHEDULED_TRIAL
- * forever. Re-marking is safe: registering the visit later flips the lead back to
- * TRIAL_ATTENDED.
+ * Texto del rescate. Solo se usa si la conversación sigue dentro de la ventana
+ * de 24h; fuera de ella sale la plantilla `noshow_recuperacion`, que dice lo
+ * mismo. `payload.message` es obligatorio: sin él el cron cancela el followup.
  */
-export async function markMissedTrials(now: Date = new Date()): Promise<number> {
+function recoveryMessage(firstName: string | null, lastName: string | null): string {
+  return (
+    `¡Hola ${templateName(firstName, lastName)}! 😊 Vimos que no pudiste venir a tu primera ` +
+    `sesión. ¿La reagendamos? Tenemos cupos esta semana. Recuerda: entrenas dos semanas por ` +
+    `tan solo $9 y aprovechas todo un proceso de evaluación de tu condición física y de ` +
+    `salud. ¿Qué día te queda mejor?`
+  );
+}
+
+/**
+ * Move past-due appointments nobody registered to TRIAL_NO_SHOW, and schedule
+ * the rescue message for each one.
+ *
+ * Marcar el no-show nunca bastó: el 21 sep cuatro personas agendaron, ninguna
+ * llegó y nadie les volvió a escribir. `NOSHOW_RECOVERY_1D` y la plantilla
+ * `noshow_recuperacion` existían desde el 21, pero NADA las programaba — había
+ * que sembrarlas a mano. Esto cierra el circuito: quien no viene recibe la
+ * invitación a reagendar sin que nadie se acuerde de hacerlo.
+ *
+ * Re-marcar sigue siendo seguro: registrar la visita después devuelve el lead a
+ * TRIAL_ATTENDED, y el rescate ya programado se cancela solo si alguien toma la
+ * conversación (el cron descarta followups con el bot en pausa).
+ */
+export async function markMissedTrials(
+  now: Date = new Date(),
+): Promise<{ marked: number; recoveries: number }> {
   const cutoff = new Date(now.getTime() - NO_SHOW_GRACE_MS);
-  const { count } = await prisma.lead.updateMany({
+  const missed = await prisma.lead.findMany({
     where: {
       stage: "SCHEDULED_TRIAL",
       trialScheduledAt: { not: null, lt: cutoff },
       trialAttended: null,
     },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      trialScheduledAt: true,
+      conversation: { select: { id: true } },
+    },
+  });
+  if (missed.length === 0) return { marked: 0, recoveries: 0 };
+
+  await prisma.lead.updateMany({
+    where: { id: { in: missed.map((l) => l.id) } },
     data: { stage: "TRIAL_NO_SHOW", trialAttended: false },
   });
-  return count;
+
+  let recoveries = 0;
+  for (const lead of missed) {
+    // Sin conversación de WhatsApp no hay a dónde escribir (leads del formulario
+    // web, altas a mano). El lead igual queda marcado como no-show.
+    if (!lead.conversation) continue;
+
+    // Una sola invitación por cita: si reagenda y vuelve a faltar, la nueva cita
+    // es posterior y sí genera otra. Así no se acumulan rescates del mismo plantón.
+    const yaTiene = await prisma.scheduledFollowup.findFirst({
+      where: {
+        conversationId: lead.conversation.id,
+        kind: { in: ["NOSHOW_RECOVERY_1D", "NOSHOW_RECOVERY_3D"] },
+        createdAt: { gte: lead.trialScheduledAt! },
+      },
+      select: { id: true },
+    });
+    if (yaTiene) continue;
+
+    await scheduleFollowup(
+      lead.conversation.id,
+      "NOSHOW_RECOVERY_1D",
+      nextSendableAt(new Date(now.getTime() + 60_000)),
+      recoveryMessage(lead.firstName, lead.lastName),
+    );
+    recoveries += 1;
+  }
+
+  return { marked: missed.length, recoveries };
 }
 
 /**

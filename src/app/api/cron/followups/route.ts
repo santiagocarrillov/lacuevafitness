@@ -22,11 +22,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    // DB-only sweep: appointments nobody registered become TRIAL_NO_SHOW, so the
-    // funnel stops showing stale "Agendado" for visits that already passed.
+    // Appointments nobody registered become TRIAL_NO_SHOW y, de paso, se les
+    // programa el rescate. Va ANTES de processDueFollowups a propósito: así un
+    // plantón de hace rato puede salir en esta misma corrida.
     const noShows = await markMissedTrials();
     const summary = await processDueFollowups();
-    return Response.json({ ok: true, ...summary, noShows });
+    return Response.json({
+      ok: true,
+      ...summary,
+      noShows: noShows.marked,
+      noShowRecoveries: noShows.recoveries,
+    });
   } catch (err) {
     console.error("[cron/followups] error", err);
     return Response.json(
