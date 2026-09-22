@@ -13,6 +13,7 @@ import {
   setLeadStage,
   searchInbox,
   searchConversation,
+  openMemberConversation,
   type ConversationRow,
   type ThreadData,
   type InboxFilter,
@@ -498,6 +499,18 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
               selectedId={selectedId}
               onOpenChat={(id) => openConversation(id)}
               onOpenMessage={(id, messageId) => openConversation(id, messageId)}
+              onWriteMember={(memberId) => {
+                startTransition(async () => {
+                  const res = await openMemberConversation(memberId);
+                  if (!res.ok) {
+                    setStageNotice(res.error);
+                    return;
+                  }
+                  setQuery("");
+                  await refreshList(filterRef.current);
+                  openConversation(res.conversationId);
+                });
+              }}
             />
           ) : (
             <>
@@ -515,7 +528,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-sm truncate flex items-center gap-1.5">
                       {c.needsAttention && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
-                      {c.leadName}
+                      {c.contactName}
                     </span>
                     <span className="text-[10px] text-muted-foreground shrink-0">{timeShort(c.lastInboundAt)}</span>
                   </div>
@@ -532,7 +545,11 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                       {SEDE_LABEL[c.sede] ?? c.sede}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      {STAGE_LABEL[c.stage] ?? c.stage}
+                      {c.stage
+                        ? STAGE_LABEL[c.stage]
+                        : c.memberStatus
+                          ? `👤 ${MEMBER_STATUS_LABEL[c.memberStatus]}`
+                          : "—"}
                     </span>
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded ${
@@ -573,10 +590,11 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 >
                   ← Volver
                 </button>
-                <p className="font-semibold text-sm truncate">{thread.leadName}</p>
+                <p className="font-semibold text-sm truncate">{thread.contactName}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {SEDE_LABEL[thread.sede] ?? thread.sede} · {STAGE_LABEL[thread.stage] ?? thread.stage}
-                  {thread.leadPhone ? ` · ${thread.leadPhone}` : ""}
+                  {SEDE_LABEL[thread.sede] ?? thread.sede}
+                  {thread.stage ? ` · ${STAGE_LABEL[thread.stage]}` : ""}
+                  {thread.contactPhone ? ` · ${thread.contactPhone}` : ""}
                 </p>
                 {thread.botPaused && thread.botResumeAt && (
                   <p className="text-[11px] text-sky-700">
@@ -606,20 +624,24 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 </button>
                 {/* Ciclo de vida. Con socio creado esto es un estado de solo lectura:
                     la verdad la manda Member.status, nunca las dos a la vez. */}
-                {thread.memberStatus ? (
+                {thread.memberStatus || !thread.leadId ? (
                   <span
-                    title="Ya es socia: su estado se cambia en su ficha de socio"
-                    className={`text-xs px-2 py-1.5 rounded-md border ${MEMBER_STATUS_COLOR[thread.memberStatus]}`}
+                    title="Es socia: su estado se cambia en su ficha de socio"
+                    className={`text-xs px-2 py-1.5 rounded-md border ${
+                      thread.memberStatus ? MEMBER_STATUS_COLOR[thread.memberStatus] : ""
+                    }`}
                   >
-                    {MEMBER_STATUS_LABEL[thread.memberStatus]}
+                    {thread.memberStatus ? MEMBER_STATUS_LABEL[thread.memberStatus] : "Socio"}
                   </span>
                 ) : (
                   <select
-                    value={thread.stage}
+                    value={thread.stage ?? "NEW"}
                     disabled={pending}
-                    onChange={(e) => onStageChange(thread.leadId, e.target.value)}
+                    onChange={(e) => onStageChange(thread.leadId!, e.target.value)}
                     title="Etapa del embudo"
-                    className={`text-xs rounded-md border px-2 py-1.5 ${STAGE_COLOR[thread.stage]}`}
+                    className={`text-xs rounded-md border px-2 py-1.5 ${
+                      thread.stage ? STAGE_COLOR[thread.stage] : ""
+                    }`}
                   >
                     {LEAD_STAGES.map((st) => (
                       <option
@@ -635,10 +657,12 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 )}
                 <select
                   value={thread.ownerUserId ?? "unassigned"}
-                  disabled={pending}
+                  disabled={pending || !thread.leadId}
                   onChange={(e) => {
                     const v = e.target.value;
-                    withRefresh(() => assignConversation(thread.leadId, v === "unassigned" ? null : v));
+                    const leadId = thread.leadId;
+                    if (!leadId) return;
+                    withRefresh(() => assignConversation(leadId, v === "unassigned" ? null : v));
                   }}
                   className="text-xs border border-border rounded-md px-2 py-1.5 bg-background max-w-[9rem]"
                 >
