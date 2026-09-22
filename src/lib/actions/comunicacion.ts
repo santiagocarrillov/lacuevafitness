@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { sendText } from "@/lib/whatsapp/client";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
+import { MEMBER_OWNED_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import {
   MIN_QUERY_LENGTH,
   SQL_ACCENTS_FROM,
@@ -24,7 +25,7 @@ import {
   normalizeQuery,
 } from "@/lib/whatsapp/search";
 import { Prisma } from "@/generated/prisma/client";
-import type { LeadStage, MessageDirection, Sede } from "@/generated/prisma/client";
+import type { LeadStage, MemberStatus, MessageDirection, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -368,6 +369,13 @@ export type ThreadData = {
   ownerUserId: string | null;
   ownerName: string | null;
   windowOpen: boolean;
+  /**
+   * Estado del socio si esta persona ya lo es. Cuando existe, ES la verdad del
+   * ciclo de vida y la etapa del lead deja de editarse — no repetimos el error
+   * de tener el mismo hecho escrito en dos tablas.
+   */
+  memberStatus: MemberStatus | null;
+  memberId: string | null;
   /** Mensaje en el que se ancló la carga (resultado de búsqueda), o null. */
   anchorMessageId: string | null;
   /** Hay mensajes anteriores al primero cargado. */
@@ -416,7 +424,14 @@ export async function getConversationThread(
 
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: { lead: { include: { owner: { select: { fullName: true } } } } },
+    include: {
+      lead: {
+        include: {
+          owner: { select: { fullName: true } },
+          member: { select: { id: true, status: true } },
+        },
+      },
+    },
   });
   if (!conversation) throw new Error("Conversación no encontrada.");
 
@@ -477,6 +492,8 @@ export async function getConversationThread(
     ownerUserId: conversation.lead.ownerUserId,
     ownerName: conversation.lead.owner?.fullName ?? null,
     windowOpen: inboundMs > 0 && Date.now() - inboundMs < WINDOW_MS,
+    memberStatus: conversation.lead.member?.status ?? null,
+    memberId: conversation.lead.member?.id ?? null,
     anchorMessageId: anchor?.id ?? null,
     hasOlder,
     messages: messages.map((m) => {
@@ -501,6 +518,63 @@ export async function getConversationThread(
       };
     }),
   };
+}
+
+/**
+ * Cambiar la etapa del lead sin salir de la conversación.
+ *
+ * El momento en que sabes la etapa es justo cuando estás hablando con la
+ * persona; obligar a ir a otra pantalla es como se pierden los datos. Queda
+ * anotado en el historial del lead, para que dentro de un mes se sepa quién lo
+ * movió y desde dónde.
+ *
+ * Se niega a tocar las etapas que manda el socio: marcar "Socio activo" no es
+ * poner una etiqueta, es registrar una mensualidad en la ficha del socio.
+ */
+export async function setLeadStage(
+  leadId: string,
+  stage: LeadStage,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireInboxAccess();
+
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { stage: true, member: { select: { status: true } } },
+  });
+  if (!lead) return { ok: false, error: "Lead no encontrado." };
+  if (lead.stage === stage) return { ok: true };
+
+  if (lead.member) {
+    return {
+      ok: false,
+      error: "Esta persona ya es socia: su estado se cambia desde su ficha, no aquí.",
+    };
+  }
+  if (MEMBER_OWNED_STAGES.includes(stage)) {
+    return {
+      ok: false,
+      error:
+        stage === "CONVERTED"
+          ? "Para marcarla como socia activa hay que registrarle la mensualidad en Socios."
+          : "La evaluación arranca al registrar su asistencia, no cambiando la etapa.",
+    };
+  }
+
+  await prisma.$transaction([
+    prisma.lead.update({ where: { id: leadId }, data: { stage } }),
+    prisma.leadInteraction.create({
+      data: {
+        leadId,
+        userId: user.id,
+        channel: "WHATSAPP",
+        summary: `Etapa: ${STAGE_LABEL[lead.stage]} → ${STAGE_LABEL[stage]} (desde la conversación).`,
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/comunicacion");
+  revalidatePath("/dashboard/leads");
+  return { ok: true };
 }
 
 /** Staff who can own a conversation (for the assignee dropdown). */

@@ -10,6 +10,7 @@ import {
   scheduleBotResume,
   endShiftReturnToBot,
   sendManualReply,
+  setLeadStage,
   searchInbox,
   searchConversation,
   type ConversationRow,
@@ -22,7 +23,15 @@ import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsap
 import { isSearchable } from "@/lib/whatsapp/search";
 import { InboxSearchResults } from "./inbox-search";
 import { Highlight } from "./highlight";
-import { SEDE_LABEL, STAGE_LABEL, dayLabel, timeShort } from "./format";
+import { SEDE_LABEL, dayLabel, timeShort } from "./format";
+import {
+  LEAD_STAGES,
+  MEMBER_OWNED_STAGES,
+  MEMBER_STATUS_COLOR,
+  MEMBER_STATUS_LABEL,
+  STAGE_COLOR,
+  STAGE_LABEL,
+} from "@/lib/leads/stages";
 
 const FILTERS: Array<{ key: InboxFilter; label: string }> = [
   { key: "all", label: "Todas" },
@@ -121,6 +130,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
   const [pending, startTransition] = useTransition();
   const [sending, setSending] = useState(false);
   const [shiftNotice, setShiftNotice] = useState<string | null>(null);
+  const [stageNotice, setStageNotice] = useState<string | null>(null);
 
   // ── Búsqueda global (todo el inbox) ──────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -293,6 +303,7 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
       setThread(null);
       setError(null);
       setReply("");
+      setStageNotice(null);
       setThreadSearchOpen(false);
       setThreadQuery("");
       setHits([]);
@@ -330,6 +341,19 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     setHits([]);
     setHitIndex(0);
     setFocusId(null);
+  }
+
+  /**
+   * Cambiar la etapa sin salir de la conversación. Si la persona ya es socia, el
+   * servidor lo rechaza: su estado lo manda la ficha del socio, no esta pantalla.
+   */
+  function onStageChange(leadId: string, stage: string) {
+    startTransition(async () => {
+      const res = await setLeadStage(leadId, stage as (typeof LEAD_STAGES)[number]);
+      setStageNotice(res.ok ? null : res.error);
+      await refreshList(filterRef.current);
+      if (selectedRef.current) await refreshThread(selectedRef.current, anchorRef.current);
+    });
   }
 
   function withRefresh(fn: () => Promise<unknown>) {
@@ -580,6 +604,35 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 >
                   🔍
                 </button>
+                {/* Ciclo de vida. Con socio creado esto es un estado de solo lectura:
+                    la verdad la manda Member.status, nunca las dos a la vez. */}
+                {thread.memberStatus ? (
+                  <span
+                    title="Ya es socia: su estado se cambia en su ficha de socio"
+                    className={`text-xs px-2 py-1.5 rounded-md border ${MEMBER_STATUS_COLOR[thread.memberStatus]}`}
+                  >
+                    {MEMBER_STATUS_LABEL[thread.memberStatus]}
+                  </span>
+                ) : (
+                  <select
+                    value={thread.stage}
+                    disabled={pending}
+                    onChange={(e) => onStageChange(thread.leadId, e.target.value)}
+                    title="Etapa del embudo"
+                    className={`text-xs rounded-md border px-2 py-1.5 ${STAGE_COLOR[thread.stage]}`}
+                  >
+                    {LEAD_STAGES.map((st) => (
+                      <option
+                        key={st}
+                        value={st}
+                        disabled={MEMBER_OWNED_STAGES.includes(st)}
+                      >
+                        {STAGE_LABEL[st]}
+                        {MEMBER_OWNED_STAGES.includes(st) ? " (desde Socios)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <select
                   value={thread.ownerUserId ?? "unassigned"}
                   disabled={pending}
@@ -638,6 +691,12 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
                 )}
               </div>
             </div>
+
+            {stageNotice && (
+              <p className="px-4 py-1.5 text-[11px] text-amber-900 bg-amber-50 border-b border-border shrink-0">
+                {stageNotice}
+              </p>
+            )}
 
             {/* Buscar dentro de esta conversación */}
             {threadSearchOpen && (
