@@ -33,7 +33,8 @@ Santiago notó que el bot "hablaba con acento argentino". Medido: 8 de 226 mensa
 
 - **Siempre tuteo:** "cuéntame", "ven", "mira", "tienes", "quieres", "puedes", "eres".
 - **Nunca** voseo ni rioplatensismos, ni españolismos ("vale", "guay"), ni mexicanismos ("órale").
-- **Sí se conserva la calidez local:** "bacán", "chévere", "de una", "full", "pana" son parte de la voz aprobada y no se tocan. Neutral = que no suene de otro país, no que suene frío.
+- **Sí se conserva la calidez local:** "chévere", "de una", "full", "pana" son parte de la voz aprobada y no se tocan. Neutral = que no suene de otro país, no que suene frío.
+- **"bacán" NO.** Santiago eligió "chévere" como la palabra de la casa (22 sep 2026). `preferChevere()` lo cierra de forma determinista, y sabe que "Bacán que te animes" se vuelve "**Qué** chévere que te animes", no "Chévere que te animes".
 
 Está resuelto en dos capas: una regla en el system prompt y `neutralizeVoseo()` en `agent.ts`, que corrige las formas con equivalente 1:1 antes de enviar. A propósito NO toca "vos" (cambiarlo obliga a reescribir el verbo) ni "dale", que aquí se usa con naturalidad. Se verifica con `npm run test:registro`.
 
