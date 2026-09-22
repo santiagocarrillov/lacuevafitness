@@ -14,6 +14,9 @@
  *
  * Si vas a escribir `status: { in: ["ACTIVE", "TRIAL"] }`, usa una de estas dos y
  * deja claro de qué pregunta estás hablando.
+ *
+ * La otra mitad —CUÁNDO cambia el estado y quién lo decide— está en
+ * `member-lifecycle.ts`. Aquí solo se define qué significa cada uno.
  */
 
 import { MemberStatus } from "@/generated/prisma/client";

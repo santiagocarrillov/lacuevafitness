@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { applyPlanToMember, linkMemberToLead } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
-import { Sede, MemberStatus, MembershipState, BillingCycle, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
+import { Sede, MemberStatus, MembershipState, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
 import { headers } from "next/headers";
 import { requireAuth, can } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -160,7 +161,15 @@ export async function createMember(data: {
       },
     });
 
+    // Atarlo a su lead desde el minuto cero. Es la enfermedad de fondo: 1437 de
+    // 1441 socios tenían leadId en null y el embudo vivía ciego a lo que pasaba
+    // en el gimnasio.
+    await prisma.$transaction(async (tx) => {
+      await linkMemberToLead(tx, member.id);
+    });
+
     revalidatePath("/dashboard/socios");
+    revalidatePath("/dashboard/leads");
     return member;
   } catch (err: unknown) {
     // Surface unique constraint as a clean message
@@ -287,23 +296,27 @@ export async function assignMembership(data: {
   const endsAt = new Date(startsAt);
   endsAt.setDate(endsAt.getDate() + plan.durationDays);
 
-  const membership = await prisma.membership.create({
-    data: {
-      memberId: data.memberId,
-      planId: data.planId,
-      state: MembershipState.ACTIVE,
-      startsAt,
-      endsAt,
-    },
-  });
+  const membership = await prisma.$transaction(async (tx) => {
+    const created = await tx.membership.create({
+      data: {
+        memberId: data.memberId,
+        planId: data.planId,
+        state: MembershipState.ACTIVE,
+        startsAt,
+        endsAt,
+      },
+    });
 
-  // Ensure member status is active
-  await prisma.member.update({
-    where: { id: data.memberId },
-    data: { status: MemberStatus.ACTIVE },
+    // El estado lo decide el plan, no un ACTIVE fijo: las dos semanas de $9 son
+    // evaluación, no una venta. Aquí también se ata el socio a su lead y se mueve
+    // el embudo — antes el alta guardaba la venta y el embudo seguía mostrando cero.
+    await applyPlanToMember(tx, data.memberId, plan.billingCycle);
+    return created;
   });
 
   revalidatePath("/dashboard/socios");
+  revalidatePath("/dashboard/leads");
+  revalidatePath("/dashboard/comunicacion");
   revalidatePath(`/dashboard/socios/${data.memberId}`);
   return membership;
 }
@@ -375,10 +388,9 @@ export async function renewMembership(data: {
       },
     });
 
-    await tx.member.update({
-      where: { id: data.memberId },
-      data: { status: MemberStatus.ACTIVE },
-    });
+    // Renovar con un plan real convierte: es el paso de evaluación a socio activo,
+    // que es justo la tasa que Santiago quiere medir.
+    await applyPlanToMember(tx, data.memberId, plan.billingCycle);
 
     if (data.payment) {
       const isCash = data.payment.method === PaymentMethod.CASH;
