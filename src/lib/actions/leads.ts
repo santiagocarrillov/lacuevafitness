@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { applyPlanToMember } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
-import { Sede, LeadSource, LeadStage, MemberStatus } from "@/generated/prisma/client";
+import { Sede, LeadSource, LeadStage } from "@/generated/prisma/client";
 
 // ── List / Search ───────────────────────────────────────────────────
 
@@ -167,20 +168,6 @@ export async function convertLeadToMember(
     where: { id: leadId },
   });
 
-  // Create member from lead data
-  const member = await prisma.member.create({
-    data: {
-      firstName: lead.firstName,
-      lastName: lead.lastName ?? "",
-      email: lead.email || undefined,
-      phone: lead.phone || undefined,
-      sede: lead.sede,
-      status: MemberStatus.ACTIVE,
-      leadId: lead.id,
-    },
-  });
-
-  // Assign membership
   const plan = await prisma.membershipPlan.findUniqueOrThrow({
     where: { id: planId },
   });
@@ -188,27 +175,40 @@ export async function convertLeadToMember(
   const endsAt = new Date(now);
   endsAt.setDate(endsAt.getDate() + plan.durationDays);
 
-  await prisma.membership.create({
-    data: {
-      memberId: member.id,
-      planId,
-      state: "ACTIVE",
-      startsAt: now,
-      endsAt,
-    },
-  });
+  const member = await prisma.$transaction(async (tx) => {
+    const created = await tx.member.create({
+      data: {
+        firstName: lead.firstName,
+        lastName: lead.lastName ?? "",
+        email: lead.email || undefined,
+        phone: lead.phone || undefined,
+        sede: lead.sede,
+        // Sin estado explícito: lo pone applyPlanToMember según el plan. Antes
+        // era ACTIVE fijo, así que comprar las dos semanas de $9 daba un socio
+        // activo y contaminaba el KPI.
+        leadId: lead.id,
+      },
+    });
 
-  // Update lead stage
-  await prisma.lead.update({
-    where: { id: leadId },
-    data: {
-      stage: LeadStage.CONVERTED,
-      convertedAt: now,
-    },
+    await tx.membership.create({
+      data: {
+        memberId: created.id,
+        planId,
+        state: "ACTIVE",
+        startsAt: now,
+        endsAt,
+      },
+    });
+
+    // Pone el estado del socio y mueve el embudo a la etapa que corresponda:
+    // "En evaluación" con el trial, "Socio activo" con una mensualidad real.
+    await applyPlanToMember(tx, created.id, plan.billingCycle);
+    return created;
   });
 
   revalidatePath("/dashboard/leads");
   revalidatePath("/dashboard/socios");
+  revalidatePath("/dashboard/comunicacion");
   return member;
 }
 

@@ -15,7 +15,8 @@
     "test:referral": "tsx scripts/test-referral.ts",
     "test:registro": "tsx scripts/test-registro.ts",
     "test:busqueda": "tsx scripts/test-busqueda.ts",
-    "test:followups": "tsx scripts/test-followups.ts"
+    "test:followups": "tsx scripts/test-followups.ts",
+    "test:alta": "tsx scripts/test-alta-socio.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
