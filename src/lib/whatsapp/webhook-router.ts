@@ -9,6 +9,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { phoneKey } from "./contact";
 import type { Sede } from "@/generated/prisma/client";
 import { markAsRead } from "@/lib/whatsapp/client";
 import { parseReferral, leadAttributionUpdate } from "@/lib/whatsapp/referral";
@@ -234,6 +235,25 @@ async function ingestInbound(
   });
 
   if (!conversation) {
+    // ¿Es un socio que ya conocemos? Antes de inventarle ficha de lead a alguien
+    // que lleva meses entrenando aquí, se busca por los últimos 9 dígitos: el
+    // mismo celular vive como "0986615931" en la ficha del socio y como
+    // "593986615931" en el wa_id. Solo aplica a números con los que NUNCA
+    // habíamos hablado; un lead que se hizo socio conserva su conversación.
+    const member = await findMemberWithoutConversation(waUserId);
+    if (member) {
+      conversation = await prisma.conversation.create({
+        data: {
+          memberId: member.id,
+          sede: member.sede,
+          channel: "WHATSAPP",
+          externalId: waUserId,
+          lastInboundAt: occurredAt,
+          // El agente vende. A un socio que escribe lo atiende una persona.
+          botPaused: true,
+        },
+      });
+    } else {
     const sede = defaultSede();
     const firstName = profileName?.split(/\s+/)[0] ?? "Sin nombre";
     const lastName = profileName?.split(/\s+/).slice(1).join(" ") || null;
@@ -252,16 +272,17 @@ async function ingestInbound(
       },
     });
 
-    conversation = await prisma.conversation.create({
-      data: {
-        leadId: lead.id,
-        sede,
-        channel: "WHATSAPP",
-        externalId: waUserId,
-        lastInboundAt: occurredAt,
-      },
-    });
-  } else if (referral) {
+      conversation = await prisma.conversation.create({
+        data: {
+          leadId: lead.id,
+          sede,
+          channel: "WHATSAPP",
+          externalId: waUserId,
+          lastInboundAt: occurredAt,
+        },
+      });
+    }
+  } else if (referral && conversation.leadId) {
     // Existing lead tapped an ad: first touch wins (helper returns {} if already attributed).
     const lead = await prisma.lead.findUnique({
       where: { id: conversation.leadId },
@@ -300,4 +321,28 @@ async function ingestInbound(
   await markAsRead(msg.id);
 
   return { conversationId: conversation.id, messageId: stored.id };
+}
+
+
+/**
+ * Socio cuyo teléfono coincide con este wa_id y que todavía no tiene
+ * conversación. El match es por los últimos 9 dígitos porque los formatos
+ * guardados son un zoo ("0986615931", "+593986615931", "+5930999033400").
+ */
+async function findMemberWithoutConversation(
+  waUserId: string,
+): Promise<{ id: string; sede: Sede } | null> {
+  const key = phoneKey(waUserId);
+  if (!key) return null;
+  const rows = await prisma.$queryRaw<Array<{ id: string; sede: Sede }>>`
+    SELECT m.id, m.sede
+    FROM "Member" m
+    LEFT JOIN "Conversation" c ON c."memberId" = m.id
+    WHERE c.id IS NULL
+      AND length(regexp_replace(coalesce(m.phone, ''), '[^0-9]', '', 'g')) >= 9
+      AND right(regexp_replace(coalesce(m.phone, ''), '[^0-9]', '', 'g'), 9) = ${key}
+    ORDER BY m."updatedAt" DESC
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
 }
