@@ -17,6 +17,7 @@ import { requireAuth, can } from "@/lib/auth";
 import { sendText } from "@/lib/whatsapp/client";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import { MEMBER_OWNED_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
+import { contactOf, phoneKey } from "@/lib/whatsapp/contact";
 import {
   MIN_QUERY_LENGTH,
   SQL_ACCENTS_FROM,
@@ -41,16 +42,21 @@ export type InboxFilter = "all" | "unassigned" | "mine" | "waiting";
 
 export type ConversationRow = {
   id: string;
-  leadId: string;
+  /** Uno de los dos está seteado: la conversación es de un lead O de un socio. */
+  leadId: string | null;
+  memberId: string | null;
+  contactKind: "lead" | "member";
   sede: Sede;
   botPaused: boolean;
   /** ISO time when the bot takes this conversation back on its own, or null. */
   botResumeAt: string | null;
   lastInboundAt: string | null;
   lastOutboundAt: string | null;
-  leadName: string;
-  leadPhone: string | null;
-  stage: LeadStage;
+  contactName: string;
+  contactPhone: string | null;
+  /** Etapa del embudo, o null si ya es socio (entonces manda memberStatus). */
+  stage: LeadStage | null;
+  memberStatus: MemberStatus | null;
   ownerUserId: string | null;
   ownerName: string | null;
   lastMessageBody: string | null;
@@ -89,6 +95,7 @@ export async function countWaitingForHuman(): Promise<number> {
 /** Lo que necesita una fila del inbox. Compartido entre el listado y la búsqueda. */
 const CONVERSATION_ROW_INCLUDE = {
   lead: { include: { owner: { select: { fullName: true } } } },
+  member: { select: { id: true, firstName: true, lastName: true, phone: true, status: true, sede: true } },
   messages: { orderBy: { createdAt: "desc" as const }, take: 1 },
 };
 
@@ -97,22 +104,26 @@ type ConversationWithRow = Prisma.ConversationGetPayload<{
 }>;
 
 function toConversationRow(c: ConversationWithRow, now: number): ConversationRow {
+  const contact = contactOf(c);
   const last = c.messages[0] ?? null;
   const inboundMs = c.lastInboundAt ? new Date(c.lastInboundAt).getTime() : 0;
   const outboundMs = c.lastOutboundAt ? new Date(c.lastOutboundAt).getTime() : 0;
   return {
     id: c.id,
-    leadId: c.leadId,
+    leadId: contact.leadId,
+    memberId: contact.memberId,
+    contactKind: contact.kind,
     sede: c.sede,
     botPaused: c.botPaused,
     botResumeAt: c.botResumeAt ? c.botResumeAt.toISOString() : null,
     lastInboundAt: c.lastInboundAt ? c.lastInboundAt.toISOString() : null,
     lastOutboundAt: c.lastOutboundAt ? c.lastOutboundAt.toISOString() : null,
-    leadName: [c.lead.firstName, c.lead.lastName].filter(Boolean).join(" ") || "Sin nombre",
-    leadPhone: c.lead.phone,
-    stage: c.lead.stage,
-    ownerUserId: c.lead.ownerUserId,
-    ownerName: c.lead.owner?.fullName ?? null,
+    contactName: contact.name,
+    contactPhone: contact.phone,
+    stage: contact.stage,
+    memberStatus: contact.memberStatus,
+    ownerUserId: c.lead?.ownerUserId ?? null,
+    ownerName: c.lead?.owner?.fullName ?? null,
     lastMessageBody: last?.body ?? null,
     lastMessageDirection: last?.direction ?? null,
     lastMessageFailed: last?.sendStatus === "FAILED",
@@ -133,7 +144,12 @@ export async function getConversations(filter: InboxFilter = "all"): Promise<Con
         : {};
 
   const conversations = await prisma.conversation.findMany({
-    where: { lead: { is: leadWhere }, ...(filter === "waiting" ? waitingForHuman() : {}) },
+    // "Sin asignar" y "Mías" hablan del dueño del LEAD, así que solo miran
+    // conversaciones de lead. Las de socios aparecen en "Todas" y "Esperando".
+    where: {
+      ...(filter === "unassigned" || filter === "mine" ? { lead: { is: leadWhere } } : {}),
+      ...(filter === "waiting" ? waitingForHuman() : {}),
+    },
     orderBy: { updatedAt: "desc" },
     take: 200,
     include: CONVERSATION_ROW_INCLUDE,
@@ -152,6 +168,7 @@ export async function getConversations(filter: InboxFilter = "all"): Promise<Con
 
 const CHAT_HITS_LIMIT = 30;
 const MESSAGE_HITS_LIMIT = 60;
+const MEMBER_HITS_LIMIT = 15;
 /** Tope de coincidencias dentro de un chat. Más que esto ya no se navega a mano. */
 const THREAD_HITS_LIMIT = 300;
 
@@ -176,8 +193,8 @@ function phonePatterns(query: string): [string | null, string | null] {
 export type MessageHit = {
   messageId: string;
   conversationId: string;
-  leadId: string;
-  leadName: string;
+  leadId: string | null;
+  contactName: string;
   sede: Sede;
   direction: MessageDirection;
   /** Cuerpo completo: el recorte y el resaltado se hacen en el cliente. */
@@ -186,11 +203,23 @@ export type MessageHit = {
   senderLabel: string;
 };
 
+export type MemberHit = {
+  memberId: string;
+  name: string;
+  phone: string | null;
+  sede: Sede;
+  status: MemberStatus;
+  /** Conversación existente, si ya le hemos escrito. */
+  conversationId: string | null;
+};
+
 export type InboxSearchResult = {
   /** Conversaciones cuyo contacto (nombre o teléfono) coincide. */
   chats: ConversationRow[];
   /** Mensajes cuyo texto coincide, del más reciente al más viejo. */
   messages: MessageHit[];
+  /** Socios con teléfono que todavía no tienen conversación abierta. */
+  members: MemberHit[];
   chatsTruncated: boolean;
   messagesTruncated: boolean;
 };
@@ -198,6 +227,7 @@ export type InboxSearchResult = {
 const EMPTY_SEARCH: InboxSearchResult = {
   chats: [],
   messages: [],
+  members: [],
   chatsTruncated: false,
   messagesTruncated: false,
 };
@@ -217,7 +247,7 @@ export async function searchInbox(query: string): Promise<InboxSearchResult> {
   const like = likePattern(folded);
   const [phoneLike, phoneLikeAlt] = phonePatterns(query);
 
-  const [chatIdRows, messageIdRows] = await Promise.all([
+  const [chatIdRows, messageIdRows, memberRows] = await Promise.all([
     prisma.$queryRaw<{ id: string }[]>`
       SELECT c.id
       FROM "Conversation" c
@@ -239,6 +269,23 @@ export async function searchInbox(query: string): Promise<InboxSearchResult> {
       WHERE ${foldedSql(Prisma.sql`m.body`)} LIKE ${like}
       ORDER BY m."createdAt" DESC
       LIMIT ${MESSAGE_HITS_LIMIT + 1}
+    `,
+    // Socios por nombre o teléfono. Es lo que permite escribirle a quien ya
+    // entrena con nosotros ("¿por qué no has venido?") sin inventarle un lead.
+    prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT m.id
+      FROM "Member" m
+      WHERE m.phone IS NOT NULL AND m.phone <> ''
+        AND m.status <> 'CHURNED'
+        AND (
+          ${foldedSql(Prisma.sql`coalesce(m."firstName", '') || ' ' || coalesce(m."lastName", '')`)} LIKE ${like}
+          OR (
+               ${phoneLike}::text IS NOT NULL
+               AND regexp_replace(m.phone, '[^0-9]', '', 'g') LIKE ${phoneLike}::text
+             )
+        )
+      ORDER BY m."updatedAt" DESC
+      LIMIT ${MEMBER_HITS_LIMIT}
     `,
   ]);
 
@@ -265,13 +312,25 @@ export async function searchInbox(query: string): Promise<InboxSearchResult> {
                 id: true,
                 sede: true,
                 leadId: true,
-                lead: { select: { firstName: true, lastName: true } },
+                memberId: true,
+                lead: { select: { id: true, firstName: true, lastName: true, phone: true, stage: true, sede: true } },
+                member: { select: { id: true, firstName: true, lastName: true, phone: true, status: true, sede: true } },
               },
             },
           },
         })
       : Promise.resolve([]),
   ]);
+
+  const members = memberRows.length
+    ? await prisma.member.findMany({
+        where: { id: { in: memberRows.map((r) => r.id) } },
+        select: {
+          id: true, firstName: true, lastName: true, phone: true, sede: true, status: true,
+          conversation: { select: { id: true } },
+        },
+      })
+    : [];
 
   const staffName = await resolveStaffNames(messageRows.map((m) => m.sentByUserId));
   const now = Date.now();
@@ -282,18 +341,75 @@ export async function searchInbox(query: string): Promise<InboxSearchResult> {
       messageId: m.id,
       conversationId: m.conversation.id,
       leadId: m.conversation.leadId,
-      leadName:
-        [m.conversation.lead.firstName, m.conversation.lead.lastName].filter(Boolean).join(" ") ||
-        "Sin nombre",
+      contactName: contactOf(m.conversation).name,
       sede: m.conversation.sede,
       direction: m.direction,
       body: m.body,
       createdAt: m.createdAt.toISOString(),
       senderLabel: senderLabelFor(m, staffName),
     })),
+    members: members.map((m) => ({
+      memberId: m.id,
+      name: [m.firstName, m.lastName].filter(Boolean).join(" ") || "Sin nombre",
+      phone: m.phone,
+      sede: m.sede,
+      status: m.status,
+      conversationId: m.conversation?.id ?? null,
+    })),
     chatsTruncated,
     messagesTruncated,
   };
+}
+
+/**
+ * Abrir (o reabrir) la conversación con un socio.
+ *
+ * No manda nada: deja el hilo creado para que la persona escriba desde el inbox
+ * de siempre. El bot queda en pausa a propósito — el agente vende, y a un socio
+ * que ya entrena con nosotros lo atiende alguien del equipo.
+ */
+export async function openMemberConversation(
+  memberId: string,
+): Promise<{ ok: true; conversationId: string } | { ok: false; error: string }> {
+  await requireInboxAccess();
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { id: true, phone: true, sede: true, conversation: { select: { id: true } } },
+  });
+  if (!member) return { ok: false, error: "Socio no encontrado." };
+  if (member.conversation) return { ok: true, conversationId: member.conversation.id };
+
+  const key = phoneKey(member.phone);
+  if (!key) {
+    return { ok: false, error: "Este socio no tiene un teléfono válido en su ficha." };
+  }
+
+  // El wa_id es el número en formato internacional sin signos. Los celulares
+  // ecuatorianos guardados como "09XXXXXXXX" son 593 + los 9 dígitos finales.
+  const digits = member.phone!.replace(/\D/g, "");
+  const externalId = digits.startsWith("593") ? digits : `593${key}`;
+
+  // Puede existir ya una conversación con ese número atada a un LEAD (la persona
+  // escribió antes de ser socia). En ese caso se usa esa, no se crea otra.
+  const existing = await prisma.conversation.findUnique({
+    where: { channel_externalId: { channel: "WHATSAPP", externalId } },
+    select: { id: true },
+  });
+  if (existing) return { ok: true, conversationId: existing.id };
+
+  const created = await prisma.conversation.create({
+    data: {
+      memberId: member.id,
+      sede: member.sede,
+      channel: "WHATSAPP",
+      externalId,
+      botPaused: true,
+    },
+    select: { id: true },
+  });
+  revalidatePath("/dashboard/comunicacion");
+  return { ok: true, conversationId: created.id };
 }
 
 export type ConversationSearchResult = {
@@ -359,11 +475,14 @@ export type ThreadMessage = {
 
 export type ThreadData = {
   conversationId: string;
-  leadId: string;
-  leadName: string;
-  leadPhone: string | null;
+  leadId: string | null;
+  memberId: string | null;
+  contactKind: "lead" | "member";
+  contactName: string;
+  contactPhone: string | null;
   sede: Sede;
-  stage: LeadStage;
+  /** null cuando el contacto ya es socio: ahí manda memberStatus. */
+  stage: LeadStage | null;
   botPaused: boolean;
   botResumeAt: string | null;
   ownerUserId: string | null;
@@ -375,7 +494,6 @@ export type ThreadData = {
    * de tener el mismo hecho escrito en dos tablas.
    */
   memberStatus: MemberStatus | null;
-  memberId: string | null;
   /** Mensaje en el que se ancló la carga (resultado de búsqueda), o null. */
   anchorMessageId: string | null;
   /** Hay mensajes anteriores al primero cargado. */
@@ -425,12 +543,8 @@ export async function getConversationThread(
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
-      lead: {
-        include: {
-          owner: { select: { fullName: true } },
-          member: { select: { id: true, status: true } },
-        },
-      },
+      lead: { include: { owner: { select: { fullName: true } } } },
+      member: { select: { id: true, firstName: true, lastName: true, phone: true, status: true, sede: true } },
     },
   });
   if (!conversation) throw new Error("Conversación no encontrada.");
@@ -478,22 +592,31 @@ export async function getConversationThread(
 
   const staffName = await resolveStaffNames(messages.map((m) => m.sentByUserId));
 
+  const contact = contactOf(conversation);
+  // Un lead que YA es socio: su estado manda sobre la etapa del embudo.
+  const memberOfLead = conversation.lead
+    ? await prisma.member.findUnique({
+        where: { leadId: conversation.lead.id },
+        select: { id: true, status: true },
+      })
+    : null;
   const inboundMs = conversation.lastInboundAt ? new Date(conversation.lastInboundAt).getTime() : 0;
 
   return {
     conversationId: conversation.id,
-    leadId: conversation.leadId,
-    leadName: [conversation.lead.firstName, conversation.lead.lastName].filter(Boolean).join(" ") || "Sin nombre",
-    leadPhone: conversation.lead.phone,
+    leadId: contact.leadId,
+    contactName: contact.name,
+    contactPhone: contact.phone,
+    contactKind: contact.kind,
+    memberId: contact.memberId,
     sede: conversation.sede,
-    stage: conversation.lead.stage,
+    stage: contact.stage,
     botPaused: conversation.botPaused,
     botResumeAt: conversation.botResumeAt ? conversation.botResumeAt.toISOString() : null,
-    ownerUserId: conversation.lead.ownerUserId,
-    ownerName: conversation.lead.owner?.fullName ?? null,
+    ownerUserId: conversation.lead?.ownerUserId ?? null,
+    ownerName: conversation.lead?.owner?.fullName ?? null,
     windowOpen: inboundMs > 0 && Date.now() - inboundMs < WINDOW_MS,
-    memberStatus: conversation.lead.member?.status ?? null,
-    memberId: conversation.lead.member?.id ?? null,
+    memberStatus: contact.memberStatus ?? memberOfLead?.status ?? null,
     anchorMessageId: anchor?.id ?? null,
     hasOlder,
     messages: messages.map((m) => {

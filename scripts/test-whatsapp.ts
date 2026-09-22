@@ -48,7 +48,8 @@ async function cmdInbox() {
     take: 20,
     include: {
       conversation: {
-        include: { lead: { select: { firstName: true, lastName: true, phone: true } } },
+        include: { lead: { select: { firstName: true, lastName: true, phone: true } },
+          member: { select: { firstName: true, lastName: true, phone: true } } },
       },
     },
   });
@@ -57,9 +58,10 @@ async function cmdInbox() {
     return;
   }
   for (const m of messages) {
-    const lead = m.conversation.lead;
-    const name = `${lead.firstName}${lead.lastName ? " " + lead.lastName : ""}`;
-    console.log(`[${m.createdAt.toISOString()}] ${name} (${lead.phone}): ${m.body}`);
+    // La conversación es de un lead O de un socio (desde el 22 sep 2026).
+    const c = m.conversation.lead ?? m.conversation.member;
+    const name = c ? `${c.firstName}${c.lastName ? " " + c.lastName : ""}` : "Sin contacto";
+    console.log(`[${m.createdAt.toISOString()}] ${name} (${c?.phone ?? "—"}): ${m.body}`);
   }
 }
 

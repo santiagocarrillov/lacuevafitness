@@ -98,6 +98,7 @@ model Member {
   churnReason               String?
   leadId                    String?      @unique
   lead                      Lead?        @relation(fields: [leadId], references: [id])
+  conversation              Conversation?
   stripeCustomerId          String?      @unique
   notes                     String?
   createdAt                 DateTime     @default(now())
@@ -735,9 +736,17 @@ enum MessageDirection {
 }
 
 model Conversation {
-  id             String              @id @default(cuid())
-  leadId         String              @unique
-  lead           Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+  // Una conversación pertenece a un NÚMERO, no a un lead. Lead y Member son dos
+  // vistas de la misma persona en momentos distintos de su vida con nosotros, y
+  // atar la conversación solo al lead dejaba sin canal a los 1441 socios (1437
+  // de ellos sin lead vinculado): la plantilla `miembro_inasistencia` estaba
+  // aprobada desde el 21 sep y era inusable por esto.
+  // Exactamente uno de los dos está seteado — lo garantiza un CHECK en la BD.
+  leadId         String?             @unique
+  lead           Lead?               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  memberId       String?             @unique
+  member         Member?             @relation(fields: [memberId], references: [id], onDelete: Cascade)
   sede           Sede
   channel        ConversationChannel @default(WHATSAPP)
   externalId     String // wa user id (phone wa_id) / IG user id

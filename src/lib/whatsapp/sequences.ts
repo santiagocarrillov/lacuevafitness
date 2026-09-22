@@ -229,7 +229,9 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
       now.getTime() - new Date(conv.lastInboundAt).getTime() < WINDOW_MS;
 
     if (!withinWindow) {
-      const spec = templateForFollowup(f.kind, conv.lead);
+      // Las plantillas se arman con datos del lead. Una conversación de socio no
+      // tiene lead: sus recordatorios son otra cadena y todavía no existen.
+      const spec = conv.lead ? templateForFollowup(f.kind, conv.lead) : null;
       if (!spec) {
         await mark(f.id, "FAILED", `fuera de ventana 24h y ${f.kind} no tiene plantilla aplicable`);
         summary.failed += 1;
