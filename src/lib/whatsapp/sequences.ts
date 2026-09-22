@@ -25,6 +25,8 @@ import { SEDE_INFO } from "./agent";
 import type { FollowupKind, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Ecuador es UTC-5 todo el año (no hay horario de verano). */
+const EC_OFFSET_MS = 5 * 60 * 60 * 1000;
 
 /**
  * Techo de plantillas por día (hora de Ecuador). Cada plantilla cuesta y, si un
@@ -52,11 +54,10 @@ function maxLateMs(kind: FollowupKind): number {
   }
 }
 
-/** Ecuador es UTC-5 todo el año (no hay horario de verano). */
 function startOfEcuadorDay(now: Date): Date {
-  const local = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+  const local = new Date(now.getTime() - EC_OFFSET_MS);
   local.setUTCHours(0, 0, 0, 0);
-  return new Date(local.getTime() + 5 * 60 * 60 * 1000);
+  return new Date(local.getTime() + EC_OFFSET_MS);
 }
 
 /** Cuántas plantillas se enviaron hoy, para no pasarse del techo diario. */
@@ -68,6 +69,32 @@ async function templatesSentToday(now: Date): Promise<number> {
       payload: { path: ["sentVia"], equals: "template" },
     },
   });
+}
+
+/**
+ * Franja en que se le puede escribir a un lead (hora de Ecuador).
+ *
+ * Medido sobre 7 días de mensajes entrantes: entre medianoche y las 6 no llega
+ * casi nada, y el lote de reenganche que salió a las 06:00 del 21 sep tuvo 0
+ * respuestas de 12. Las horas vivas son 08-09 y 18-21. Un no-show de las 8 de
+ * la noche no puede disparar un mensaje a las 11, así que se empuja a la mañana.
+ */
+const SEND_WINDOW_START_H = 8;
+const SEND_WINDOW_END_H = 21;
+
+/**
+ * El mismo instante si cae en franja, o el siguiente arranque de franja si no.
+ * Ecuador es UTC-5 todo el año, así que la aritmética en UTC es exacta.
+ */
+export function nextSendableAt(from: Date): Date {
+  const ec = new Date(from.getTime() - EC_OFFSET_MS);
+  const hour = ec.getUTCHours();
+  if (hour >= SEND_WINDOW_START_H && hour < SEND_WINDOW_END_H) return from;
+
+  const target = new Date(ec);
+  if (hour >= SEND_WINDOW_END_H) target.setUTCDate(target.getUTCDate() + 1);
+  target.setUTCHours(SEND_WINDOW_START_H, 0, 0, 0);
+  return new Date(target.getTime() + EC_OFFSET_MS);
 }
 
 /** Create a followup unless its fire time is already in the past. */
