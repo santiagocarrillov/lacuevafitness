@@ -135,3 +135,45 @@ export function templateForFollowup(
 
   return { name, language: TEMPLATE_LANGUAGE, variables };
 }
+
+
+/**
+ * El texto aprobado de cada plantilla, con `{{n}}` donde van las variables.
+ *
+ * Existe para que el hilo del inbox muestre **lo que el cliente realmente
+ * recibió**. Hasta el 22 sep 2026 los followups salían por la Cloud API sin
+ * dejar fila en `Message`: 46 mensajes enviados desde el 18 de septiembre
+ * —recordatorios, reenganches, rescates de no-show— eran invisibles en el
+ * inbox. Quien abría la conversación veía un silencio que no existía, y podía
+ * repetir o contradecir lo que el sistema ya había dicho.
+ *
+ * Tiene que coincidir carácter a carácter con lo aprobado en la WABA. Si Meta
+ * pide reescribir una plantilla, esto se actualiza en el mismo commit — ver
+ * `docs/whatsapp-templates.md`.
+ */
+const TEMPLATE_BODIES: Record<string, string> = {
+  recordatorio_eval_24h:
+    "¡Hola {{1}}! 👋 Mañana arrancas tus dos semanas de evaluación en {{2}} a las {{3}}. Llega 15 min antes para recibirte con calma. ¿Confirmas que vienes? 💪",
+  recordatorio_eval_1h:
+    "¡Hola {{1}}! En una hora es tu primera sesión en {{2}} ({{3}}). Llega 15 min antes para tomarte los datos de tu evaluación. ¡Te esperamos! 📍💪",
+  noshow_recuperacion:
+    "¡Hola {{1}}! 😊 Vimos que no pudiste venir a tu primera sesión. ¿La reagendamos? Tenemos cupos esta semana. Recuerda: entrenas dos semanas por tan solo $9 y aprovechas todo un proceso de evaluación de tu condición física y de salud. ¿Qué día te queda mejor?",
+  reengagement_no_reply:
+    "¡Hola {{1}}! 😊 ¿Arrancamos tus dos semanas en La Cueva? Entrena dos semanas por tan solo $9 y aprovecha todo un proceso de evaluación de tu condición física y de salud con datos científicos para saber cuál es el mejor entrenamiento para ti. Cuéntame qué día te queda mejor y lo agendamos. 💪",
+};
+
+/**
+ * La plantilla con sus variables puestas, para guardarla en el hilo.
+ *
+ * Si la plantilla no está en la tabla (una nueva que se aprobó y nadie copió
+ * aquí), devuelve una línea honesta en vez de inventarse el texto: es peor que
+ * el historial mienta a que diga "no lo tengo".
+ */
+export function renderTemplate(spec: TemplateSpec): string {
+  const body = TEMPLATE_BODIES[spec.name];
+  if (!body) return `[plantilla ${spec.name}: ${spec.variables.join(" · ")}]`;
+  return spec.variables.reduce(
+    (text, value, i) => text.replaceAll(`{{${i + 1}}}`, value),
+    body,
+  );
+}

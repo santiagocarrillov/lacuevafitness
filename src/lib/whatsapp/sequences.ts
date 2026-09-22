@@ -20,7 +20,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { sendText, sendTemplate, describeSendError } from "./client";
-import { templateForFollowup } from "./templates";
+import { renderTemplate, templateForFollowup } from "./templates";
 import { SEDE_INFO } from "./agent";
 import type { FollowupKind, Sede } from "@/generated/prisma/client";
 
@@ -244,7 +244,8 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
         continue;
       }
       try {
-        await sendTemplate(conv.externalId, spec.name, spec.language, spec.variables);
+        const sent = await sendTemplate(conv.externalId, spec.name, spec.language, spec.variables);
+        await recordOutbound(conv.id, renderTemplate(spec), sent.messageId);
         await markSent(f.id, f.payload, spec.name);
         await touchOutbound(conv.id);
         templateBudget -= 1;
@@ -258,7 +259,8 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     }
 
     try {
-      await sendText(conv.externalId, message);
+      const sent = await sendText(conv.externalId, message);
+      await recordOutbound(conv.id, message, sent.messageId);
       await markSent(f.id, f.payload, null);
       await touchOutbound(conv.id);
       summary.sent += 1;
@@ -269,6 +271,41 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
   }
 
   return summary;
+}
+
+/**
+ * Deja el mensaje enviado en el hilo de la conversación.
+ *
+ * Sin esto el cliente recibe el WhatsApp y el inbox no se entera: quien abre la
+ * conversación ve un silencio que no existe. Se marca como automático dejando
+ * `llmGenerated: false` y `sentByUserId: null` — esa combinación no la usa nadie
+ * más, así que el inbox la puede etiquetar sin ambigüedad.
+ *
+ * Nunca tumba el envío: el mensaje YA salió, y perder la fila del historial es
+ * malo pero marcar el followup como fallido sería peor (lo reintentaría).
+ */
+async function recordOutbound(
+  conversationId: string,
+  body: string,
+  externalId: string | null,
+): Promise<void> {
+  try {
+    await prisma.message.create({
+      data: {
+        conversationId,
+        direction: "OUTBOUND",
+        channel: "WHATSAPP",
+        externalId: externalId ?? undefined,
+        body,
+        llmGenerated: false,
+        sentByUserId: null,
+        sendStatus: "SENT",
+        sendAttemptedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    console.error("[followups] no se pudo guardar el saliente en el hilo", conversationId, err);
+  }
 }
 
 async function mark(id: string, status: "CANCELED" | "FAILED", errorMessage: string) {

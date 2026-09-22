@@ -512,14 +512,17 @@ async function resolveStaffNames(ids: Array<string | null>): Promise<Map<string,
   return new Map(staff.map((s) => [s.id, s.fullName]));
 }
 
-/** "Cliente" | "Agente IA" | nombre de quien lo escribió. */
+/** "Cliente" | "Agente IA" | "Automático" | nombre de quien lo escribió. */
 function senderLabelFor(
   m: { direction: MessageDirection; llmGenerated: boolean; sentByUserId: string | null },
   staffName: Map<string, string>,
 ): string {
   if (m.direction === "INBOUND") return "Cliente";
   if (m.llmGenerated) return "Agente IA";
-  return m.sentByUserId ? staffName.get(m.sentByUserId) ?? "Staff" : "Staff";
+  // Saliente sin autor y sin modelo = lo mandó el sistema (recordatorio,
+  // reenganche, rescate de no-show). Antes estos ni siquiera llegaban al hilo.
+  if (!m.sentByUserId) return "Automático";
+  return staffName.get(m.sentByUserId) ?? "Staff";
 }
 
 /** Cuántos mensajes se cargan de una: la cola del hilo, o la ventana alrededor del ancla. */
