@@ -9,7 +9,7 @@
  * Uso:  npx tsx scripts/test-registro.ts
  */
 
-import { neutralizeVoseo } from "../src/lib/whatsapp/agent";
+import { neutralizeVoseo, normalizeRegistro, preferChevere } from "../src/lib/whatsapp/agent";
 import { templateName } from "../src/lib/whatsapp/templates";
 
 const casos: Array<[string, string]> = [
@@ -38,6 +38,43 @@ for (const [entrada, esperado] of casos) {
   if (!ok) console.log(`   esperaba: ${esperado}\n   obtuvo:   ${real}`);
 }
 console.log(`\n${casos.length - fallos}/${casos.length} correctos (registro)`);
+
+// ── La palabra de la casa: "chévere", nunca "bacán" ──────────────────────
+// Santiago lo pidió el 22 sep 2026 sobre un mensaje real del bot. Ojo con el
+// caso que lo motivó: no basta con cambiar la palabra, hay que meter el "qué".
+const chevere: Array<[string, string]> = [
+  // El mensaje exacto que salió en producción
+  ["¡Hola! Bacán que te animes 💪", "¡Hola! Qué chévere que te animes 💪"],
+  // Ya trae el "qué": solo se cambia la palabra, sin duplicarlo
+  ["¡Qué bacán que te animes!", "¡Qué chévere que te animes!"],
+  ["Qué bacán, te espero", "Qué chévere, te espero"],
+  // Suelto
+  ["Bacán, nos vemos mañana", "Chévere, nos vemos mañana"],
+  ["Eso está bacán", "Eso está chévere"],
+  // Mayúsculas
+  ["BACÁN que vengas", "QUÉ CHÉVERE que vengas"],
+  // Sin tilde, como lo escribiría un lead
+  ["bacan que te animes", "qué chévere que te animes"],
+  // Lo que NO debe tocar
+  ["Qué chévere que te animes", "Qué chévere que te animes"],
+  ["Nos vemos, pana", "Nos vemos, pana"],
+  ["Entrenamos full esta semana", "Entrenamos full esta semana"],
+];
+for (const [entrada, esperado] of chevere) {
+  const real = preferChevere(entrada);
+  const ok = real === esperado;
+  if (!ok) fallos++;
+  console.log(`${ok ? "✅" : "❌"} ${entrada}`);
+  if (!ok) console.log(`   esperaba: ${esperado}\n   obtuvo:   ${real}`);
+}
+
+// Las dos capas juntas, que es como se aplica de verdad.
+const ambas = normalizeRegistro("Contame, ¿te animas? ¡Bacán que preguntes!");
+const esperadoAmbas = "Cuéntame, ¿te animas? ¡Qué chévere que preguntes!";
+const okAmbas = ambas === esperadoAmbas;
+if (!okAmbas) fallos++;
+console.log(`${okAmbas ? "✅" : "❌"} normalizeRegistro aplica voseo + chévere en una pasada`);
+if (!okAmbas) console.log(`   esperaba: ${esperadoAmbas}\n   obtuvo:   ${ambas}`);
 
 // ── Nombres que van dentro de las plantillas ─────────────────────────────
 // Vienen del perfil de WhatsApp y son basura con frecuencia. Lo que NO puede

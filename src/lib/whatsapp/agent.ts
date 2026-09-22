@@ -40,7 +40,8 @@ export const SYSTEM_PROMPT = `Eres asesor(a) de ventas de La Cueva (dos sedes en
 
 # Cómo hablas (registro)
 Tuteo ecuatoriano, siempre. NUNCA vosea ni uses formas rioplatenses: se te escapa "contame" y suena argentino. Es "cuéntame". Lo mismo con cualquier otra: "vení"→"ven", "mirá"→"mira", "tenés"→"tienes", "querés"→"quieres", "podés"→"puedes", "sos"→"eres", "fijate"→"fíjate", "escribime"→"escríbeme". Nada de "vos" ni "che". Tampoco españolismos ("vale", "guay", "tío") ni mexicanismos ("órale", "ándale").
-Sí conservas la calidez de aquí: "bacán", "chévere", "de una", "full", "pana" están bien y son parte de la voz de La Cueva. Neutral no significa frío ni acartonado — significa que no suenes de otro país.
+Sí conservas la calidez de aquí: "chévere", "de una", "full", "pana" están bien y son parte de la voz de La Cueva. Neutral no significa frío ni acartonado — significa que no suenes de otro país.
+NUNCA digas "bacán": la palabra de La Cueva es "chévere". Se dice "¡Qué chévere que te animes!", no "¡Bacán que te animes!".
 
 # La oferta irresistible (tu gancho por defecto)
 $9 por dos semanas de evaluación. Copy de Santiago: "Entrena dos semanas por tan solo $9 y aprovecha todo un proceso de evaluación de tu condición física y de salud con datos científicos para que puedas saber cómo es el mejor entrenamiento para ti."
@@ -204,7 +205,7 @@ export async function runAgent(
     throw new Error("El agente no devolvió la llamada a la herramienta 'responder'.");
   }
   const parsed = toolUse.input as AgentResult;
-  return { ...parsed, reply: neutralizeVoseo(parsed.reply ?? "") };
+  return { ...parsed, reply: normalizeRegistro(parsed.reply ?? "") };
 }
 
 /**
@@ -239,6 +240,49 @@ const VOSEO_FIXES: ReadonlyArray<readonly [string, string]> = [
   ["decís", "dices"],
   ["sos", "eres"],
 ];
+
+/**
+ * "bacán" → "chévere".
+ *
+ * Las dos son ecuatorianas y las dos estaban aprobadas, pero Santiago eligió
+ * una (22 sep 2026): la voz de La Cueva dice "chévere". No es una corrección de
+ * registro como el voseo — es una preferencia de marca, y por eso vive en su
+ * propia función en vez de mezclarse con VOSEO_FIXES.
+ *
+ * El caso que la motivó necesita más que cambiar la palabra: "Bacán que te
+ * animes" no se vuelve "Chévere que te animes" sino "Qué chévere que te
+ * animes". De ahí las tres pasadas, en este orden:
+ *   1. "Qué bacán" → "Qué chévere"      (ya trae el "qué", solo se cambia la palabra)
+ *   2. "Bacán que" → "Qué chévere que"  (le falta el "qué", se le pone)
+ *   3. lo que quede                     ("Bacán, te espero" → "Chévere, te espero")
+ * Invertir 1 y 2 produciría "Qué qué chévere que".
+ */
+export function preferChevere(text: string): string {
+  let out = text;
+  // Acepta "bacan" sin tilde: el modelo la escribe con tilde, pero un lead no.
+  out = out.replace(
+    /(?<!\p{L})(qué|que)(\s+)bac[aá]n(?!\p{L})/giu,
+    (_m, qué: string, espacio: string) => `${qué}${espacio}chévere`,
+  );
+  out = out.replace(
+    /(?<!\p{L})bac[aá]n(?=\s+que(?!\p{L}))/giu,
+    (m: string) => matchCase(m, "qué chévere"),
+  );
+  out = out.replace(
+    /(?<!\p{L})bac[aá]n(?!\p{L})/giu,
+    (m: string) => matchCase(m, "chévere"),
+  );
+  return out;
+}
+
+/**
+ * Todo lo que se le hace al texto del modelo antes de mandarlo: quitar formas
+ * rioplatenses y fijar la palabra de la casa. Un solo punto de entrada para que
+ * una regla nueva no se quede sin aplicar en la mitad de los sitios.
+ */
+export function normalizeRegistro(text: string): string {
+  return preferChevere(neutralizeVoseo(text));
+}
 
 /** Respeta la capitalización del original: "Contame" → "Cuéntame". */
 function matchCase(original: string, replacement: string): string {
