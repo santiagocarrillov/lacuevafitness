@@ -11,6 +11,7 @@
 
 import { neutralizeVoseo, normalizeRegistro, preferChevere } from "../src/lib/whatsapp/agent";
 import { templateName } from "../src/lib/whatsapp/templates";
+import { renderTemplate } from "../src/lib/whatsapp/templates";
 
 const casos: Array<[string, string]> = [
   // Los casos reales que salieron en producción
@@ -104,5 +105,38 @@ for (const [first, last, esperado] of nombres) {
   if (!ok) console.log(`   esperaba: "${esperado}"`);
 }
 console.log(`\n${nombres.length - fallosN}/${nombres.length} correctos (nombres)`);
+
+
+// ── Plantillas: el hilo debe mostrar lo que el cliente recibió ────────────
+// Hasta el 22 sep 2026 los followups salían sin dejar fila en Message: 46
+// mensajes eran invisibles en el inbox. Ahora se guardan renderizados, así que
+// el texto tiene que coincidir con lo aprobado en la WABA.
+
+const plantillas: Array<[string, string[], string]> = [
+  [
+    "noshow_recuperacion",
+    ["Dario"],
+    "¡Hola Dario! 😊 Vimos que no pudiste venir a tu primera sesión. ¿La reagendamos? Tenemos cupos esta semana. Recuerda: entrenas dos semanas por tan solo $9 y aprovechas todo un proceso de evaluación de tu condición física y de salud. ¿Qué día te queda mejor?",
+  ],
+  [
+    "recordatorio_eval_1h",
+    ["Vanessa", "La Cueva Xtreme", "6:00 p. m."],
+    "¡Hola Vanessa! En una hora es tu primera sesión en La Cueva Xtreme (6:00 p. m.). Llega 15 min antes para tomarte los datos de tu evaluación. ¡Te esperamos! 📍💪",
+  ],
+];
+for (const [name, variables, esperado] of plantillas) {
+  const real = renderTemplate({ name, language: "es", variables });
+  const ok = real === esperado;
+  if (!ok) fallos++;
+  console.log(`${ok ? "✅" : "❌"} renderTemplate(${name})`);
+  if (!ok) console.log(`   esperaba: ${esperado}\n   obtuvo:   ${real}`);
+}
+// Una plantilla que nadie copió aquí no puede inventarse el texto.
+const desconocida = renderTemplate({ name: "miembro_inasistencia", language: "es", variables: ["Ana"] });
+const okDesc = desconocida.startsWith("[plantilla miembro_inasistencia");
+if (!okDesc) fallos++;
+console.log(`${okDesc ? "✅" : "❌"} una plantilla sin texto copiado se declara, no se inventa`);
+
+
 
 process.exit(fallos + fallosN > 0 ? 1 : 0);
