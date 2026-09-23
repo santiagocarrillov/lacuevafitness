@@ -22,6 +22,8 @@ import { scheduleTrialReminders } from "./sequences";
 import { notifyStaffOfBotHandoff } from "@/lib/push/notify-staff";
 import { adContextLine } from "./referral";
 import { mediaTurnMarker } from "./media";
+import { asksForHuman, handoffReply, isThirdRepeat } from "./guards";
+import { templateName } from "./templates";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -226,12 +228,35 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
   // a human with a safe holding message instead of pushing "" to WhatsApp.
   let replyText = (result.reply ?? "").trim();
   let forceHandoff = result.handoff;
+  let guarded = false;
   if (!replyText) {
     console.warn("[whatsapp-agent] empty reply from model; handing off");
     replyText = "¡Gracias por escribir! 😊 En un momento un asesor te atiende.";
     forceHandoff = true;
   }
-  const finalReply = replyText + locationSuffix(result.shareLocation, resolvedSede);
+
+  // Guardas en código (ver guards.ts): el prompt ya pedía ambas cosas y el
+  // modelo igual las ignoró con Ibeth el 23 sep.
+  const lastOutboundIdx = conversation.messages.findLastIndex((m) => m.direction === "OUTBOUND");
+  const burst = conversation.messages
+    .slice(lastOutboundIdx + 1)
+    .filter((m) => m.direction === "INBOUND")
+    .map((m) => m.body);
+  const botTail = conversation.messages.filter((m) => m.direction === "OUTBOUND").slice(-2);
+  const botOnlyTail = botTail.every((m) => m.llmGenerated && !m.sentByUserId);
+  const guardName = conversation.lead ? templateName(conversation.lead.firstName) : null;
+  const shortName = guardName && guardName !== "qué tal" ? guardName : null;
+  if (asksForHuman(burst)) {
+    replyText = handoffReply("asked", shortName);
+    forceHandoff = true;
+    guarded = true;
+  } else if (botOnlyTail && isThirdRepeat(replyText, botTail.map((m) => m.body))) {
+    console.warn("[whatsapp-agent] same question a third time; handing off", { conversationId });
+    replyText = handoffReply("repeat", shortName);
+    forceHandoff = true;
+    guarded = true;
+  }
+  const finalReply = guarded ? replyText : replyText + locationSuffix(result.shareLocation, resolvedSede);
 
   // Persist the draft reply + lead updates in one transaction.
   const draft = await prisma.$transaction(async (tx) => {
