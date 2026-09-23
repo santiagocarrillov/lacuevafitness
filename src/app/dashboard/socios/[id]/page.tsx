@@ -31,7 +31,7 @@ import { MemberInfoEditor } from "./member-info-editor";
 export const dynamic = "force-dynamic";
 
 const statusLabels: Record<string, string> = {
-  ACTIVE: "Activo", TRIAL: "Trial", PAUSED: "Congelado", CHURNED: "Cancelado", LEAD: "Lead",
+  ACTIVE: "Activo", TRIAL: "Trial", PAUSED: "Congelado", CHURNED: "Cancelado", LEAD: "Sin plan",
 };
 const statusColors: Record<string, string> = {
   ACTIVE: "text-emerald-700 bg-emerald-50 border-emerald-200",

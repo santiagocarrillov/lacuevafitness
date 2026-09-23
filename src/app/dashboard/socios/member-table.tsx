@@ -44,7 +44,7 @@ const statusLabels: Record<string, string> = {
   TRIAL: "Trial",
   PAUSED: "Pausado",
   CHURNED: "Baja",
-  LEAD: "Lead",
+  LEAD: "Sin plan",
 };
 
 const sedeLabels: Record<string, string> = {

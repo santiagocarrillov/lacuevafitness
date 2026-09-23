@@ -15,6 +15,7 @@ const statuses = [
   { value: "", label: "Todos" },
   { value: "ACTIVE", label: "Activos" },
   { value: "TRIAL", label: "Trial" },
+  { value: "LEAD", label: "Sin plan" },
   { value: "PAUSED", label: "Pausados" },
   { value: "CHURNED", label: "Bajas" },
 ];
