@@ -164,12 +164,21 @@ export async function applyPlanToMember(
 ): Promise<void> {
   const status = memberStatusForPlan(cycle);
   if (status) {
-    const current = await tx.member.findUnique({
-      where: { id: memberId },
-      select: { status: true },
-    });
-    // Un trial no degrada a quien ya es socio activo.
-    if (!(status === "TRIAL" && current?.status === "ACTIVE")) {
+    // Un trial no degrada a quien ya paga mensualidad. Pero "ya paga" se mira en
+    // sus membresías, no en `status`: el 23 sep Majo dio de alta a Connie y a
+    // Natalia con "Nuevo socio" (que crea en ACTIVE), les asignó el trial de $9 y
+    // se quedaron activas — no había forma de ponerlas en evaluación.
+    const paying =
+      status === "TRIAL" &&
+      (await tx.membership.count({
+        where: {
+          memberId,
+          state: "ACTIVE",
+          endsAt: { gt: new Date() },
+          plan: { billingCycle: { notIn: ["TRIAL", "ONE_TIME"] } },
+        },
+      })) > 0;
+    if (!paying) {
       await tx.member.update({ where: { id: memberId }, data: { status } });
     }
   }
