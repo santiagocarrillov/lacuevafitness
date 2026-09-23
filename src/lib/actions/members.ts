@@ -156,7 +156,10 @@ export async function createMember(data: {
         emergencyPhone: data.emergencyPhone || undefined,
         sede: data.sede,
         secondarySede: data.secondarySede && data.secondarySede !== data.sede ? data.secondarySede : undefined,
-        status: data.status ?? MemberStatus.ACTIVE,
+        // Sin plan todavía: "Sin plan" (LEAD). El estado lo pone el plan que se
+        // asigne después (applyPlanToMember) — nacer en ACTIVE inflaba el KPI de
+        // socios activos con gente que nunca pagó una mensualidad.
+        status: data.status ?? MemberStatus.LEAD,
         notes: data.notes || undefined,
       },
     });
