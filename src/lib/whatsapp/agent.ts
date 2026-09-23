@@ -17,23 +17,49 @@ const MODEL = process.env.WHATSAPP_AGENT_MODEL ?? "claude-opus-4-8";
 const EFFORT = (process.env.WHATSAPP_AGENT_EFFORT ?? "medium") as
   | "low" | "medium" | "high";
 
-// ── First-session slots per sede (L–V, cada hora, hora Ecuador) ─────────────
-// The $9 offer is a 2-week evaluation program; these slots book its first session.
-// Source: memory eval-slots-and-locations. Hardcoded config for v1 (no admin UI).
+// ── First-session slots per sede (L–V, hora Ecuador) ───────────────────────
+//
+// ⚠️ ESTO TIENE QUE COINCIDIR CON `ClassSchedule`. No es decoración: es lo que el
+// bot le dice a la gente, y la gente se presenta a esa hora.
+//
+// El 22 sep 2026 alguien llegó a Fitness a las 8:30 pm a su evaluación, cuando ya
+// estaban cerrando, porque el bot le dijo que había clase. Nunca la hubo: el
+// último turno de la tarde es 7:30 pm. Cada bloque tenía **un turno fantasma
+// extra al final** — Fitness 9:30 am y 8:30 pm, Xtreme 10:00 am y 9:00 pm —, y
+// dos personas llegaron a citarse a las 9:30 am en Fitness, una hora que no
+// existe. Las dos figuran como no-show; probablemente sí fueron.
+//
+// Verificado contra `ClassSchedule` (activos, L–V) el 22 sep 2026.
+// `npm run test:horarios` falla si vuelven a separarse.
 export const SEDE_INFO: Record<Sede, { name: string; maps: string; morning: string; evening: string }> = {
   FITNESS_CENTER: {
     name: "La Cueva Fitness",
     maps: "https://maps.app.goo.gl/DPquYpZSwpKHcS9AA",
-    morning: "5:30, 6:30, 7:30, 8:30, 9:30",
-    evening: "4:30, 5:30, 6:30, 7:30, 8:30",
+    morning: "5:30, 6:30, 7:30, 8:30",
+    evening: "4:30, 5:30, 6:30, 7:30",
   },
   XTREME: {
     name: "La Cueva Xtreme",
     maps: "https://maps.app.goo.gl/LxRZs9fG4yRYMEqA9",
-    morning: "6:00, 7:00, 8:00, 9:00, 10:00",
-    evening: "5:00, 6:00, 7:00, 8:00, 9:00",
+    morning: "6:00, 7:00, 8:00, 9:00",
+    evening: "5:00, 6:00, 7:00, 8:00",
   },
 };
+
+/**
+ * Los turnos de {@link SEDE_INFO} en formato "HH:MM" de 24 horas, que es como
+ * los guarda `ClassSchedule.startTime`. Sirve para comprobar que no se separen.
+ */
+export function sedeSlots24h(sede: Sede): string[] {
+  const info = SEDE_INFO[sede];
+  const parse = (lista: string, pm: boolean) =>
+    lista.split(",").map((raw) => {
+      const [h, m] = raw.trim().split(":").map(Number);
+      const hora = pm && h < 12 ? h + 12 : h;
+      return `${String(hora).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    });
+  return [...parse(info.morning, false), ...parse(info.evening, true)];
+}
 
 // ── Persona / system prompt (canonical copy from the playbook) ──────────────
 export const SYSTEM_PROMPT = `Eres asesor(a) de ventas de La Cueva (dos sedes en Sangolquí, Ecuador: La Cueva Fitness y La Cueva Xtreme). Atiendes por WhatsApp. Respondes SIEMPRE en español ecuatoriano, cálido, cercano, directo y sin jerga. Nunca suenas a robot ni a formulario. Haces preguntas, no interrogas. Mensajes cortos, estilo WhatsApp (usa emojis con moderación).
@@ -167,7 +193,9 @@ export async function runAgent(
 
   const contextBlock =
     `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}. Úsala para resolver "hoy", "mañana", "pasado mañana".\n\n` +
-    `Horarios disponibles para la primera sesión (L–V, hora Ecuador):\n${slotsContext}` +
+    `Horarios disponibles para la primera sesión (L–V, hora Ecuador):\n${slotsContext}\n` +
+    `Son HORAS DE INICIO: la clase dura una hora. La última de la tarde empieza a la hora que dice y termina una hora después — no ofrezcas nada más tarde.\n` +
+    `Sábados SÍ hay clases para socios, pero NO se agendan evaluaciones ni primeras sesiones: suele haber un solo coach y no se abastece. Si preguntan por sábado, dilo así — no digas que cerramos el fin de semana.` +
     (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "") +
     (opts.adContext ? `\n\n${opts.adContext}` : "");
 
