@@ -14,6 +14,7 @@ import type { Sede } from "@/generated/prisma/client";
 import { markAsRead } from "@/lib/whatsapp/client";
 import { parseReferral, leadAttributionUpdate } from "@/lib/whatsapp/referral";
 import { mediaPlaceholder } from "@/lib/whatsapp/media";
+import { reactionBody, type WaReaction } from "@/lib/whatsapp/reactions";
 
 // ── Meta webhook payload types (subset we use) ─────────────────────────────
 
@@ -186,7 +187,10 @@ export async function processWebhookPayload(payload: unknown): Promise<ProcessRe
       for (const msg of value.messages ?? []) {
         try {
           const stored = await ingestInbound(msg, contactName.get(msg.from));
-          if (stored) lastInboundByConversation.set(stored.conversationId, stored.messageId);
+          // Una reacción queda en el hilo pero no despierta al bot.
+          if (stored && !stored.isReaction) {
+            lastInboundByConversation.set(stored.conversationId, stored.messageId);
+          }
           result.processed += 1;
         } catch (err) {
           // Idempotency collision (duplicate externalId) is the most common case.
@@ -218,9 +222,19 @@ export async function processWebhookPayload(payload: unknown): Promise<ProcessRe
 async function ingestInbound(
   msg: WaMessage,
   profileName: string | undefined,
-): Promise<{ conversationId: string; messageId: string } | null> {
+): Promise<{ conversationId: string; messageId: string; isReaction: boolean } | null> {
   const waUserId = msg.from;
-  const { body, mediaUrl, mediaId, mediaMimeType, mediaKind, mediaVoice } = extractBody(msg);
+  const extracted = extractBody(msg);
+  const { mediaUrl, mediaId, mediaMimeType, mediaKind, mediaVoice } = extracted;
+  let body = extracted.body;
+  const isReaction = msg.type === "reaction";
+  if (isReaction) {
+    const reaction = (msg as Record<string, unknown>).reaction as WaReaction | undefined;
+    const target = reaction?.message_id
+      ? await prisma.message.findUnique({ where: { externalId: reaction.message_id }, select: { body: true } })
+      : null;
+    body = reactionBody(reaction?.emoji, target?.body ?? null);
+  }
   const occurredAt = new Date(Number(msg.timestamp) * 1000);
   // Click-to-WhatsApp ad/post referral (only present on the first message from an ad tap).
   const referral = parseReferral(msg);
@@ -311,16 +325,22 @@ async function ingestInbound(
         createdAt: occurredAt,
       },
     }),
-    prisma.conversation.update({
-      where: { id: conversation.id },
-      data: { lastInboundAt: occurredAt },
-    }),
+    // Una reacción no mueve lastInboundAt: answerUnansweredInbounds lo leería como
+    // "el cliente escribió y nadie contestó" y el bot le respondería a un 👍.
+    ...(isReaction
+      ? []
+      : [
+          prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { lastInboundAt: occurredAt },
+          }),
+        ]),
   ]);
 
   // Best-effort blue ticks. Non-critical.
   await markAsRead(msg.id);
 
-  return { conversationId: conversation.id, messageId: stored.id };
+  return { conversationId: conversation.id, messageId: stored.id, isReaction };
 }
 
 
