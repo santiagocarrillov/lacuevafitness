@@ -193,7 +193,9 @@ export async function runAgent(
 
   const contextBlock =
     `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}. Úsala para resolver "hoy", "mañana", "pasado mañana".\n\n` +
-    `Horarios disponibles para la primera sesión (L–V, hora Ecuador):\n${slotsContext}` +
+    `Horarios disponibles para la primera sesión (L–V, hora Ecuador):\n${slotsContext}\n` +
+    `Son HORAS DE INICIO: la clase dura una hora. La última de la tarde empieza a la hora que dice y termina una hora después — no ofrezcas nada más tarde.\n` +
+    `Sábados SÍ hay clases para socios, pero NO se agendan evaluaciones ni primeras sesiones: suele haber un solo coach y no se abastece. Si preguntan por sábado, dilo así — no digas que cerramos el fin de semana.` +
     (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "") +
     (opts.adContext ? `\n\n${opts.adContext}` : "");
 
