@@ -66,11 +66,15 @@ export function MemberInfoEditor({
     const { sede, secondarySede, ...rest } = form;
     startTransition(async () => {
       try {
-        await updateMember(memberId, {
+        const res = await updateMember(memberId, {
           ...rest,
           sede: sede as Sede,
           secondarySede: secondarySede ? (secondarySede as Sede) : null,
         });
+        if (!res.ok) {
+          toast.error(res.error);
+          return;
+        }
         toast.success("Información actualizada.");
         setOpen(false);
         router.refresh();

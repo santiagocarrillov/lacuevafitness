@@ -202,7 +202,10 @@ export async function updateMember(
     status?: MemberStatus;
     notes?: string;
   },
-) {
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Se DEVUELVE el error en vez de lanzarlo: en producción Next borra el mensaje
+  // de cualquier error lanzado por una server action, y la admin veía «An error
+  // occurred in the Server Components render…» en vez de «ese email ya es de X».
   const { secondarySede, ...rest } = data;
 
   // Email is @unique. Pre-check against OTHER members so a collision surfaces as a
@@ -213,14 +216,15 @@ export async function updateMember(
       select: { id: true, firstName: true, lastName: true },
     });
     if (clash && clash.id !== id) {
-      throw new Error(
-        `Ya existe otro socio con el email ${data.email} (${clash.firstName} ${clash.lastName}).`,
-      );
+      return {
+        ok: false,
+        error: `Ya existe otro socio con el email ${data.email} (${clash.firstName} ${clash.lastName}).`,
+      };
     }
   }
 
   try {
-    const member = await prisma.member.update({
+    await prisma.member.update({
       where: { id },
       data: {
         ...rest,
@@ -236,13 +240,14 @@ export async function updateMember(
 
     revalidatePath("/dashboard/socios");
     revalidatePath(`/dashboard/socios/${id}`);
-    return member;
+    return { ok: true };
   } catch (err: unknown) {
     // Fallback for the race where the email is taken between the pre-check and update.
     if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
-      throw new Error("Ya existe otro socio con ese email o teléfono.");
+      return { ok: false, error: "Ya existe otro socio con ese email." };
     }
-    throw err;
+    console.error("updateMember", id, err);
+    return { ok: false, error: "No se pudo actualizar la información." };
   }
 }
 

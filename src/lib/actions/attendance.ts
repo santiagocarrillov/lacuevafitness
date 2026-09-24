@@ -197,10 +197,22 @@ export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
     select: {
       id: true, firstName: true, lastName: true, email: true, phone: true,
       trialScheduledAt: true, stage: true, adHeadline: true, trialAttended: true,
+      member: {
+        select: {
+          attendance: {
+            where: { classSession: { date: { lt: todayDate() } } },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
     },
   });
 
-  return leads.map((l) => ({
+  // Quien ya vino otro día (antes o fuera de su cita) no se queda en la lista
+  // de hoy: la admin ya la registró y el ✅ solo estorbaba. Los registrados HOY
+  // sí se quedan, para ver que la asistencia entró.
+  return leads.filter((l) => !(l.trialAttended === true && (l.member?.attendance.length ?? 0) > 0)).map((l) => ({
     leadId: l.id,
     name: [l.firstName, l.lastName].filter(Boolean).join(" ") || "Sin nombre",
     firstName: l.firstName,
