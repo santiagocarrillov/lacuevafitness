@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { CapsuleCard } from "@/components/portal/capsule-card";
 import { MealCheck } from "@/components/portal/MealCheck";
 import { NextAppointmentCard } from "@/components/portal/next-appointment-card";
+import { enabledMeals, parsePlanContent } from "@/lib/nutrition/plan-schema";
+import { ADHERENCE_META, adherenceFromChecks } from "@/lib/nutrition/adherence";
+import { MEAL_LABEL } from "@/lib/nutrition/meals";
 import { getNextNutritionAppointment } from "@/lib/portal/nutrition-appointment";
 import { RoutineWeek, type RoutineWeekData } from "@/components/portal/routine-week";
 import { getWeekNumberForDate, getWeekSessions } from "@/lib/srxfit-calendar";
@@ -78,9 +82,23 @@ export default async function HoyPage() {
       }),
       prisma.mealLog.findUnique({
         where: { memberId_date: { memberId: member.id, date: ecuadorDateUtc } },
+        include: { entries: { select: { mealKey: true, ate: true } } },
       }),
       getNextNutritionAppointment(member.id),
     ]);
+
+  // Structured plan (editor): progress summary here, interactive blocks in Nutrición.
+  const structuredPlan = parsePlanContent(activeMealPlan?.content);
+  const planMealKeys = structuredPlan ? enabledMeals(structuredPlan) : [];
+  const planAdherence = adherenceFromChecks(planMealKeys, todayMealLog?.entries ?? []);
+  const markedKeys = new Set((todayMealLog?.entries ?? []).map((e) => e.mealKey));
+  const nextMeal = planMealKeys.find((k) => !markedKeys.has(k));
+  const planProgress = {
+    followed: planAdherence.followed,
+    total: planMealKeys.length,
+    level: planAdherence.level,
+    next: nextMeal ? structuredPlan?.meals.find((m) => m.key === nextMeal)?.label ?? MEAL_LABEL[nextMeal] : null,
+  };
 
   const streak = computeStreak(attendanceDates, today);
   const attStats = computeAttendanceStats(attendanceDates, today);
@@ -210,7 +228,23 @@ export default async function HoyPage() {
 
       {nextNutritionAppt && <NextAppointmentCard appointment={nextNutritionAppt} />}
 
-      {activeMealPlan && (
+      {activeMealPlan && structuredPlan && (
+        <Link href="/portal/nutricion" className="portal-card" style={{ display: "block", marginBottom: 14, textDecoration: "none", color: "inherit" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+            <div className="portal-kicker">Tu plan de hoy</div>
+            <div style={{ fontSize: 12, color: "var(--pt-ink-3)" }}>{Math.round(structuredPlan.targets.kcal)} kcal/día</div>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 500, marginTop: 2 }}>
+            {planProgress.followed} de {planProgress.total} comidas cumplidas
+            {planProgress.level ? ` ${ADHERENCE_META[planProgress.level].emoji}` : ""}
+          </div>
+          <div style={{ fontSize: 13, marginTop: 6, textDecoration: "underline", textUnderlineOffset: 3 }}>
+            {planProgress.next ? `Siguiente: ${planProgress.next} →` : "Ver mi plan →"}
+          </div>
+        </Link>
+      )}
+
+      {activeMealPlan && !structuredPlan && (
         <section className="portal-card" style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
             <div className="portal-kicker">Tu plan de hoy</div>

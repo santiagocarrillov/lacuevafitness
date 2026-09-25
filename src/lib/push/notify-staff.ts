@@ -1,6 +1,32 @@
 import { prisma } from "@/lib/prisma";
-import { pushToMember } from "./send";
-import type { Sede } from "@/generated/prisma/client";
+import { pushToMember, type PushPayload } from "./send";
+import type { Sede, UserRole } from "@/generated/prisma/client";
+
+/**
+ * Generic staff push: every active user with one of `roles`, scoped to `sede`
+ * (sede-less staff hear about both), delivered through their linked member
+ * record. Best-effort — callers `.catch()` it.
+ */
+export async function notifyStaff(opts: {
+  roles: UserRole[];
+  sede: Sede | null;
+  payload: PushPayload;
+  excludeMemberId?: string;
+}): Promise<{ notified: number }> {
+  const staff = await prisma.user.findMany({
+    where: {
+      active: true,
+      role: { in: opts.roles },
+      ...(opts.sede ? { OR: [{ sede: null }, { sede: opts.sede }] } : {}),
+    },
+    select: { member: { select: { id: true } } },
+  });
+  const targets = staff
+    .map((s) => s.member?.id)
+    .filter((id): id is string => Boolean(id) && id !== opts.excludeMemberId);
+  await Promise.all(targets.map((id) => pushToMember(id, opts.payload).catch(() => undefined)));
+  return { notified: targets.length };
+}
 
 /** Roles that should hear about a socio logging their own data. */
 const NOTIFIED_ROLES = ["COACH", "NUTRITIONIST", "ADMIN", "OWNER"] as const;
