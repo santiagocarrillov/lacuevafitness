@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { useDebouncedSearch } from "./use-debounced-search";
 import { searchFoods, type FoodRow } from "@/lib/actions/foods";
 
 /**
@@ -19,34 +20,9 @@ export function FoodPicker({
   autoFocus?: boolean;
 }) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<FoodRow[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { results, loading } = useDebouncedSearch(q, (term) => searchFoods(term, 12));
   const boxRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (q.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    const t = setTimeout(async () => {
-      try {
-        const r = await searchFoods(q, 12);
-        if (!cancelled) {
-          setResults(r);
-          setOpen(true);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [q]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -62,8 +38,11 @@ export function FoodPicker({
         autoFocus={autoFocus}
         placeholder={placeholder}
         value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onFocus={() => results.length && setOpen(true)}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
       />
       {open && (results.length > 0 || (!loading && q.trim().length >= 2)) && (
         <ul className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-input bg-popover shadow-md divide-y">
@@ -76,7 +55,6 @@ export function FoodPicker({
                 onClick={() => {
                   onPick(f);
                   setQ("");
-                  setResults([]);
                   setOpen(false);
                 }}
               >

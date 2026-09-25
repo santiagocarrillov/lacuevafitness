@@ -13,7 +13,7 @@ export default async function NutricionPage() {
   const [focus, plans, tips, nextAppt] = await Promise.all([
     prisma.nutritionFocus.findUnique({ where: { memberId: member.id } }),
     prisma.mealPlan.findMany({
-      where: { memberId: member.id, active: true, visibleToMember: true },
+      where: { memberId: member.id, active: true, visibleToMember: true, publishedAt: { not: null } },
       orderBy: { createdAt: "desc" },
     }),
     // Tips for the member's sede + sede-agnostic ones, most recent first.

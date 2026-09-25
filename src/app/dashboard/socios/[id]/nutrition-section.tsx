@@ -19,6 +19,8 @@ type MealPlan = {
   active: boolean;
   visibleToMember: boolean;
   createdAt: Date;
+  schemaVersion: number;
+  publishedAt: Date | null;
 };
 
 type Adherence = "GREEN" | "YELLOW" | "ORANGE" | "RED" | null;
@@ -152,8 +154,23 @@ export function NutritionSection({
           </div>
         </div>
 
-        {/* Crear plan */}
-        <form onSubmit={handleCreate} className="space-y-3">
+        {/* Plan estructurado (editor) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed p-3">
+          <p className="text-sm text-muted-foreground">
+            Arma el plan dentro de la app (menú o intercambios): el socio lo ve y marca lo que cumple.
+          </p>
+          <Link
+            href={`/dashboard/nutricion/planes?socio=${memberId}`}
+            className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+          >
+            + Crear plan en el editor
+          </Link>
+        </div>
+
+        {/* Crear plan (link a Google Doc) */}
+        <details className="text-sm">
+          <summary className="cursor-pointer text-muted-foreground">O compartir un plan como enlace (Google Doc)</summary>
+        <form onSubmit={handleCreate} className="space-y-3 pt-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1 sm:col-span-2">
               <Label>Título *</Label>
@@ -198,6 +215,7 @@ export function NutritionSection({
             </Button>
           </div>
         </form>
+        </details>
 
         {/* Lista de planes */}
         <div className="space-y-2">
@@ -216,6 +234,9 @@ export function NutritionSection({
                       <span className="text-muted-foreground">{p.calorieTarget} kcal</span>
                     )}
                     {!p.active && <Badge variant="outline" className="text-[10px]">Archivado</Badge>}
+                    {p.schemaVersion === 2 && !p.publishedAt && (
+                      <Badge variant="outline" className="text-[10px]">Borrador</Badge>
+                    )}
                     {p.active && p.visibleToMember && (
                       <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-600/40">
                         Visible
@@ -225,6 +246,14 @@ export function NutritionSection({
                       <Badge variant="outline" className="text-[10px]">Oculto</Badge>
                     )}
                   </div>
+                  {p.schemaVersion === 2 && (
+                    <Link
+                      href={`/dashboard/nutricion/planes/socio/${p.id}`}
+                      className="text-xs text-primary underline underline-offset-2"
+                    >
+                      Abrir en el editor →
+                    </Link>
+                  )}
                   {p.externalUrl && (
                     <a
                       href={p.externalUrl}
