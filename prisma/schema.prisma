@@ -124,6 +124,7 @@ model Member {
   challengeProgress ChallengeProgress[]
   nutritionAppointments NutritionAppointment[]
   nutritionTarget   NutritionTarget?
+  nutritionMessages NutritionMessage[]
   foodsCreated      Food[]            @relation("FoodCreatedByMember")
   recipesAuthored   Recipe[]          @relation("RecipeAuthorMember")
 
@@ -957,19 +958,23 @@ model MealLog {
   @@index([memberId, date])
 }
 
-// Per-meal granularity. Table ships in v1 but is UNUSED until the structured
-// `content` renderer exists — so per-food-option checks need no later migration.
+// One plan block (meal) the socio marked for the day: followed it (`ate`, with
+// the option they chose) or didn't (`ate` false + optional note). Drives the
+// automatic daily semáforo. One row per meal per day.
 model MealLogEntry {
   id          String   @id @default(cuid())
   mealLogId   String
   mealLog     MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
   mealKey     String // "breakfast" | "lunch" | ... matches content JSON
+  optionId    String? // PlanOption.id chosen (MENU plans)
   optionLabel String?
   ate         Boolean  @default(false)
   freeText    String?  @db.Text
   kcal        Int? // snapshot of chosen option's kcal, for adherence math
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
+  @@unique([mealLogId, mealKey])
   @@index([mealLogId])
 }
 
@@ -1212,6 +1217,31 @@ model NutritionTarget {
   updatedById String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+enum MessageAuthor {
+  MEMBER
+  STAFF
+}
+
+// Socio ↔ nutritionist thread (feedback on the plan, questions). Optionally
+// anchored to a plan meal on a day ("comentario sobre el almuerzo del martes").
+// readAt = read by the other side.
+model NutritionMessage {
+  id           String        @id @default(cuid())
+  memberId     String
+  member       Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mealPlanId   String?
+  mealKey      String?
+  date         DateTime?     @db.Date
+  author       MessageAuthor
+  authorUserId String?
+  body         String        @db.Text
+  readAt       DateTime?
+  createdAt    DateTime      @default(now())
+
+  @@index([memberId, createdAt])
+  @@index([author, readAt])
 }
 
 // Menstrual period tracking (portal, socias only). One row per period; the

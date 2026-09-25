@@ -17,6 +17,8 @@ import {
   type PlanContent,
   type PlanItem,
 } from "../src/lib/nutrition/plan-schema";
+import { adherenceFromChecks, isoWeekday, levelFromPct } from "../src/lib/nutrition/adherence";
+import { buildDay, itemAmount } from "../src/components/portal/nutrition/view-model";
 
 let fallos = 0;
 function check(nombre: string, ok: boolean, detalle?: unknown) {
@@ -97,6 +99,25 @@ const lunchEx = exSmall.exchanges.find((m) => m.key === "lunch")!.groups;
 check("intercambios se escalan en pasos de ½", lunchEx.PROTEIN === 1.5 && lunchEx.STARCH === 1 && lunchEx.FAT === 0.5, lunchEx);
 check("reescalar no muta el original", menu.days[0].meals[1].options[0].items[0].grams === 150);
 check("reescalado sigue siendo válido", planContentSchema.safeParse(big).success && planContentSchema.safeParse(exSmall).success);
+
+// ── Adherencia (semáforo automático) ───────────────────────────────────────
+const cinco = ["breakfast", "snack_am", "lunch", "snack_pm", "dinner"];
+check("sin marcar = sin color (no es rojo)", adherenceFromChecks(cinco, []).level === null);
+check("5/5 → verde", adherenceFromChecks(cinco, cinco.map((k) => ({ mealKey: k, ate: true }))).level === "GREEN");
+check("3/5 → amarillo (60%)", adherenceFromChecks(cinco, cinco.slice(0, 3).map((k) => ({ mealKey: k, ate: true }))).level === "YELLOW");
+check("1 cumplida y 1 no de 5 → rojo (20%)", adherenceFromChecks(cinco, [{ mealKey: "breakfast", ate: true }, { mealKey: "lunch", ate: false }]).level === "RED");
+check("marcas de comidas fuera del plan no cuentan", adherenceFromChecks(["lunch"], [{ mealKey: "dinner", ate: true }]).level === null);
+check("umbrales", levelFromPct(81) === "GREEN" && levelFromPct(80) === "YELLOW" && levelFromPct(40) === "ORANGE" && levelFromPct(39) === "RED");
+check("isoWeekday: 28 sep 2026 es lunes, 4 oct domingo", isoWeekday("2026-09-28") === 1 && isoWeekday("2026-10-04") === 7);
+
+// ── Vista del socio ────────────────────────────────────────────────────────
+const vm = buildDay(menu, menu.days[0]);
+check("la vista solo trae comidas habilitadas", vm.meals.map((m) => m.key).join() === "breakfast,lunch");
+check("opciones vacías no se muestran", vm.meals[0].options.length === 2);
+check("cantidad con medida casera", itemAmount({ ...item("Arroz", 158, 205, 4, 44, 0), portionLabel: "1 taza" }) === "1 taza (158 g)");
+check("cantidad de receta", itemAmount({ ...item("Wrap", 1, 300, 20, 30, 10), grams: null, recipeId: "r", servings: 2 }) === "2 porciones");
+const vmEx = buildDay(ex, null);
+check("intercambios en la vista", vmEx.meals.find((m) => m.key === "lunch")?.groups.length === 4);
 
 console.log(fallos === 0 ? "\nTodo OK" : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);
