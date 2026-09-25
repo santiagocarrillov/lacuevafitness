@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/followups", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/weekly-checkin", "schedule": "0 14 * * 0" }
+    { "path": "/api/cron/weekly-checkin", "schedule": "0 14 * * 0" },
+    { "path": "/api/cron/nutrition-reminders", "schedule": "0 23 * * *" }
   ]
 }

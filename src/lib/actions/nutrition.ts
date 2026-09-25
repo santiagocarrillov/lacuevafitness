@@ -193,7 +193,7 @@ export async function createNutritionTip(data: TipInput) {
       authoredById: user.id,
     },
   });
-  revalidatePath("/dashboard/nutricion");
+  revalidatePath("/dashboard/nutricion/tips");
   revalidatePath("/portal/nutricion");
   return tip;
 }
@@ -206,7 +206,7 @@ export async function updateNutritionTip(id: string, data: TipInput) {
     where: { id },
     data: { title: data.title.trim(), body: data.body.trim(), sede: data.sede ?? null },
   });
-  revalidatePath("/dashboard/nutricion");
+  revalidatePath("/dashboard/nutricion/tips");
   revalidatePath("/portal/nutricion");
   return { success: true };
 }
@@ -216,7 +216,7 @@ export async function setNutritionTipActive(id: string, active: boolean) {
   const user = await requireAuth();
   if (!can.editBodyComp(user)) throw new Error("Sin permisos");
   await prisma.nutritionTip.update({ where: { id }, data: { active } });
-  revalidatePath("/dashboard/nutricion");
+  revalidatePath("/dashboard/nutricion/tips");
   revalidatePath("/portal/nutricion");
   return { success: true };
 }

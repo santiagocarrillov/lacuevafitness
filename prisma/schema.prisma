@@ -54,6 +54,7 @@ model User {
   clinicalMarkersRecorded ClinicalMarker[]        @relation("ClinicalMarkerRecordedBy")
   clinicalRecordsAuthored ClinicalRecord[]        @relation("ClinicalRecordAuthor")
   mealPlansAuthored       MealPlan[]              @relation("MealPlanAuthor")
+  nutritionAppointments   NutritionAppointment[]  @relation("NutritionAppointmentStaff")
 
   @@index([sede, role])
 }
@@ -121,6 +122,7 @@ model Member {
   menstrualPeriods  MenstrualPeriod[]
   pushSubscriptions PushSubscription[]
   challengeProgress ChallengeProgress[]
+  nutritionAppointments NutritionAppointment[]
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -1021,6 +1023,45 @@ model NutritionTip {
   updatedAt    DateTime @updatedAt
 
   @@index([active, createdAt])
+}
+
+enum AppointmentKind {
+  INITIAL // primera consulta
+  FOLLOW_UP // control
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
+}
+
+// A consultation with the nutritionist. Replaces HubSpot meetings: staff book it,
+// the member sees it in the portal and gets a push reminder the day before, and
+// the nutritionist closes it as ATTENDED / NO_SHOW — which feeds the coverage
+// report (who has been seen, who never has). `notes` is staff-only: portal
+// queries must never select it.
+model NutritionAppointment {
+  id             String            @id @default(cuid())
+  memberId       String
+  member         Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  staffUserId    String
+  staff          User              @relation("NutritionAppointmentStaff", fields: [staffUserId], references: [id])
+  sede           Sede
+  startsAt       DateTime
+  durationMin    Int               @default(30)
+  kind           AppointmentKind   @default(FOLLOW_UP)
+  status         AppointmentStatus @default(SCHEDULED)
+  notes          String?           @db.Text
+  reminderSentAt DateTime?
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([startsAt])
+  @@index([memberId, startsAt])
 }
 
 // Menstrual period tracking (portal, socias only). One row per period; the
