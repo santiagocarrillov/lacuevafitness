@@ -19,7 +19,8 @@
     "test:alta": "tsx scripts/test-alta-socio.ts",
     "test:horarios": "tsx scripts/test-horarios.ts",
     "test:reacciones": "tsx scripts/test-reacciones.ts",
-    "test:guardas": "tsx scripts/test-guardas.ts"
+    "test:guardas": "tsx scripts/test-guardas.ts",
+    "test:nutricion-agenda": "tsx scripts/test-nutricion-agenda.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

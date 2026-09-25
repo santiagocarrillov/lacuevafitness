@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { CapsuleCard } from "@/components/portal/capsule-card";
 import { MealCheck } from "@/components/portal/MealCheck";
+import { NextAppointmentCard } from "@/components/portal/next-appointment-card";
+import { getNextNutritionAppointment } from "@/lib/portal/nutrition-appointment";
 import { RoutineWeek, type RoutineWeekData } from "@/components/portal/routine-week";
 import { getWeekNumberForDate, getWeekSessions } from "@/lib/srxfit-calendar";
 import { getWeekOverrides } from "@/lib/actions/srxfit-overrides";
@@ -40,6 +42,7 @@ export default async function HoyPage() {
     latestNote,
     activeMealPlan,
     todayMealLog,
+    nextNutritionAppt,
   ] = await Promise.all([
       prisma.attendance
         .findMany({
@@ -76,6 +79,7 @@ export default async function HoyPage() {
       prisma.mealLog.findUnique({
         where: { memberId_date: { memberId: member.id, date: ecuadorDateUtc } },
       }),
+      getNextNutritionAppointment(member.id),
     ]);
 
   const streak = computeStreak(attendanceDates, today);
@@ -203,6 +207,8 @@ export default async function HoyPage() {
       )}
 
       {routineWeek && <RoutineWeek data={routineWeek} />}
+
+      {nextNutritionAppt && <NextAppointmentCard appointment={nextNutritionAppt} />}
 
       {activeMealPlan && (
         <section className="portal-card" style={{ marginBottom: 14 }}>

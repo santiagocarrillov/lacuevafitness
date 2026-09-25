@@ -220,4 +220,11 @@ export const can = {
     user.role === "OWNER",
   manageChallenges: (user: User) =>
     user.role === "OWNER" || user.role === "ADMIN",
+  // Nutrición: plans, food DB, recipes, member diaries. Clinical judgement —
+  // not front desk.
+  manageNutrition: (user: User) =>
+    user.role === "OWNER" || user.role === "NUTRITIONIST",
+  // Nutritionist agenda: front desk (ADMIN) books appointments too.
+  scheduleNutrition: (user: User) =>
+    user.role === "OWNER" || user.role === "NUTRITIONIST" || user.role === "ADMIN",
 };

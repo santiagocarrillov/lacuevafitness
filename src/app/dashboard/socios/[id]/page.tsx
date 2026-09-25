@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, can } from "@/lib/auth";
 import { getMember, getMembershipPlans } from "@/lib/actions/members";
 import { getMemberNotes } from "@/lib/actions/notes";
 import { getMemberChallenges } from "@/lib/actions/challenges";
@@ -16,6 +16,8 @@ import { HealthSection } from "./health-section";
 import { ClinicalRecordsSection } from "./clinical-records-section";
 import { getClinicalRecords } from "@/lib/actions/clinical-records";
 import { NutritionSection } from "./nutrition-section";
+import { NutritionAppointmentsCard } from "./nutrition-appointments-card";
+import { getMemberAppointments } from "@/lib/actions/nutrition-appointments";
 import { getMemberMealPlans, getMemberMealLogs, getNutritionFocus } from "@/lib/actions/nutrition";
 import { TestResultsSection } from "./test-results-section";
 import { SelfEntriesSection } from "./self-entries-section";
@@ -115,6 +117,8 @@ export default async function MemberDetailPage({
         getNutritionFocus(id),
       ])
     : [[], [], [], null];
+  const canSchedule = can.scheduleNutrition(user);
+  const appointments = canSchedule ? await getMemberAppointments(id) : [];
 
   const now = new Date();
   // Active membership = state ACTIVE + not expired + not a one-time daily pass.
@@ -432,6 +436,11 @@ export default async function MemberDetailPage({
       {/* Historia clínica privada (solo personal con acceso a salud) */}
       {canEditHealth && (
         <ClinicalRecordsSection memberId={member.id} records={clinicalRecords} />
+      )}
+
+      {/* Citas con la nutricionista */}
+      {canSchedule && (
+        <NutritionAppointmentsCard memberId={member.id} appointments={appointments} />
       )}
 
       {/* Nutrición — planes + adherencia */}

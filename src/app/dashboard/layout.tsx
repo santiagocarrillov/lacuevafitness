@@ -24,13 +24,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // (Staff who are also athletes keep dashboard access; only pure MEMBERs bounce.)
   if (user.role === "MEMBER") redirect("/portal/hoy");
 
-  // Retos, Nutrición y Notificaciones viven ahora dentro del hub de SRXFit.
+  // Retos y Notificaciones viven dentro del hub de SRXFit. Nutrición volvió al
+  // nav (sep 2026): la agenda es la herramienta diaria de la nutricionista.
   const nav = [
     { href: "/dashboard", label: "Resumen", show: true },
     { href: "/dashboard/asistencia", label: "Asistencia", show: true },
     { href: "/dashboard/socios", label: "Socios", show: can.viewMembers(user) },
     { href: "/dashboard/pagos", label: "Pagos", show: can.viewPayments(user) },
     { href: "/dashboard/srxfit", label: "SRXFit", show: true },
+    { href: "/dashboard/nutricion", label: "Nutrición", show: can.scheduleNutrition(user) },
     { href: "/dashboard/comunicacion", label: "Comunicación", show: can.manageLeads(user) },
     { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },

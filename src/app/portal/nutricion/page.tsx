@@ -2,13 +2,15 @@ import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { shortDate } from "@/lib/portal/format";
+import { NextAppointmentCard } from "@/components/portal/next-appointment-card";
+import { getNextNutritionAppointment } from "@/lib/portal/nutrition-appointment";
 
 export const dynamic = "force-dynamic";
 
 export default async function NutricionPage() {
   const { member } = await requireMember();
 
-  const [focus, plans, tips] = await Promise.all([
+  const [focus, plans, tips, nextAppt] = await Promise.all([
     prisma.nutritionFocus.findUnique({ where: { memberId: member.id } }),
     prisma.mealPlan.findMany({
       where: { memberId: member.id, active: true, visibleToMember: true },
@@ -20,6 +22,7 @@ export default async function NutricionPage() {
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
+    getNextNutritionAppointment(member.id),
   ]);
 
   const initial = member.firstName.charAt(0).toUpperCase();
@@ -32,6 +35,8 @@ export default async function NutricionPage() {
           Mi <em>nutrición</em>
         </h2>
       </div>
+
+      {nextAppt && <NextAppointmentCard appointment={nextAppt} />}
 
       {/* Prioridad de la semana */}
       {focus && (
