@@ -171,7 +171,10 @@ export async function upsertNutritionFocus(memberId: string, message: string) {
 
 type TipInput = { title: string; body: string; sede?: Sede | null };
 
+/** Staff tip library (archived included). The portal queries active tips itself. */
 export async function getNutritionTips(opts?: { sede?: Sede; activeOnly?: boolean }) {
+  const user = await requireAuth();
+  if (!can.editBodyComp(user)) throw new Error("Sin permisos");
   const where: { active?: boolean; OR?: object[] } = {};
   if (opts?.activeOnly) where.active = true;
   if (opts?.sede) where.OR = [{ sede: opts.sede }, { sede: null }];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,12 @@ export function NutritionSection({
         <CardDescription>
           Plan alimenticio del socio y su adherencia diaria. El socio ve los planes marcados como visibles.
         </CardDescription>
+        <Link
+          href={`/dashboard/nutricion/calculadora?socio=${memberId}`}
+          className="text-sm font-medium hover:underline"
+        >
+          Calcular meta de calorías →
+        </Link>
       </CardHeader>
       <CardContent className="space-y-5">
         {/* Prioridad de la semana */}
