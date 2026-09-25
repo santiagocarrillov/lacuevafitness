@@ -73,7 +73,7 @@ export default async function HoyPage() {
         include: { author: true },
       }),
       prisma.mealPlan.findFirst({
-        where: { memberId: member.id, active: true, visibleToMember: true },
+        where: { memberId: member.id, active: true, visibleToMember: true, publishedAt: { not: null } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.mealLog.findUnique({

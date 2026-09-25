@@ -39,6 +39,7 @@ export async function createMealPlan(memberId: string, data: MealPlanInput) {
       ...cleanPlanData(data),
       source: "MANUAL",
       authoredById: user.id,
+      publishedAt: new Date(), // link plans are live immediately (no draft stage)
     },
   });
   revalidatePath(`/dashboard/socios/${memberId}`);
@@ -106,7 +107,7 @@ export async function logMeal(data: {
 
   // Link the log to the plan currently in effect (if any), for adherence context.
   const activePlan = await prisma.mealPlan.findFirst({
-    where: { memberId: member.id, active: true, visibleToMember: true },
+    where: { memberId: member.id, active: true, visibleToMember: true, publishedAt: { not: null } },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });

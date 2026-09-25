@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useDebouncedSearch } from "./use-debounced-search";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -29,22 +30,7 @@ const selectCls = "h-9 w-full rounded-md border border-input bg-background px-2 
 function MemberSearch() {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
-  useEffect(() => {
-    if (q.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      const r = await searchMembersForCalc(q);
-      if (!cancelled) setResults(r);
-    }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [q]);
+  const { results } = useDebouncedSearch(q, searchMembersForCalc);
   return (
     <div className="relative">
       <Input placeholder="Cargar datos de un socio…" value={q} onChange={(e) => setQ(e.target.value)} />

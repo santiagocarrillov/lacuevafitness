@@ -913,7 +913,9 @@ model MealPlan {
   title           String
   calorieTarget   Int? // kcal/day — mirrors her calorie-level classification
   externalUrl     String? // Google Sheet/Doc — the immediate-term bridge
-  content         Json? // structured plan; null in v1
+  content         Json? // PUBLISHED structured plan (what the socio sees) — see src/lib/nutrition/plan-schema.ts
+  draftContent    Json? // work in progress in the editor; the socio never sees it
+  publishedAt     DateTime? // null = draft never published (hidden from the portal)
   schemaVersion   Int               @default(1)
   source          MealPlanSource    @default(MANUAL)
   templateId      String?
@@ -972,8 +974,8 @@ model MealLogEntry {
 }
 
 // Reusable standard plans keyed by calorie level — the digital form of her
-// calorie-classified Google Sheets, and the source-of-truth for future AI
-// generation. No authoring UI in v1; seed manually or skip.
+// calorie-classified Google Sheets. Authored in /dashboard/nutricion/planes and
+// copied (optionally rescaled) into each socio's MealPlan when assigned.
 model MealPlanTemplate {
   id            String   @id @default(cuid())
   name          String // "Estándar 1400 kcal"
@@ -982,6 +984,7 @@ model MealPlanTemplate {
   content       Json?
   schemaVersion Int      @default(1)
   notes         String?  @db.Text
+  authoredById  String?
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
