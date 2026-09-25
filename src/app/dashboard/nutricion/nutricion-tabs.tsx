@@ -4,16 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/dashboard/nutricion", label: "Agenda" },
-  { href: "/dashboard/nutricion/cobertura", label: "Cobertura" },
-  { href: "/dashboard/nutricion/tips", label: "Tips" },
+  { href: "/dashboard/nutricion", label: "Agenda", clinical: false },
+  { href: "/dashboard/nutricion/cobertura", label: "Cobertura", clinical: false },
+  { href: "/dashboard/nutricion/alimentos", label: "Alimentos", clinical: true },
+  { href: "/dashboard/nutricion/recetas", label: "Recetas", clinical: true },
+  { href: "/dashboard/nutricion/calculadora", label: "Calculadora", clinical: true },
+  { href: "/dashboard/nutricion/tips", label: "Tips", clinical: false },
 ];
 
-export function NutricionTabs() {
+/** `clinical` tabs (food DB, recipes, calculator) are for the nutritionist and OWNER only. */
+export function NutricionTabs({ showClinical }: { showClinical: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="flex gap-1 border-b border-border overflow-x-auto">
-      {TABS.map((t) => {
+      {TABS.filter((t) => showClinical || !t.clinical).map((t) => {
         const active =
           t.href === "/dashboard/nutricion" ? pathname === t.href : pathname.startsWith(t.href);
         return (

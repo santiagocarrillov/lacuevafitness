@@ -1,0 +1,234 @@
+name;group;kcal;protein;carbs;fat;fiber;portions;liquid;source
+# Valores por 100 g (o 100 ml si liquid=1). Fuente: USDA FoodData Central (SR Legacy) salvo "Estimación" = platos/productos locales estimados por receta típica. La nutricionista debe revisar y corregir desde la app.
+# ── Proteínas animales ──
+Pechuga de pollo sin piel, cocida;PROTEIN;165;31;0;3.6;0;1 filete:120;0;USDA
+Pechuga de pollo sin piel, cruda;PROTEIN;120;22.5;0;2.6;0;1 filete:150;0;USDA
+Muslo de pollo sin piel, cocido;PROTEIN;179;24.8;0;8.2;0;1 muslo:90;0;USDA
+Pollo con piel, asado;PROTEIN;239;27.3;0;13.6;0;1 presa:130;0;USDA
+Pavo, pechuga asada;PROTEIN;147;30;0;2.1;0;1 porción:100;0;USDA
+Lomo fino de res, cocido;PROTEIN;190;29;0;8;0;1 filete:120;0;USDA
+Carne de res para estofado (pulpa), cocida;PROTEIN;200;29;0;8.7;0;1 porción:100;0;USDA
+Carne molida de res 90/10, cocida;PROTEIN;217;26.1;0;11.7;0;½ taza:75;0;USDA
+Carne molida de res 80/20, cocida;PROTEIN;270;25.9;0;17.9;0;½ taza:75;0;USDA
+Hígado de res, cocido;PROTEIN;175;26.5;5.2;4.7;0;1 porción:100;0;USDA
+Lomo de cerdo magro, cocido;PROTEIN;143;26.2;0;3.5;0;1 porción:100;0;USDA
+Chuleta de cerdo, cocida;PROTEIN;210;27;0;11;0;1 chuleta:120;0;USDA
+Fritada de cerdo;PROTEIN;330;26;0;25;0;1 porción:120;0;Estimación
+Hornado de cerdo;PROTEIN;290;25;0;21;0;1 porción:120;0;Estimación
+Jamón de pavo;PROTEIN;110;16.5;3.5;3.5;0;1 lonja:20;0;USDA
+Jamón de cerdo (sanduchero);PROTEIN;163;16.6;3.8;8.6;0;1 lonja:20;0;USDA
+Salchicha de pollo;PROTEIN;220;12;4;17;0;1 salchicha:45;0;USDA
+Chorizo;PROTEIN;455;24;2;38;0;1 unidad:60;0;USDA
+Tocino cocido;FAT;541;37;1.4;42;0;1 lonja:8;0;USDA
+Huevo entero;PROTEIN;143;12.6;0.7;9.5;0;1 huevo:50;0;USDA
+Huevo duro;PROTEIN;155;12.6;1.1;10.6;0;1 huevo:50;0;USDA
+Huevo frito;PROTEIN;196;13.6;0.8;14.8;0;1 huevo:46;0;USDA
+Clara de huevo;PROTEIN;52;10.9;0.7;0.2;0;1 clara:33;0;USDA
+Atún en agua, escurrido;PROTEIN;116;25.5;0;0.8;0;1 lata escurrida:120;0;USDA
+Atún en aceite, escurrido;PROTEIN;198;29.1;0;8.2;0;1 lata escurrida:120;0;USDA
+Sardina en salsa de tomate;PROTEIN;185;20.9;0.7;10.5;0;1 lata:155;0;USDA
+Tilapia, cocida;PROTEIN;128;26.2;0;2.7;0;1 filete:120;0;USDA
+Corvina / robalo, cocido;PROTEIN;124;23.6;0;2.6;0;1 filete:120;0;USDA
+Dorado, cocido;PROTEIN;109;23.7;0;0.9;0;1 filete:120;0;USDA
+Salmón, cocido;PROTEIN;206;22.1;0;12.4;0;1 filete:120;0;USDA
+Camarón, cocido;PROTEIN;99;24;0.2;0.3;0;10 camarones:60;0;USDA
+Proteína whey en polvo;PROTEIN;400;78;8;6;0;1 scoop:30;0;USDA
+# ── Proteínas vegetales y quesos ──
+Chocho desamargado;PROTEIN;119;15.6;9.9;2.9;2.8;½ taza:80|1 taza:166;0;USDA
+Tofu firme;PROTEIN;144;17.3;2.8;8.7;2.3;1 porción:100;0;USDA
+Queso fresco;PROTEIN;299;18.1;3;23.8;0;1 tajada:30;0;USDA
+Queso mozzarella;PROTEIN;300;22.2;2.2;22.4;0;1 tajada:25;0;USDA
+Queso mozzarella semidescremado;PROTEIN;254;24.3;2.8;15.9;0;1 tajada:25;0;USDA
+Queso parmesano rallado;PROTEIN;420;28.4;13.9;27.8;0;1 cda:5;0;USDA
+Queso cheddar;PROTEIN;403;24.9;1.3;33.1;0;1 tajada:20;0;USDA
+Queso cottage;PROTEIN;98;11.1;3.4;4.3;0;½ taza:113;0;USDA
+Ricotta / requesón;PROTEIN;174;11.3;3;13;0;½ taza:124;0;USDA
+# ── Lácteos ──
+Leche entera;DAIRY;61;3.2;4.8;3.3;0;1 taza:244|1 vaso:250;1;USDA
+Leche semidescremada;DAIRY;50;3.3;4.8;2;0;1 taza:244|1 vaso:250;1;USDA
+Leche descremada;DAIRY;34;3.4;5;0.1;0;1 taza:244|1 vaso:250;1;USDA
+Leche deslactosada semidescremada;DAIRY;47;3.3;4.8;1.6;0;1 taza:244|1 vaso:250;1;USDA
+Leche de soya sin azúcar;DAIRY;33;2.9;1.7;1.6;0.4;1 taza:243;1;USDA
+Yogur natural entero;DAIRY;61;3.5;4.7;3.3;0;1 taza:245;0;USDA
+Yogur griego natural sin grasa;DAIRY;59;10.2;3.6;0.4;0;1 envase:170;0;USDA
+Yogur griego natural entero;DAIRY;97;9;4;5;0;1 envase:170;0;USDA
+Yogur bebible de fruta;SUGAR;80;2.8;13.5;1.6;0;1 vaso:200;1;USDA
+Kéfir natural;DAIRY;41;3.8;4.5;0.9;0;1 taza:243;1;USDA
+Leche de almendras sin azúcar;FREE;15;0.6;0.6;1.1;0.2;1 taza:240;1;USDA
+Leche de avena;;46;1;6.6;1.5;0.8;1 taza:240;1;USDA
+# ── Cereales, tubérculos, panes ──
+Arroz blanco, cocido;STARCH;130;2.7;28.2;0.3;0.4;½ taza:79|1 taza:158;0;USDA
+Arroz integral, cocido;STARCH;123;2.7;25.6;1;1.6;½ taza:98|1 taza:195;0;USDA
+Quinua, cocida;STARCH;120;4.4;21.3;1.9;2.8;½ taza:92|1 taza:185;0;USDA
+Avena en hojuelas;STARCH;379;13.2;67.7;6.5;10.1;1 cda:10|½ taza:40;0;USDA
+Avena cocida en agua;STARCH;71;2.5;12;1.5;1.7;1 taza:234;0;USDA
+Harina de avena;STARCH;404;14.7;65.7;9.1;6.5;1 cda:8;0;USDA
+Harina de trigo;STARCH;364;10.3;76.3;1;2.7;1 cda:8;0;USDA
+Granola;STARCH;471;10;64;20;5.3;¼ taza:30|½ taza:60;0;USDA
+Cereal de maíz (corn flakes);STARCH;357;7.5;84;0.4;3.3;1 taza:28;0;USDA
+Pan blanco de molde;STARCH;266;7.6;49.4;3.3;2.7;1 rebanada:25;0;USDA
+Pan integral de molde;STARCH;252;12.4;42.7;3.5;6;1 rebanada:28;0;USDA
+Pan de sal / enrollado;STARCH;290;8.5;55;4;2.5;1 pan:50;0;Estimación
+Pan de yuca;STARCH;330;9;42;14;1;1 unidad:40;0;Estimación
+Tortilla de trigo;STARCH;306;8.2;50;8;3.5;1 tortilla mediana:45;0;USDA
+Tortilla de trigo integral;STARCH;285;9;46;7;7;1 tortilla mediana:45;0;Estimación
+Tortilla de maíz;STARCH;218;5.7;44.6;2.9;6.3;1 tortilla:25;0;USDA
+Galletas de soda;STARCH;421;9.5;71.3;11.3;2.8;4 galletas:12;0;USDA
+Galletas integrales;STARCH;440;8;70;14;5;3 galletas:25;0;Estimación
+Pasta, cocida;STARCH;158;5.8;30.9;0.9;1.8;1 taza:140;0;USDA
+Pasta integral, cocida;STARCH;149;6;30;1.7;3.9;1 taza:140;0;USDA
+Papa cocida;STARCH;87;1.9;20.1;0.1;1.8;1 papa mediana:150;0;USDA
+Papas fritas;STARCH;312;3.4;41.4;15;3.8;1 porción mediana:117;0;USDA
+Camote, cocido;STARCH;90;2;20.7;0.2;3.3;1 mediano:130;0;USDA
+Yuca, cocida;STARCH;112;1;26.5;0.3;1.4;1 porción:100;0;USDA
+Yuca frita;STARCH;290;1.4;38;15;2;1 porción:100;0;Estimación
+Verde, cocido;STARCH;116;0.8;31.2;0.2;2.3;½ verde:90;0;USDA
+Maduro, cocido;STARCH;123;0.8;32.5;0.2;2.3;½ maduro:90;0;USDA
+Maduro frito;STARCH;236;1.5;38;9.2;2.3;½ maduro:90;0;Estimación
+Patacón;STARCH;300;1.5;45;13;3.3;3 patacones:75;0;Estimación
+Chifles;STARCH;520;2.3;62;30;3.5;1 funda pequeña:30;0;Estimación
+Mote, cocido;STARCH;110;2.5;23;1;2.8;½ taza:80;0;Estimación
+Choclo, cocido;STARCH;96;3.4;21;1.5;2.4;1 choclo:100;0;USDA
+Tostado;STARCH;438;8.9;71.2;14.4;7;¼ taza:30;0;USDA
+Canguil sin mantequilla;STARCH;387;12.9;77.8;4.5;14.5;1 taza:8;0;USDA
+Humita;STARCH;200;4.5;26;9;2.5;1 humita:140;0;Estimación
+Quimbolito;SUGAR;300;5;45;11;1;1 unidad:80;0;Estimación
+Bolón de verde;STARCH;250;5;32;11;2.5;1 bolón:200;0;Estimación
+Empanada de viento;STARCH;390;7;45;20;1.5;1 empanada:90;0;Estimación
+Empanada de verde;STARCH;250;6;28;13;2;1 empanada:110;0;Estimación
+# ── Leguminosas ──
+Fréjol rojo, cocido;STARCH;127;8.7;22.8;0.5;7.4;½ taza:90;0;USDA
+Fréjol negro, cocido;STARCH;132;8.9;23.7;0.5;8.7;½ taza:86;0;USDA
+Lenteja, cocida;STARCH;116;9;20.1;0.4;7.9;½ taza:100;0;USDA
+Garbanzo, cocido;STARCH;164;8.9;27.4;2.6;7.6;½ taza:82;0;USDA
+Arveja, cocida;STARCH;84;5.4;15.6;0.2;5.5;½ taza:80;0;USDA
+Habas, cocidas;STARCH;110;7.6;19.7;0.4;5.4;½ taza:85;0;USDA
+Menestra de fréjol;STARCH;130;7;18;3.5;6;½ taza:100;0;Estimación
+# ── Vegetales ──
+Brócoli, cocido;VEGETABLE;35;2.4;7.2;0.4;3.3;1 taza:156;0;USDA
+Brócoli, crudo;VEGETABLE;34;2.8;6.6;0.4;2.6;1 taza:91;0;USDA
+Coliflor, cocida;VEGETABLE;23;1.8;4.1;0.5;2.3;1 taza:124;0;USDA
+Zanahoria, cruda;VEGETABLE;41;0.9;9.6;0.2;2.8;1 mediana:60;0;USDA
+Zanahoria, cocida;VEGETABLE;35;0.8;8.2;0.2;3;½ taza:78;0;USDA
+Tomate riñón;VEGETABLE;18;0.9;3.9;0.2;1.2;1 mediano:120;0;USDA
+Cebolla (paiteña o perla);VEGETABLE;40;1.1;9.3;0.1;1.7;½ cebolla:55;0;USDA
+Pimiento verde;VEGETABLE;20;0.9;4.6;0.2;1.7;1 mediano:120;0;USDA
+Pimiento rojo;VEGETABLE;31;1;6;0.3;2.1;1 mediano:120;0;USDA
+Lechuga;VEGETABLE;15;1.4;2.9;0.2;1.3;1 taza:47;0;USDA
+Espinaca, cruda;VEGETABLE;23;2.9;3.6;0.4;2.2;1 taza:30;0;USDA
+Espinaca, cocida;VEGETABLE;23;3;3.8;0.3;2.4;½ taza:90;0;USDA
+Acelga, cocida;VEGETABLE;20;1.9;4.1;0.1;2.1;½ taza:88;0;USDA
+Kale;VEGETABLE;35;2.9;4.4;1.5;4.1;1 taza:21;0;USDA
+Rúcula;VEGETABLE;25;2.6;3.7;0.7;1.6;1 taza:20;0;USDA
+Pepino;VEGETABLE;15;0.7;3.6;0.1;0.5;½ pepino:150;0;USDA
+Zucchini;VEGETABLE;17;1.2;3.1;0.3;1;1 mediano:200;0;USDA
+Zapallo, cocido;VEGETABLE;20;0.7;4.9;0.1;1.1;½ taza:122;0;USDA
+Zambo tierno, cocido;VEGETABLE;20;0.8;4;0.2;1.5;½ taza:100;0;Estimación
+Vainita, cocida;VEGETABLE;35;1.9;7.9;0.3;3.2;½ taza:62;0;USDA
+Champiñones;VEGETABLE;22;3.1;3.3;0.3;1;1 taza:70;0;USDA
+Col / repollo;VEGETABLE;25;1.3;5.8;0.1;2.5;1 taza:89;0;USDA
+Remolacha, cocida;VEGETABLE;44;1.7;10;0.2;2;½ taza:85;0;USDA
+Berenjena, cocida;VEGETABLE;35;0.8;8.7;0.2;2.5;1 taza:99;0;USDA
+Espárragos;VEGETABLE;20;2.2;3.9;0.1;2.1;6 espárragos:90;0;USDA
+Apio;VEGETABLE;16;0.7;3;0.2;1.6;1 tallo:40;0;USDA
+Rábano;VEGETABLE;16;0.7;3.4;0.1;1.6;5 rábanos:45;0;USDA
+Palmito;VEGETABLE;28;2.5;4.6;0.6;2.4;2 palmitos:66;0;USDA
+Ensalada mixta (lechuga, tomate, cebolla);VEGETABLE;20;1;4;0.2;1.3;1 taza:100;0;Estimación
+Ajo;FREE;149;6.4;33.1;0.5;2.1;1 diente:3;0;USDA
+Culantro / perejil;FREE;23;2.1;3.7;0.5;2.8;1 cda:4;0;USDA
+# ── Frutas ──
+Banano (guineo);FRUIT;89;1.1;22.8;0.3;2.6;1 mediano:118;0;USDA
+Orito;FRUIT;95;1.2;24;0.3;2;1 orito:40;0;Estimación
+Manzana;FRUIT;52;0.3;13.8;0.2;2.4;1 mediana:180;0;USDA
+Pera;FRUIT;57;0.4;15.2;0.1;3.1;1 mediana:178;0;USDA
+Naranja;FRUIT;47;0.9;11.8;0.1;2.4;1 mediana:130;0;USDA
+Mandarina;FRUIT;53;0.8;13.3;0.3;1.8;1 mediana:88;0;USDA
+Papaya;FRUIT;43;0.5;10.8;0.3;1.7;1 taza:145;0;USDA
+Piña;FRUIT;50;0.5;13.1;0.1;1.4;1 taza:165;0;USDA
+Sandía;FRUIT;30;0.6;7.6;0.2;0.4;1 taza:152;0;USDA
+Melón;FRUIT;34;0.8;8.2;0.2;0.9;1 taza:160;0;USDA
+Mango;FRUIT;60;0.8;15;0.4;1.6;1 taza:165;0;USDA
+Frutillas;FRUIT;32;0.7;7.7;0.3;2;1 taza:152;0;USDA
+Mora;FRUIT;43;1.4;9.6;0.5;5.3;1 taza:144;0;USDA
+Arándanos;FRUIT;57;0.7;14.5;0.3;2.4;1 taza:148;0;USDA
+Uvillas;FRUIT;53;1.9;11.2;0.7;;1 taza:140;0;USDA
+Uvas;FRUIT;69;0.7;18.1;0.2;0.9;1 taza:151;0;USDA
+Kiwi;FRUIT;61;1.1;14.7;0.5;3;1 kiwi:69;0;USDA
+Maracuyá (pulpa);FRUIT;97;2.2;23.4;0.7;10.4;1 maracuyá:18;0;USDA
+Naranjilla (pulpa);FRUIT;25;0.6;5.9;0.1;1.1;1 naranjilla:60;0;Estimación
+Tomate de árbol;FRUIT;31;2;3.8;0.4;3.3;1 unidad:80;0;USDA
+Guanábana;FRUIT;66;1;16.8;0.3;3.3;1 taza:225;0;USDA
+Guayaba;FRUIT;68;2.6;14.3;1;5.4;1 unidad:55;0;USDA
+Babaco;FRUIT;21;0.9;4.6;0.1;1;1 taza:150;0;Estimación
+Pitahaya;FRUIT;60;1.2;12.9;0.4;3;1 unidad:200;0;USDA
+Durazno;FRUIT;39;0.9;9.5;0.3;1.5;1 mediano:150;0;USDA
+Pasas;FRUIT;299;3.1;79.2;0.5;3.7;1 cda:10;0;USDA
+Dátiles;FRUIT;282;2.5;75;0.4;8;1 dátil:8;0;USDA
+Jugo de naranja natural;FRUIT;45;0.7;10.4;0.2;0.2;1 vaso:250;1;USDA
+Limón (jugo);FREE;22;0.4;6.9;0.2;0.3;1 cda:15;1;USDA
+# ── Grasas ──
+Aguacate;FAT;160;2;8.5;14.7;6.7;¼ aguacate:50|½ aguacate:100;0;USDA
+Aceite de oliva;FAT;884;0;0;100;0;1 cdta:4.5|1 cda:13.5;0;USDA
+Aceite vegetal;FAT;884;0;0;100;0;1 cdta:4.5|1 cda:13.5;0;USDA
+Mantequilla;FAT;717;0.9;0.1;81.1;0;1 cdta:5|1 cda:14;0;USDA
+Margarina;FAT;713;0.2;0.7;80;0;1 cdta:5;0;USDA
+Mayonesa;FAT;680;1;0.6;75;0;1 cda:14;0;USDA
+Mayonesa light;FAT;250;0.9;9.2;23.4;0;1 cda:15;0;USDA
+Crema de leche;FAT;340;2.8;2.7;36;0;1 cda:15;0;USDA
+Queso crema;FAT;342;5.9;4.1;34.2;0;1 cda:15;0;USDA
+Maní;FAT;567;25.8;16.1;49.2;8.5;1 cda:9|¼ taza:37;0;USDA
+Mantequilla de maní;FAT;588;25;20;50;6;1 cda:16;0;USDA
+Almendras;FAT;579;21.2;21.6;49.9;12.5;10 almendras:12;0;USDA
+Nueces;FAT;654;15.2;13.7;65.2;6.7;3 nueces:15;0;USDA
+Marañón;FAT;553;18.2;30.2;43.9;3.3;10 marañones:15;0;USDA
+Semillas de chía;FAT;486;16.5;42.1;30.7;34.4;1 cda:12;0;USDA
+Linaza molida;FAT;534;18.3;28.9;42.2;27.3;1 cda:7;0;USDA
+Semillas de zapallo;FAT;559;30.2;10.7;49.1;6;1 cda:10;0;USDA
+Aceitunas;FAT;115;0.8;6.3;10.7;3.2;5 aceitunas:20;0;USDA
+Coco rallado;FAT;354;3.3;15.2;33.5;9;1 cda:7;0;USDA
+Chocolate negro 70%;;598;7.8;45.9;42.6;10.9;1 cuadrito:10;0;USDA
+# ── Azúcares y dulces ──
+Azúcar;SUGAR;387;0;100;0;0;1 cdta:4|1 cda:12;0;USDA
+Panela;SUGAR;380;0.4;95;0.1;0;1 cda:12;0;USDA
+Miel de abeja;SUGAR;304;0.3;82.4;0;0.2;1 cdta:7|1 cda:21;0;USDA
+Mermelada;SUGAR;278;0.4;68.9;0.1;1;1 cda:20;0;USDA
+Chocolate con leche;;535;7.7;59.4;29.7;3.4;1 barra pequeña:40;0;USDA
+Helado de crema;;207;3.5;23.6;11;0.7;½ taza:66;0;USDA
+Galletas rellenas de chocolate;;480;5;68;21;3;3 galletas:34;0;USDA
+Torta de chocolate;;371;5;53;16;2;1 porción:95;0;USDA
+Cacao en polvo 100%;FREE;228;19.6;57.9;13.7;37;1 cda:5;0;USDA
+Gelatina preparada;SUGAR;62;1.2;14.2;0;0;½ taza:135;0;USDA
+# ── Bebidas ──
+Café negro;FREE;2;0.3;0;0;0;1 taza:240;1;USDA
+Té / aromática sin azúcar;FREE;1;0;0.2;0;0;1 taza:240;1;USDA
+Café con leche;;40;2;4;1.8;0;1 taza:240;1;Estimación
+Gaseosa (cola);SUGAR;42;0;10.6;0;0;1 lata:355|1 botella personal:500;1;USDA
+Jugo de fruta envasado;SUGAR;46;0.2;11.5;0.1;0.2;1 vaso:250;1;USDA
+Bebida deportiva;SUGAR;24;0;6;0;0;1 botella:500;1;USDA
+Cerveza;;43;0.5;3.6;0;0;1 lata:355|1 botella:600;1;USDA
+Vino tinto;;85;0.1;2.6;0;0;1 copa:150;1;USDA
+Batido de fruta con leche;;75;2.8;12;1.8;0.8;1 vaso:300;1;Estimación
+Morocho;;110;3.5;18;2.8;1;1 taza:240;1;Estimación
+Colada morada;;70;0.5;17;0.1;1;1 vaso:250;1;Estimación
+# ── Condimentos y salsas ──
+Mostaza;FREE;60;3.7;5.8;3.3;4;1 cdta:5;0;USDA
+Salsa de tomate (ketchup);;101;1;27.4;0.1;0.3;1 cda:17;0;USDA
+Salsa de soya;FREE;53;8.1;4.9;0.6;0.8;1 cda:16;1;USDA
+Ají casero;FREE;30;1;6;0.3;1.5;1 cda:15;0;Estimación
+Vinagre;FREE;18;0;0.04;0;0;1 cda:15;1;USDA
+# ── Platos típicos (por 100 g del plato) ──
+Encebollado;;85;7;9;2.3;1;1 plato:450;0;Estimación
+Seco de pollo (presa y salsa);;160;17;4;8;0.5;1 porción:250;0;Estimación
+Arroz con menestra y carne asada;;170;9;22;5;3;1 plato:450;0;Estimación
+Llapingacho;;190;4;22;9.5;2;1 unidad:80;0;Estimación
+Tigrillo;;210;7;20;11.5;1.5;1 plato:300;0;Estimación
+Ceviche de camarón;;75;9;6;1.5;1;1 plato:300;0;Estimación
+Caldo de gallina;;45;4;3;2;0.3;1 plato:450;1;Estimación
+Locro de papa;;80;2.5;10;3.2;1;1 plato:400;0;Estimación
+Fanesca;;150;6;17;6.5;4;1 plato:450;0;Estimación
+Guatita;;140;9;7;8.5;1.5;1 plato:350;0;Estimación
+Hamburguesa con pan;;254;13;24;12;1.5;1 hamburguesa:220;0;USDA
+Pizza de queso;;266;11.4;33.3;9.7;2.3;1 porción:107;0;USDA
+Pollo frito (broaster);;260;25;9;13.5;0.4;1 presa:150;0;USDA
+Salchipapa;;290;7;30;16;2.5;1 porción:300;0;Estimación
+Sánduche de jamón y queso;;260;13;28;10.5;1.5;1 sánduche:150;0;Estimación

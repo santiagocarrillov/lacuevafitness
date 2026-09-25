@@ -123,6 +123,9 @@ model Member {
   pushSubscriptions PushSubscription[]
   challengeProgress ChallengeProgress[]
   nutritionAppointments NutritionAppointment[]
+  nutritionTarget   NutritionTarget?
+  foodsCreated      Food[]            @relation("FoodCreatedByMember")
+  recipesAuthored   Recipe[]          @relation("RecipeAuthorMember")
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -1062,6 +1065,150 @@ model NutritionAppointment {
 
   @@index([startsAt])
   @@index([memberId, startsAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Nutrición — base de alimentos, recetas y metas
+// ─────────────────────────────────────────────────────────────
+
+enum FoodSource {
+  CURATED // seeded list (USDA / tablas locales), reviewed by the nutritionist
+  OPEN_FOOD_FACTS // imported from a barcode lookup
+  STAFF // created by the nutritionist / staff
+  MEMBER // created by a socio (private until verified)
+}
+
+// Exchange-list groups ("sistema de intercambios").
+enum ExchangeGroup {
+  PROTEIN
+  STARCH
+  FRUIT
+  VEGETABLE
+  DAIRY
+  FAT
+  SUGAR
+  FREE
+}
+
+// One food in our own database. Nutrients are per 100 g (per 100 ml when
+// isLiquid). `portions` lists household measures: [{label:"1 taza", grams:240}].
+// Visibility: verified foods are public; unverified ones only to their creator
+// and staff (a socio's scanned product waits for the nutritionist).
+model Food {
+  id                String         @id @default(cuid())
+  name              String
+  brand             String?
+  searchName        String // lowercased + unaccented name + brand, for search
+  barcode           String?        @unique
+  kcal              Float
+  proteinG          Float
+  carbsG            Float
+  fatG              Float
+  fiberG            Float?
+  sugarG            Float?
+  satFatG           Float?
+  sodiumMg          Float?
+  isLiquid          Boolean        @default(false)
+  portions          Json?
+  exchangeGroup     ExchangeGroup?
+  exchangeGrams     Float? // grams that make 1 exchange of its group
+  source            FoodSource
+  sourceNote        String? // e.g. "USDA FDC", "Estimación La Cueva"
+  verifiedAt        DateTime?
+  verifiedById      String?
+  createdByMemberId String?
+  createdByMember   Member?        @relation("FoodCreatedByMember", fields: [createdByMemberId], references: [id], onDelete: SetNull)
+  createdByUserId   String?
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  recipeIngredients RecipeIngredient[]
+
+  @@index([searchName])
+  @@index([verifiedAt, active])
+  @@index([createdByMemberId])
+}
+
+enum RecipeStatus {
+  PRIVATE // visible to its author only (a socio's own recipe, or a staff draft)
+  SUBMITTED // a socio sent it to the nutritionist for review
+  PUBLISHED // in the shared library everyone sees
+  REJECTED
+}
+
+// A recipe with cached per-serving nutrition. When `macrosFromIngredients` the
+// totals are recomputed from linked foods on every save; otherwise they were
+// typed in (e.g. the nutrition tables of the old blog recipes).
+model Recipe {
+  id                    String       @id @default(cuid())
+  title                 String
+  description           String?      @db.Text
+  instructions          String       @db.Text
+  servings              Int          @default(1)
+  prepMinutes           Int?
+  photoUrl              String?
+  tags                  String[]
+  mealKeys              String[] // breakfast | snack_am | lunch | snack_pm | dinner
+  status                RecipeStatus @default(PRIVATE)
+  reviewNote            String?      @db.Text
+  reviewedById          String?
+  reviewedAt            DateTime?
+  authorUserId          String?
+  authorMemberId        String?
+  authorMember          Member?      @relation("RecipeAuthorMember", fields: [authorMemberId], references: [id], onDelete: SetNull)
+  sourceUrl             String?
+  macrosFromIngredients Boolean      @default(true)
+  kcal                  Float        @default(0) // per serving
+  proteinG              Float        @default(0)
+  carbsG                Float        @default(0)
+  fatG                  Float        @default(0)
+  fiberG                Float?
+  active                Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  ingredients RecipeIngredient[]
+
+  @@index([status, active])
+  @@index([authorMemberId])
+}
+
+model RecipeIngredient {
+  id        String  @id @default(cuid())
+  recipeId  String
+  recipe    Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  foodId    String?
+  food      Food?   @relation(fields: [foodId], references: [id], onDelete: SetNull)
+  label     String // as written: "2 tomates (aprox. 200 g)"
+  grams     Float?
+  sortOrder Int     @default(0)
+
+  @@index([recipeId])
+}
+
+enum TargetSource {
+  CALCULATED
+  MEMBER // the socio set it with the in-app calculator
+  NUTRITIONIST // set by the nutritionist — the socio cannot overwrite it
+}
+
+// A member's daily nutrition target and how it splits across meals
+// (mealSplit = {breakfast:25, snack_am:10, lunch:35, snack_pm:10, dinner:20}).
+model NutritionTarget {
+  id          String       @id @default(cuid())
+  memberId    String       @unique
+  member      Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kcal        Int
+  proteinG    Int
+  carbsG      Int
+  fatG        Int
+  mealSplit   Json
+  inputs      Json? // calculator inputs used (weight, activity, goal…), for audit
+  source      TargetSource
+  updatedById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 // Menstrual period tracking (portal, socias only). One row per period; the

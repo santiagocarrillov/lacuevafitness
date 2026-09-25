@@ -20,7 +20,9 @@
     "test:horarios": "tsx scripts/test-horarios.ts",
     "test:reacciones": "tsx scripts/test-reacciones.ts",
     "test:guardas": "tsx scripts/test-guardas.ts",
-    "test:nutricion-agenda": "tsx scripts/test-nutricion-agenda.ts"
+    "test:nutricion-agenda": "tsx scripts/test-nutricion-agenda.ts",
+    "test:nutricion-base": "tsx scripts/test-nutricion-base.ts",
+    "db:seed:nutricion": "tsx scripts/seed-nutrition.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
