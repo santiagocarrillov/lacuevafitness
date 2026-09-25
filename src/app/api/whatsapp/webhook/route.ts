@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { verifyChallenge, verifySignature } from "@/lib/whatsapp/webhook-verify";
 import { processWebhookPayload } from "@/lib/whatsapp/webhook-router";
 import { respondToInboundConversation, agentEnabled } from "@/lib/whatsapp/agent-runner";
+import { extractOwnerButtons, handleOwnerButtons } from "@/lib/whatsapp/owner-commands";
 
 // Webhook must run on Node (crypto + Prisma) and never be cached.
 export const runtime = "nodejs";
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
 
   try {
     const result = await processWebhookPayload(payload);
+    // Santiago aprobando/rechazando propuestas del Command Center (plantilla propuesta_ads).
+    const ownerButtons = extractOwnerButtons(payload);
+    if (ownerButtons.length) after(() => handleOwnerButtons(ownerButtons));
     if (process.env.NODE_ENV !== "production") {
       console.log("[whatsapp] processed", result);
     }
