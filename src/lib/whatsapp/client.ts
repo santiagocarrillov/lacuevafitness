@@ -144,13 +144,24 @@ export async function sendTemplate(
   templateName: string,
   language: string,
   variables: string[] = [],
+  /** Payloads for the template's quick-reply buttons, in button order. */
+  quickReplies: string[] = [],
 ): Promise<SendResult> {
-  const components = variables.length
-    ? [{
-        type: "body",
-        parameters: variables.map((v) => ({ type: "text", text: v })),
-      }]
-    : undefined;
+  const components: unknown[] = [];
+  if (variables.length) {
+    components.push({
+      type: "body",
+      parameters: variables.map((v) => ({ type: "text", text: v })),
+    });
+  }
+  quickReplies.forEach((payload, index) => {
+    components.push({
+      type: "button",
+      sub_type: "quick_reply",
+      index: String(index),
+      parameters: [{ type: "payload", payload }],
+    });
+  });
   return postGraph({
     messaging_product: "whatsapp",
     recipient_type: "individual",
@@ -159,7 +170,7 @@ export async function sendTemplate(
     template: {
       name: templateName,
       language: { code: language },
-      ...(components ? { components } : {}),
+      ...(components.length ? { components } : {}),
     },
   });
 }
