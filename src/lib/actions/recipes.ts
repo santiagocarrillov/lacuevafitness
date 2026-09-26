@@ -4,8 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { pushToMember } from "@/lib/push/send";
-import { recipePerServing } from "@/lib/nutrition/nutrients";
-import { isMealKey } from "@/lib/nutrition/meals";
+import { normalizeRecipeInput, recipeMacros, type RecipeInput } from "@/lib/nutrition/recipe-input";
 import type { Prisma, RecipeStatus, User } from "@/generated/prisma/client";
 
 async function requireNutrition(): Promise<User> {
@@ -93,73 +92,16 @@ export async function getRecipeForEdit(id: string) {
 
 // ── Save ─────────────────────────────────────────────────────────────
 
-export type RecipeInput = {
-  title: string;
-  description?: string | null;
-  instructions: string;
-  servings: number;
-  prepMinutes?: number | null;
-  tags?: string[];
-  mealKeys?: string[];
-  macrosFromIngredients: boolean;
-  // Used only when macrosFromIngredients = false (typed from a label/table).
-  manual?: { kcal: number; proteinG: number; carbsG: number; fatG: number; fiberG?: number | null };
-  ingredients: { foodId?: string | null; label: string; grams?: number | null }[];
-};
+export type { RecipeInput } from "@/lib/nutrition/recipe-input";
 
 async function normalizeRecipe(input: RecipeInput) {
-  const title = input.title?.trim();
-  if (!title) throw new Error("El título es obligatorio.");
-  const servings = Math.round(Number(input.servings));
-  if (!(servings >= 1 && servings <= 50)) throw new Error("Las porciones deben estar entre 1 y 50.");
-  const ingredients = input.ingredients
-    .map((i, idx) => ({
-      foodId: i.foodId || null,
-      label: i.label.trim(),
-      grams: i.grams && i.grams > 0 ? Math.round(i.grams * 10) / 10 : null,
-      sortOrder: idx,
-    }))
-    .filter((i) => i.label || i.foodId);
-
-  let macros: { kcal: number; proteinG: number; carbsG: number; fatG: number; fiberG: number | null };
-  if (input.macrosFromIngredients) {
-    const foodIds = ingredients.map((i) => i.foodId).filter((x): x is string => Boolean(x));
-    const foods = await prisma.food.findMany({
-      where: { id: { in: foodIds } },
-      select: { id: true, kcal: true, proteinG: true, carbsG: true, fatG: true, fiberG: true },
-    });
-    const byId = new Map(foods.map((f) => [f.id, f]));
-    const r = recipePerServing(
-      ingredients.map((i) => ({ grams: i.grams, food: i.foodId ? byId.get(i.foodId) ?? null : null })),
-      servings,
-    );
-    macros = r.perServing;
-  } else {
-    const m = input.manual;
-    if (!m || !(m.kcal >= 0)) throw new Error("Ingresa las calorías y macros por porción.");
-    macros = {
-      kcal: Math.round(m.kcal),
-      proteinG: m.proteinG || 0,
-      carbsG: m.carbsG || 0,
-      fatG: m.fatG || 0,
-      fiberG: m.fiberG ?? null,
-    };
-  }
-
-  return {
-    data: {
-      title,
-      description: input.description?.trim() || null,
-      instructions: input.instructions?.trim() ?? "",
-      servings,
-      prepMinutes: input.prepMinutes && input.prepMinutes > 0 ? Math.round(input.prepMinutes) : null,
-      tags: (input.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean),
-      mealKeys: (input.mealKeys ?? []).filter(isMealKey),
-      macrosFromIngredients: input.macrosFromIngredients,
-      ...macros,
-    },
-    ingredients,
-  };
+  const { base, ingredients, foodIds } = normalizeRecipeInput(input);
+  const foods = await prisma.food.findMany({
+    where: { id: { in: foodIds } },
+    select: { id: true, kcal: true, proteinG: true, carbsG: true, fatG: true, fiberG: true },
+  });
+  const macros = recipeMacros(input, ingredients, base.servings, new Map(foods.map((f) => [f.id, f])));
+  return { data: { ...base, ...macros }, ingredients };
 }
 
 /** Create (id = null) or update a recipe from the staff editor. New staff recipes start as drafts. */

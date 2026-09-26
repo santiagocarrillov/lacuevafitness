@@ -14,6 +14,7 @@ import { validateFoodInput } from "../src/lib/nutrition/food-input";
 import { normalizeMealSplit } from "../src/lib/nutrition/meals";
 import { parseFoodsCsv } from "../src/lib/nutrition/foods-csv";
 import { cleanTitle, gramsFromLabel, parseBlogRecipe } from "../src/lib/nutrition/blog-recipe-parser";
+import { normalizeRecipeInput, recipeMacros } from "../src/lib/nutrition/recipe-input";
 
 let fallos = 0;
 function check(nombre: string, ok: boolean, detalle?: unknown) {
@@ -139,6 +140,27 @@ check(
 );
 const seedRecipes = JSON.parse(readFileSync(resolve(__dirname, "../prisma/seed-data/recipes-blog.json"), "utf8"));
 check(`JSON de recetas: ${seedRecipes.length} con tabla`, seedRecipes.length >= 20 && seedRecipes.every((r: { nutrition: unknown }) => r.nutrition));
+
+// ── Recetas (validación compartida staff/socio) ────────────────────────────
+const rin = {
+  title: "  Bowl de pollo ",
+  instructions: "Mezclar",
+  servings: 2,
+  mealKeys: ["lunch", "cena-inventada"],
+  photoUrl: "https://x.supabase.co/storage/v1/object/public/nutrition-media/recipes/a.jpg",
+  macrosFromIngredients: true,
+  ingredients: [
+    { foodId: "pollo", label: "Pollo", grams: 300 },
+    { foodId: null, label: "  ", grams: null }, // vacío: se descarta
+    { foodId: null, label: "Sal al gusto", grams: null },
+  ],
+};
+const nr = normalizeRecipeInput(rin);
+check("receta: limpia título, comidas inválidas e ingredientes vacíos", nr.base.title === "Bowl de pollo" && nr.base.mealKeys.join() === "lunch" && nr.ingredients.length === 2, nr);
+const mac = recipeMacros(rin, nr.ingredients, nr.base.servings, new Map([["pollo", pollo]]));
+check("receta: macros por porción desde ingredientes", mac.kcal === 248 && mac.proteinG === 46.5, mac);
+check("receta: foto debe ser https", throws(() => normalizeRecipeInput({ ...rin, photoUrl: "javascript:alert(1)" })));
+check("receta: porciones fuera de rango", throws(() => normalizeRecipeInput({ ...rin, servings: 0 })));
 
 console.log(fallos === 0 ? "\nTodo OK" : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);

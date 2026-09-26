@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FoodPicker } from "@/components/nutrition/food-picker";
+import { PhotoUpload } from "@/components/nutrition/photo-upload";
 import { saveRecipe, setRecipeActive, setRecipeStatus, type RecipeInput } from "@/lib/actions/recipes";
 import { MEAL_KEYS, MEAL_LABEL } from "@/lib/nutrition/meals";
 import { recipePerServing, scaleFood, type Portion } from "@/lib/nutrition/nutrients";
@@ -41,6 +42,7 @@ export type EditorRecipe = {
   reviewNote: string | null;
   active: boolean;
   sourceUrl: string | null;
+  photoUrl: string | null;
   author: string | null;
   macrosFromIngredients: boolean;
   manual: { kcal: number; proteinG: number; carbsG: number; fatG: number; fiberG: number | null };
@@ -76,6 +78,7 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
     fatG: String(recipe?.manual.fatG ?? ""),
   }));
   const [reviewNote, setReviewNote] = useState(recipe?.reviewNote ?? "");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(recipe?.photoUrl ?? null);
   const [linkingKey, setLinkingKey] = useState<string | null>(null);
 
   const computed = useMemo(
@@ -101,6 +104,7 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
       prepMinutes: prep ? Number(prep) : null,
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       mealKeys,
+      photoUrl,
       macrosFromIngredients: fromIngredients,
       manual: {
         kcal: Number(manual.kcal),
@@ -161,6 +165,7 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
                 <Input id="r-tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="dulce, vegetariano" />
               </div>
             </div>
+            <PhotoUpload value={photoUrl} onChange={setPhotoUrl} />
             <div className="flex flex-wrap gap-3 text-sm">
               {MEAL_KEYS.map((k) => (
                 <label key={k} className="flex items-center gap-1.5">

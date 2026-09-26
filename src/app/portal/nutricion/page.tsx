@@ -17,6 +17,8 @@ import { MEAL_LABEL, isMealKey } from "@/lib/nutrition/meals";
 import type { ExchangeGroup } from "@/lib/nutrition/exchanges";
 import { ecuadorDateString, todayDateUtc } from "@/lib/timezone";
 import { DiaryView } from "@/components/portal/nutrition/diary-view";
+import { RecipesTab, type PortalRecipe } from "@/components/portal/nutrition/recipes-tab";
+import { parsePortions } from "@/lib/nutrition/nutrients";
 import { DiaryProgress } from "@/components/portal/nutrition/diary-progress";
 import { getDiaryDay, getDiaryHistory } from "@/lib/portal/food-diary";
 import { addDays } from "@/lib/nutrition/appointments";
@@ -81,9 +83,17 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
       : Promise.resolve([]),
     tab === "recetas"
       ? prisma.recipe.findMany({
-          where: { active: true, status: "PUBLISHED" },
+          where: { active: true, OR: [{ status: "PUBLISHED" }, { authorMemberId: member.id }] },
           orderBy: { title: "asc" },
-          select: { id: true, title: true, description: true, kcal: true, proteinG: true, carbsG: true, fatG: true, servings: true, prepMinutes: true, mealKeys: true, tags: true, instructions: true, ingredients: { orderBy: { sortOrder: "asc" }, select: { label: true } } },
+          include: {
+            authorMember: { select: { firstName: true, lastName: true } },
+            ingredients: {
+              orderBy: { sortOrder: "asc" },
+              include: {
+                food: { select: { id: true, name: true, kcal: true, proteinG: true, carbsG: true, fatG: true, fiberG: true, isLiquid: true, portions: true } },
+              },
+            },
+          },
         })
       : Promise.resolve([]),
   ]);
@@ -109,6 +119,31 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
     tab === "diario"
       ? (await prisma.nutritionTarget.findUnique({ where: { memberId: member.id }, select: { source: true } }))?.source ?? null
       : null;
+
+  const portalRecipes: PortalRecipe[] = recipes.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    instructions: r.instructions,
+    servings: r.servings,
+    prepMinutes: r.prepMinutes,
+    mealKeys: r.mealKeys,
+    photoUrl: r.photoUrl,
+    kcal: r.kcal,
+    proteinG: r.proteinG,
+    carbsG: r.carbsG,
+    fatG: r.fatG,
+    status: r.status,
+    reviewNote: r.reviewNote,
+    mine: r.authorMemberId === member.id,
+    // Credit socios whose recipe made it into the shared library.
+    author: r.authorMember && r.authorMemberId !== member.id ? `de ${r.authorMember.firstName} ${r.authorMember.lastName.charAt(0)}.` : null,
+    ingredients: r.ingredients.map((i) => ({
+      label: i.label,
+      grams: i.grams,
+      food: i.food && r.authorMemberId === member.id ? { ...i.food, portions: parsePortions(i.food.portions) } : null,
+    })),
+  }));
 
   const initialChecks: Record<string, Check> = Object.fromEntries(
     (checks?.entries ?? []).map((e) => [e.mealKey, { ate: e.ate, optionId: e.optionId, freeText: e.freeText }]),
@@ -277,41 +312,10 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
         ))}
 
       {tab === "recetas" && (
-        <div style={{ display: "grid", gap: 10 }}>
-          {recipes.length === 0 ? (
-            <div className="portal-card">
-              <p style={{ fontSize: 13, color: "var(--pt-ink-2)", margin: 0 }}>Pronto: el recetario de La Cueva.</p>
-            </div>
-          ) : (
-            recipes.map((r) => (
-              <details key={r.id} className="portal-card">
-                <summary style={{ cursor: "pointer", listStyle: "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600 }}>{r.title}</span>
-                    <span style={{ fontSize: 12, color: "var(--pt-ink-3)", whiteSpace: "nowrap" }}>{Math.round(r.kcal)} kcal</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--pt-ink-3)", marginTop: 2 }}>
-                    P {r.proteinG} · C {r.carbsG} · G {r.fatG} por porción
-                    {r.mealKeys.filter(isMealKey).length > 0 && ` · ${r.mealKeys.filter(isMealKey).map((k) => MEAL_LABEL[k]).join(", ")}`}
-                  </div>
-                </summary>
-                {r.description && <p style={{ fontSize: 13, color: "var(--pt-ink-2)", marginTop: 10 }}>{r.description}</p>}
-                <div className="portal-kicker" style={{ marginTop: 10 }}>
-                  Ingredientes {r.servings > 1 ? `(${r.servings} porciones)` : ""}
-                </div>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, display: "grid", gap: 2 }}>
-                  {r.ingredients.map((i, k) => (
-                    <li key={k}>{i.label}</li>
-                  ))}
-                </ul>
-                <div className="portal-kicker" style={{ marginTop: 10 }}>
-                  Preparación {r.prepMinutes ? `· ${r.prepMinutes} min` : ""}
-                </div>
-                <p style={{ fontSize: 14, whiteSpace: "pre-wrap", margin: 0, lineHeight: 1.5 }}>{r.instructions}</p>
-              </details>
-            ))
-          )}
-        </div>
+        <RecipesTab
+          library={portalRecipes.filter((r) => r.status === "PUBLISHED")}
+          mine={portalRecipes.filter((r) => r.mine)}
+        />
       )}
 
       {tab === "chat" && (
