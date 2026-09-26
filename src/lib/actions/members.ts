@@ -206,42 +206,89 @@ export async function updateMember(
   // Se DEVUELVE el error en vez de lanzarlo: en producción Next borra el mensaje
   // de cualquier error lanzado por una server action, y la admin veía «An error
   // occurred in the Server Components render…» en vez de «ese email ya es de X».
+  const actor = await requireAuth();
+  if (!can.viewMembers(actor)) return { ok: false, error: "No autorizado." };
+  // Front desk edits everything (sede included). Other staff — the nutritionist,
+  // who helps socios get into the app, and coaches — only fix contact data.
+  if (!can.manageMembers(actor)) data = { email: data.email, phone: data.phone };
+
+  const email = data.email?.trim().toLowerCase() || undefined;
   const { secondarySede, ...rest } = data;
 
   // Email is @unique. Pre-check against OTHER members so a collision surfaces as a
   // clean message instead of an unhandled P2002 that crashes the socio page (bug #5).
-  if (data.email) {
-    const clash = await prisma.member.findUnique({
-      where: { email: data.email },
+  if (email) {
+    const clash = await prisma.member.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, id: { not: id } },
       select: { id: true, firstName: true, lastName: true },
     });
-    if (clash && clash.id !== id) {
+    if (clash) {
       return {
         ok: false,
-        error: `Ya existe otro socio con el email ${data.email} (${clash.firstName} ${clash.lastName}).`,
+        error: `Ya existe otro socio con el email ${email} (${clash.firstName} ${clash.lastName}).`,
       };
     }
   }
 
-  try {
-    await prisma.member.update({
-      where: { id },
-      data: {
-        ...rest,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-        email: data.email || undefined,
-        phone: data.phone || undefined,
-        // Secondary sede is attendance-only; never equal to the primary.
-        ...(secondarySede !== undefined
-          ? { secondarySede: secondarySede && secondarySede !== data.sede ? secondarySede : null }
-          : {}),
-      },
+  // If the socio already uses the app, their login email must follow the ficha —
+  // otherwise they keep logging in with the old one and "olvidé mi contraseña"
+  // (which looks the ficha email up) can't find them.
+  const current = await prisma.member.findUnique({
+    where: { id },
+    select: { email: true, user: { select: { id: true, role: true, supabaseUserId: true } } },
+  });
+  if (!current) return { ok: false, error: "Socio no encontrado." };
+  const emailChanged = email !== undefined && email !== current.email?.toLowerCase();
+  const login = emailChanged ? current.user : null;
+  if (login && login.role !== "MEMBER") {
+    return { ok: false, error: "Esta ficha es de alguien del staff: su correo se cambia en Usuarios." };
+  }
+  if (login) {
+    const taken = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" }, id: { not: login.id } },
+      select: { id: true },
     });
+    if (taken) return { ok: false, error: `El correo ${email} ya tiene una cuenta en la app.` };
+  }
+
+  let authEmailMoved = false;
+  try {
+    if (login?.supabaseUserId) {
+      const { error } = await createSupabaseAdminClient().auth.admin.updateUserById(login.supabaseUserId, {
+        email,
+        email_confirm: true,
+      });
+      if (error) return { ok: false, error: `No se pudo cambiar el correo de acceso: ${error.message}` };
+      authEmailMoved = true;
+    }
+
+    await prisma.$transaction([
+      prisma.member.update({
+        where: { id },
+        data: {
+          ...rest,
+          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+          email,
+          phone: data.phone || undefined,
+          // Secondary sede is attendance-only; never equal to the primary.
+          ...(secondarySede !== undefined
+            ? { secondarySede: secondarySede && secondarySede !== data.sede ? secondarySede : null }
+            : {}),
+        },
+      }),
+      ...(login ? [prisma.user.update({ where: { id: login.id }, data: { email } })] : []),
+    ]);
 
     revalidatePath("/dashboard/socios");
     revalidatePath(`/dashboard/socios/${id}`);
     return { ok: true };
   } catch (err: unknown) {
+    // Keep the login email and the ficha in sync: undo the auth change if the DB write failed.
+    if (authEmailMoved && login?.supabaseUserId && current.email) {
+      await createSupabaseAdminClient()
+        .auth.admin.updateUserById(login.supabaseUserId, { email: current.email, email_confirm: true })
+        .catch(() => undefined);
+    }
     // Fallback for the race where the email is taken between the pre-check and update.
     if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
       return { ok: false, error: "Ya existe otro socio con ese email." };
@@ -485,13 +532,14 @@ export type PortalInviteResult =
   | { ok: false; error: string };
 
 /**
- * Issue (or re-issue) a one-time portal invite code for a socio. Admin-only.
+ * Issue (or re-issue) a one-time portal invite code for a socio. Front desk and
+ * the nutritionist (can.managePortalAccess).
  * The code is returned once for the admin to send (e.g. WhatsApp); the socio
  * redeems it at /portal/signup. Regenerating replaces any prior unused code.
  */
 export async function generatePortalInvite(memberId: string): Promise<PortalInviteResult> {
   const actor = await requireAuth();
-  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+  if (!can.managePortalAccess(actor)) return { ok: false, error: "No autorizado." };
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
@@ -531,7 +579,7 @@ export async function generatePortalInvite(memberId: string): Promise<PortalInvi
 /** Cancel an outstanding invite code so it can no longer be redeemed. Admin-only. */
 export async function revokePortalInvite(memberId: string): Promise<{ ok: boolean; error?: string }> {
   const actor = await requireAuth();
-  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+  if (!can.managePortalAccess(actor)) return { ok: false, error: "No autorizado." };
 
   await prisma.member.update({
     where: { id: memberId },
@@ -562,7 +610,7 @@ export async function emailPortalInvite(
   memberId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const actor = await requireAuth();
-  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+  if (!can.managePortalAccess(actor)) return { ok: false, error: "No autorizado." };
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
@@ -600,7 +648,7 @@ export type MemberAccessResult =
  */
 export async function resetMemberPassword(memberId: string): Promise<MemberAccessResult> {
   const actor = await requireAuth();
-  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+  if (!can.managePortalAccess(actor)) return { ok: false, error: "No autorizado." };
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
@@ -637,7 +685,7 @@ export type RecoveryLinkResult =
  */
 export async function sendMemberRecoveryLink(memberId: string): Promise<RecoveryLinkResult> {
   const actor = await requireAuth();
-  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+  if (!can.managePortalAccess(actor)) return { ok: false, error: "No autorizado." };
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
@@ -674,7 +722,7 @@ export async function unlinkMemberAccount(
   memberId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const actor = await requireAuth();
-  if (!can.manageMembers(actor)) return { ok: false, error: "No autorizado." };
+  if (!can.managePortalAccess(actor)) return { ok: false, error: "No autorizado." };
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },

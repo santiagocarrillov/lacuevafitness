@@ -30,9 +30,15 @@ type MemberData = {
 export function MemberInfoEditor({
   memberId,
   member,
+  contactOnly = false,
+  hasApp = false,
 }: {
   memberId: string;
   member: MemberData;
+  /** Staff outside the front desk (nutritionist, coaches) only fix email/phone. */
+  contactOnly?: boolean;
+  /** The socio already logs into the app — changing the email changes their login. */
+  hasApp?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -89,25 +95,30 @@ export function MemberInfoEditor({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="text-xs text-primary hover:underline">
-        Editar
+        {contactOnly ? "Editar contacto" : "Editar"}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Editar información personal</DialogTitle>
+          <DialogTitle>{contactOnly ? "Editar contacto" : "Editar información personal"}</DialogTitle>
           <DialogDescription>
-            Actualiza los datos del socio.
+            {contactOnly ? "Correo y teléfono del socio. El resto lo cambia recepción." : "Actualiza los datos del socio."}
+            {hasApp && " Ya usa la app: si cambias el correo, también cambia el correo con el que entra."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSave} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Nombre *</Label>
-              <Input required value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Apellido *</Label>
-              <Input required value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
-            </div>
+            {!contactOnly && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nombre *</Label>
+                  <Input required value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Apellido *</Label>
+                  <Input required value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
+                </div>
+              </>
+            )}
             <div className="space-y-1">
               <Label className="text-xs">Email</Label>
               <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} />
@@ -116,6 +127,8 @@ export function MemberInfoEditor({
               <Label className="text-xs">Teléfono</Label>
               <Input value={form.phone} onChange={(e) => update("phone", e.target.value)} />
             </div>
+            {!contactOnly && (
+            <>
             <div className="space-y-1">
               <Label className="text-xs">Fecha de nacimiento</Label>
               <Input type="date" value={form.dateOfBirth} onChange={(e) => update("dateOfBirth", e.target.value)} />
@@ -163,6 +176,8 @@ export function MemberInfoEditor({
               <Label className="text-xs">Notas</Label>
               <Input value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Restricciones médicas, preferencias..." />
             </div>
+            </>
+            )}
           </div>
           <div className="flex gap-2 justify-end pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
