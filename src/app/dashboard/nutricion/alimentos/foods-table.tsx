@@ -7,7 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { FoodDialog } from "@/components/nutrition/food-dialog";
-import { setFoodActive, verifyFood, type FoodListFilter, type FoodRow } from "@/lib/actions/foods";
+import { getFood, mergeFoods, setFoodActive, verifyFood, type FoodListFilter, type FoodRow } from "@/lib/actions/foods";
+import { lookupBarcodeStaff } from "@/lib/actions/barcode";
+import type { FoodInput } from "@/lib/nutrition/food-input";
+import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
+import { FoodPicker } from "@/components/nutrition/food-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EXCHANGE_GROUPS, EXCHANGE_LABEL } from "@/lib/nutrition/exchanges";
 
 export function FoodsTable({
@@ -32,6 +43,30 @@ export function FoodsTable({
   const [editing, setEditing] = useState<FoodRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [scanning, setScanning] = useState(false);
+  const [prefill, setPrefill] = useState<Partial<FoodInput> | null>(null);
+  const [merging, setMerging] = useState<FoodRow | null>(null);
+
+  async function onScanned(code: string) {
+    setScanning(false);
+    try {
+      const r = await lookupBarcodeStaff(code);
+      if (r.status === "found") {
+        const f = await getFood(r.foodId);
+        if (f) setEditing(f);
+        toast.info(`Ya está en la base: ${r.name}.`);
+      } else if (r.status === "external") {
+        setPrefill(r.prefill);
+        setCreating(true);
+      } else if (r.status === "unknown") {
+        setPrefill({ barcode: r.barcode });
+        setCreating(true);
+        toast.info("No está en Open Food Facts: cárgalo desde la etiqueta.");
+      } else toast.error("Código inválido.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo buscar el código.");
+    }
+  }
 
   function go(patch: { q?: string; filtro?: string; p?: number }) {
     const sp = new URLSearchParams();
@@ -78,7 +113,17 @@ export function FoodsTable({
             Buscar
           </Button>
         </form>
-        <Button onClick={() => setCreating(true)}>+ Nuevo alimento</Button>
+        <Button variant="outline" onClick={() => setScanning(true)}>
+          Escanear código
+        </Button>
+        <Button
+          onClick={() => {
+            setPrefill(null);
+            setCreating(true);
+          }}
+        >
+          + Nuevo alimento
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-1">
@@ -165,6 +210,11 @@ export function FoodsTable({
                     <Button size="sm" variant="ghost" onClick={() => setEditing(f)}>
                       Editar
                     </Button>
+                    {!f.verified && f.active && (
+                      <Button size="sm" variant="ghost" onClick={() => setMerging(f)}>
+                        Fusionar
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -200,14 +250,41 @@ export function FoodsTable({
         )}
       </div>
 
+      {scanning && <BarcodeScanner onDetected={onScanned} onClose={() => setScanning(false)} />}
+
+      {merging && (
+        <Dialog open onOpenChange={(o) => !o && setMerging(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Fusionar “{merging.name}”</DialogTitle>
+              <DialogDescription>
+                Elige el alimento de la base que es el mismo. Los diarios y recetas que lo usan pasan a ese, y este se archiva.
+              </DialogDescription>
+            </DialogHeader>
+            <FoodPicker
+              autoFocus
+              placeholder="Buscar el alimento correcto…"
+              onPick={(target) =>
+                act(async () => {
+                  await mergeFoods(merging.id, target.id);
+                  setMerging(null);
+                }, `Fusionado con “${target.name}”.`)
+              }
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
       {(creating || editing) && (
         <FoodDialog
           open
           food={editing}
+          prefill={editing ? null : prefill}
           onOpenChange={(o) => {
             if (!o) {
               setCreating(false);
               setEditing(null);
+              setPrefill(null);
             }
           }}
           onSaved={() => router.refresh()}

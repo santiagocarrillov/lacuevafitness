@@ -15,6 +15,7 @@ import {
 import { createFood, updateFood, type FoodRow } from "@/lib/actions/foods";
 import { EXCHANGE_GROUPS, EXCHANGE_LABEL, exchangeGramsFor, type ExchangeGroup } from "@/lib/nutrition/exchanges";
 import { kcalFromMacros } from "@/lib/nutrition/nutrients";
+import type { FoodInput } from "@/lib/nutrition/food-input";
 
 type NumField = "kcal" | "proteinG" | "carbsG" | "fatG" | "fiberG" | "sugarG" | "satFatG" | "sodiumMg";
 
@@ -35,33 +36,37 @@ export function FoodDialog({
   open,
   onOpenChange,
   food,
+  prefill,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   food: FoodRow | null;
+  /** New food prefilled from a barcode lookup (Open Food Facts). */
+  prefill?: Partial<FoodInput> | null;
   onSaved?: (f: FoodRow) => void;
 }) {
+  const init = food ?? prefill ?? null;
   const [isPending, startTransition] = useTransition();
-  const [name, setName] = useState(food?.name ?? "");
-  const [brand, setBrand] = useState(food?.brand ?? "");
-  const [barcode, setBarcode] = useState(food?.barcode ?? "");
-  const [isLiquid, setIsLiquid] = useState(food?.isLiquid ?? false);
+  const [name, setName] = useState(init?.name ?? "");
+  const [brand, setBrand] = useState(init?.brand ?? "");
+  const [barcode, setBarcode] = useState(init?.barcode ?? "");
+  const [isLiquid, setIsLiquid] = useState(init?.isLiquid ?? false);
   // Nutrition labels often come per serving: let the nutritionist type them as
   // printed and convert to 100 g on save.
   const [basis, setBasis] = useState("100");
   const [nums, setNums] = useState<Record<NumField, string>>(() => ({
-    kcal: str(food?.kcal),
-    proteinG: str(food?.proteinG),
-    carbsG: str(food?.carbsG),
-    fatG: str(food?.fatG),
-    fiberG: str(food?.fiberG),
-    sugarG: str(food?.sugarG),
-    satFatG: str(food?.satFatG),
-    sodiumMg: str(food?.sodiumMg),
+    kcal: str(init?.kcal),
+    proteinG: str(init?.proteinG),
+    carbsG: str(init?.carbsG),
+    fatG: str(init?.fatG),
+    fiberG: str(init?.fiberG),
+    sugarG: str(init?.sugarG),
+    satFatG: str(init?.satFatG),
+    sodiumMg: str(init?.sodiumMg),
   }));
   const [portions, setPortions] = useState(
-    (food?.portions ?? []).map((p) => ({ label: p.label, grams: String(p.grams) })),
+    (init?.portions ?? []).map((p) => ({ label: p.label, grams: String(p.grams) })),
   );
   const [group, setGroup] = useState<string>(food?.exchangeGroup ?? "");
   const [exGrams, setExGrams] = useState(str(food?.exchangeGrams));
@@ -124,7 +129,9 @@ export function FoodDialog({
           <DialogDescription>
             {food?.createdByMember
               ? `Creado por ${food.createdByMember}. Revisa los valores antes de verificarlo.`
-              : "Los valores se guardan por 100 g (o 100 ml)."}
+              : prefill?.name
+                ? "Datos de Open Food Facts: confírmalos con la etiqueta. Se guardan por 100 g (o 100 ml)."
+                : "Los valores se guardan por 100 g (o 100 ml)."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">

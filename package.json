@@ -24,7 +24,8 @@
     "test:nutricion-base": "tsx scripts/test-nutricion-base.ts",
     "db:seed:nutricion": "tsx scripts/seed-nutrition.ts",
     "test:nutricion-planes": "tsx scripts/test-nutricion-planes.ts",
-    "test:nutricion-diario": "tsx scripts/test-nutricion-diario.ts"
+    "test:nutricion-diario": "tsx scripts/test-nutricion-diario.ts",
+    "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
@@ -34,6 +35,7 @@
     "@prisma/client": "^7.7.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
+    "@zxing/browser": "^0.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

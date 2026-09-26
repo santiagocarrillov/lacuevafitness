@@ -14,6 +14,10 @@ import { scaleFood } from "@/lib/nutrition/nutrients";
 import { MEAL_LABEL, type MealKey } from "@/lib/nutrition/meals";
 import { useDebouncedSearch } from "@/components/nutrition/use-debounced-search";
 import type { PlanOptionVm } from "@/lib/portal/food-diary";
+import { lookupBarcode } from "@/lib/actions/barcode";
+import type { FoodInput } from "@/lib/nutrition/food-input";
+import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
+import { CreateFoodForm } from "./create-food-form";
 
 export const sheetStyle: React.CSSProperties = {
   position: "fixed",
@@ -284,6 +288,26 @@ export function AddFoodSheet({
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const { results, loading, done } = useDebouncedSearch(q, searchDiaryItems);
+  const [scanning, setScanning] = useState(false);
+  const [creating, setCreating] = useState<{ prefill: Partial<FoodInput>; fromOff: boolean } | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+
+  async function onScanned(code: string) {
+    setScanning(false);
+    setLookingUp(true);
+    setMsg(null);
+    try {
+      const r = await lookupBarcode(code);
+      if (r.status === "found") setPicked(r.food);
+      else if (r.status === "external") setCreating({ prefill: r.prefill, fromOff: true });
+      else if (r.status === "unknown") setCreating({ prefill: { barcode: r.barcode }, fromOff: false });
+      else setMsg("Ese código no parece de un producto. Intenta de nuevo.");
+    } catch {
+      setMsg("No se pudo buscar el código. Revisa tu conexión.");
+    } finally {
+      setLookingUp(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -315,6 +339,24 @@ export function AddFoodSheet({
     { key: "rapido", label: "Rápido", show: true },
   ];
 
+  if (scanning) return <BarcodeScanner onDetected={onScanned} onClose={() => setScanning(false)} />;
+
+  if (creating) {
+    return (
+      <div style={sheetStyle}>
+        <SheetHeader title={creating.fromOff ? "Confirma el producto" : "Nuevo alimento"} onClose={onClose} onBack={() => setCreating(null)} />
+        <CreateFoodForm
+          prefill={creating.prefill}
+          fromOpenFoodFacts={creating.fromOff}
+          onCreated={(food) => {
+            setCreating(null);
+            setPicked(food);
+          }}
+        />
+      </div>
+    );
+  }
+
   if (picked) {
     return (
       <div style={sheetStyle}>
@@ -339,7 +381,19 @@ export function AddFoodSheet({
     <div style={sheetStyle}>
       <SheetHeader title={`Agregar a ${MEAL_LABEL[mealKey].toLowerCase()}`} onClose={onClose} />
       <div style={{ padding: "12px 16px 0", background: "var(--pt-bg-card)" }}>
-        <input autoFocus style={inputStyle} placeholder="Buscar alimento o receta…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <input autoFocus style={inputStyle} placeholder="Buscar alimento o receta…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            aria-label="Escanear código de barras"
+            style={{ flex: "none", width: 48, borderRadius: 12, border: "1px solid var(--pt-line)", background: "var(--pt-bg-card)", fontSize: 20, cursor: "pointer" }}
+          >
+            ▥
+          </button>
+        </div>
+        {lookingUp && <p style={{ fontSize: 13, color: "var(--pt-ink-3)", margin: "8px 0 0" }}>Buscando el producto…</p>}
+        {msg && !lookingUp && tab !== "plan" && <p style={{ fontSize: 13, color: "var(--pt-red)", margin: "8px 0 0" }}>{msg}</p>}
         {q.trim().length < 2 && (
           <div style={{ display: "flex", gap: 4, overflowX: "auto", padding: "10px 0" }}>
             {tabs
@@ -407,15 +461,33 @@ export function AddFoodSheet({
               <HitRow key={`${h.kind}${h.id}`} hit={h} onPick={() => setPicked(h)} />
             ))}
             {q.trim().length >= 2 && done && list.length === 0 && (
-              <p style={{ padding: 16, fontSize: 13, color: "var(--pt-ink-2)" }}>
-                No encontramos “{q}”. Prueba con otra palabra o usa “Rápido” para anotar las calorías.
-              </p>
+              <div style={{ padding: 16, fontSize: 13, color: "var(--pt-ink-2)", display: "grid", gap: 10 }}>
+                <span>No encontramos “{q}”. Prueba con otra palabra, escanea el código o créalo con los datos de la etiqueta.</span>
+                <button
+                  type="button"
+                  onClick={() => setCreating({ prefill: { name: q.trim() }, fromOff: false })}
+                  style={{ ...primaryBtn, background: "var(--pt-bg-card)", color: "var(--pt-ink)", border: "1px solid var(--pt-ink)" }}
+                >
+                  Crear “{q.trim()}”
+                </button>
+              </div>
             )}
             {q.trim().length >= 2 && loading && list.length === 0 && <p style={{ padding: 16, fontSize: 13, color: "var(--pt-ink-3)" }}>Buscando…</p>}
             {q.trim().length < 2 && shortcuts && list.length === 0 && (
               <p style={{ padding: 16, fontSize: 13, color: "var(--pt-ink-3)" }}>
-                {tab === "mios" ? "Aquí aparecerán los alimentos y recetas que crees." : "Todavía no hay nada aquí. Busca arriba."}
+                {tab === "mios" ? "Aquí aparecerán los alimentos y recetas que crees." : "Todavía no hay nada aquí. Busca arriba o escanea un producto."}
               </p>
+            )}
+            {q.trim().length < 2 && tab === "mios" && (
+              <div style={{ padding: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setCreating({ prefill: {}, fromOff: false })}
+                  style={{ ...primaryBtn, background: "var(--pt-bg-card)", color: "var(--pt-ink)", border: "1px solid var(--pt-ink)" }}
+                >
+                  + Crear alimento desde la etiqueta
+                </button>
+              </div>
             )}
           </>
         )}
