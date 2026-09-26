@@ -125,6 +125,7 @@ model Member {
   nutritionAppointments NutritionAppointment[]
   nutritionTarget   NutritionTarget?
   nutritionMessages NutritionMessage[]
+  foodLogEntries    FoodLogEntry[]
   foodsCreated      Food[]            @relation("FoodCreatedByMember")
   recipesAuthored   Recipe[]          @relation("RecipeAuthorMember")
 
@@ -1132,6 +1133,7 @@ model Food {
   updatedAt         DateTime       @updatedAt
 
   recipeIngredients RecipeIngredient[]
+  foodLogEntries    FoodLogEntry[]
 
   @@index([searchName])
   @@index([verifiedAt, active])
@@ -1176,7 +1178,8 @@ model Recipe {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
-  ingredients RecipeIngredient[]
+  ingredients    RecipeIngredient[]
+  foodLogEntries FoodLogEntry[]
 
   @@index([status, active])
   @@index([authorMemberId])
@@ -1217,6 +1220,47 @@ model NutritionTarget {
   updatedById String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+enum FoodLogSource {
+  SEARCH
+  PLAN // added from a plan block ("lo cumplí" → al diario)
+  RECIPE
+  QUICK_ADD // only kcal (and optional macros), no food
+  COPY // copied from another day/meal
+  SUGGESTION // from the "ideas para tu siguiente comida"
+  BARCODE
+}
+
+// Food diary (MyFitnessPal-style): what the socio actually ate, item by item.
+// Nutrients are a snapshot at logging time. Private to the socio and the
+// nutrition staff. Soft-deleted with `active`.
+model FoodLogEntry {
+  id           String        @id @default(cuid())
+  memberId     String
+  member       Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date         DateTime      @db.Date // Ecuador local day
+  mealKey      String
+  foodId       String?
+  food         Food?         @relation(fields: [foodId], references: [id], onDelete: SetNull)
+  recipeId     String?
+  recipe       Recipe?       @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  name         String
+  grams        Float?
+  servings     Float?
+  portionLabel String?
+  kcal         Float
+  proteinG     Float
+  carbsG       Float
+  fatG         Float
+  fiberG       Float?
+  source       FoodLogSource
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([memberId, date])
+  @@index([memberId, createdAt])
 }
 
 enum MessageAuthor {

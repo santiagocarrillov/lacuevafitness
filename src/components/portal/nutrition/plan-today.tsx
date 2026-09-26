@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { markPlanMeal } from "@/lib/actions/meal-checks";
+import { addPlanOptionToDiary } from "@/lib/actions/food-log";
 import { sendNutritionMessage } from "@/lib/actions/nutrition-messages";
 import { ADHERENCE_META, adherenceFromChecks, type AdherenceLevel } from "@/lib/nutrition/adherence";
 import type { ExchangeGroup } from "@/lib/nutrition/exchanges";
@@ -62,6 +63,8 @@ function MealBlock({
   const [comment, setComment] = useState("");
   const [sent, setSent] = useState(false);
   const [sending, startSend] = useTransition();
+  const [adding, startAdd] = useTransition();
+  const [diaryMsg, setDiaryMsg] = useState<string | null>(null);
   const opt = meal.options[optIdx];
 
   const state = !check ? "pending" : check.ate ? "done" : "missed";
@@ -166,6 +169,32 @@ function MealBlock({
           </>
         )}
       </div>
+
+      {state === "done" && check?.optionId && meal.options.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {diaryMsg ? (
+            <span style={{ fontSize: 12, color: "var(--pt-green)" }}>{diaryMsg}</span>
+          ) : (
+            <button
+              type="button"
+              disabled={adding}
+              onClick={() =>
+                startAdd(async () => {
+                  try {
+                    const r = await addPlanOptionToDiary({ mealKey: meal.key, optionId: check.optionId! });
+                    setDiaryMsg(r.added ? "Agregado a tu diario ✓" : "Ya estaba en tu diario");
+                  } catch (e) {
+                    setDiaryMsg(e instanceof Error ? e.message : "No se pudo agregar.");
+                  }
+                })
+              }
+              style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "var(--pt-ink-2)", textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}
+            >
+              + Agregar esta comida a mi diario de calorías
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={{ marginTop: 10 }}>
         {sent ? (

@@ -114,6 +114,12 @@ export async function getMemberNutritionFollowUp(memberId: string) {
     prisma.nutritionMessage.findMany({ where: { memberId }, orderBy: { createdAt: "asc" }, take: 300 }),
     prisma.nutritionTarget.findUnique({ where: { memberId }, select: { kcal: true, proteinG: true, source: true } }),
   ]);
+  const diaryFrom = new Date(today.getTime() - 6 * DAY_MS);
+  const diary = await prisma.foodLogEntry.findMany({
+    where: { memberId, active: true, date: { gte: diaryFrom, lte: today } },
+    orderBy: [{ date: "desc" }, { createdAt: "asc" }],
+    select: { date: true, mealKey: true, name: true, grams: true, servings: true, portionLabel: true, kcal: true, proteinG: true, carbsG: true, fatG: true },
+  });
   if (!member) return null;
   const content = parsePlanContent(plan?.content);
   return {
@@ -128,5 +134,12 @@ export async function getMemberNutritionFollowUp(memberId: string) {
     }),
     messages,
     target,
+    // Food diary, last 7 days (newest first), grouped by day.
+    diary: Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today.getTime() - i * DAY_MS);
+      const items = diary.filter((e) => e.date.getTime() === d.getTime());
+      const sum = (k: "kcal" | "proteinG" | "carbsG" | "fatG") => Math.round(items.reduce((a, e) => a + e[k], 0));
+      return { date: d, items, kcal: sum("kcal"), proteinG: sum("proteinG"), carbsG: sum("carbsG"), fatG: sum("fatG") };
+    }),
   };
 }
