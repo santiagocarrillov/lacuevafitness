@@ -166,6 +166,7 @@ export default async function MemberDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {can.managePortalAccess(user) && (
           <InviteMemberButton
             memberId={member.id}
             hasApp={member.userId != null}
@@ -181,6 +182,7 @@ export default async function MemberDetailPage({
                 : null
             }
           />
+          )}
           {(user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN") && (
             <MemberPushButton memberId={member.id} memberName={member.firstName} />
           )}
@@ -243,6 +245,8 @@ export default async function MemberDetailPage({
                 secondarySede: member.secondarySede,
                 notes: member.notes,
               }}
+              contactOnly={!can.manageMembers(user)}
+              hasApp={member.userId != null}
             />
           </CardHeader>
           <CardContent className="space-y-2 text-sm">

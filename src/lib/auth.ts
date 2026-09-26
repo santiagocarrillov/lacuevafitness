@@ -224,6 +224,11 @@ export const can = {
   // not front desk.
   manageNutrition: (user: User) =>
     user.role === "OWNER" || user.role === "NUTRITIONIST",
+  // Getting socios into the app: invite codes, fixing the login email, unblocking
+  // an account. The nutritionist shares this job with the front desk (Santiago,
+  // 26 sep 2026). Staff accounts stay protected inside each action.
+  managePortalAccess: (user: User) =>
+    user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN" || user.role === "NUTRITIONIST",
   // Nutritionist agenda: front desk (ADMIN) books appointments too.
   scheduleNutrition: (user: User) =>
     user.role === "OWNER" || user.role === "NUTRITIONIST" || user.role === "ADMIN",
