@@ -16,20 +16,27 @@ import { menuDayFor } from "@/lib/nutrition/plan-schema";
 import { MEAL_LABEL, isMealKey } from "@/lib/nutrition/meals";
 import type { ExchangeGroup } from "@/lib/nutrition/exchanges";
 import { ecuadorDateString, todayDateUtc } from "@/lib/timezone";
+import { DiaryView } from "@/components/portal/nutrition/diary-view";
+import { DiaryProgress } from "@/components/portal/nutrition/diary-progress";
+import { getDiaryDay, getDiaryHistory } from "@/lib/portal/food-diary";
+import { addDays } from "@/lib/nutrition/appointments";
+import { ageFrom } from "@/lib/nutrition/calc";
 
 export const dynamic = "force-dynamic";
 
 const TABS = [
   { key: "hoy", label: "Hoy" },
+  { key: "diario", label: "Diario" },
+  { key: "progreso", label: "Progreso" },
   { key: "plan", label: "Mi plan" },
   { key: "recetas", label: "Recetas" },
   { key: "chat", label: "Nutricionista" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
-export default async function NutricionPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function NutricionPage({ searchParams }: { searchParams: Promise<{ tab?: string; fecha?: string }> }) {
   const { member } = await requireMember();
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, fecha } = await searchParams;
   const tab: Tab = (TABS.find((t) => t.key === rawTab)?.key ?? "hoy") as Tab;
 
   const today = ecuadorDateString();
@@ -80,6 +87,28 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
         })
       : Promise.resolve([]),
   ]);
+
+  // Diary: any day from 30 days back (editable only the last week) up to today.
+  const diaryDate =
+    fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha <= today && fecha >= addDays(today, -30) ? fecha : today;
+  const [diary, history, bodyComps] = await Promise.all([
+    tab === "diario" ? getDiaryDay(member.id, diaryDate, diaryDate === today) : Promise.resolve(null),
+    tab === "progreso" ? getDiaryHistory(member.id, todayUtc, 30) : Promise.resolve(null),
+    tab === "diario"
+      ? prisma.bodyComposition.findMany({
+          where: { memberId: member.id },
+          orderBy: { measuredAt: "desc" },
+          take: 12,
+          select: { weightKg: true, heightCm: true, bodyFatPct: true, basalMetabolism: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const progressTarget = tab === "progreso" ? (await getDiaryDay(member.id, today, false)).target : null;
+  const latest = <K extends keyof (typeof bodyComps)[number]>(k: K) => bodyComps.find((b) => b[k] !== null)?.[k] ?? null;
+  const storedTargetSource =
+    tab === "diario"
+      ? (await prisma.nutritionTarget.findUnique({ where: { memberId: member.id }, select: { source: true } }))?.source ?? null
+      : null;
 
   const initialChecks: Record<string, Check> = Object.fromEntries(
     (checks?.entries ?? []).map((e) => [e.mealKey, { ate: e.ate, optionId: e.optionId, freeText: e.freeText }]),
@@ -187,6 +216,31 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
             </>
           )}
         </>
+      )}
+
+      {tab === "diario" && diary && (
+        <DiaryView
+          day={diary}
+          today={today}
+          targetLocked={diary.target?.source === "PLAN" || storedTargetSource === "NUTRITIONIST"}
+          prefill={{
+            sex: member.sex,
+            ageYears: member.dateOfBirth ? ageFrom(member.dateOfBirth) : null,
+            weightKg: latest("weightKg") as number | null,
+            heightCm: latest("heightCm") as number | null,
+            bodyFatPct: latest("bodyFatPct") as number | null,
+            measuredBmr: latest("basalMetabolism") as number | null,
+          }}
+        />
+      )}
+
+      {tab === "progreso" && history && (
+        <DiaryProgress
+          days={history.days}
+          weights={history.weights}
+          targetKcal={progressTarget?.kcal ?? null}
+          targetProtein={progressTarget?.proteinG ?? null}
+        />
       )}
 
       {tab === "plan" &&

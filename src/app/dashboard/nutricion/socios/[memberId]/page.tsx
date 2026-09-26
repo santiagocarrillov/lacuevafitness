@@ -110,6 +110,53 @@ export default async function MemberFollowUpPage({ params }: { params: Promise<{
           </CardContent>
         </Card>
 
+        <Card className="lg:col-span-2 lg:order-last">
+          <CardHeader>
+            <CardTitle className="text-base">Diario de comidas · 7 días</CardTitle>
+            <CardDescription>Lo que el socio registra en su app (estilo MyFitnessPal).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.diary.every((d) => d.items.length === 0) ? (
+              <p className="text-sm text-muted-foreground">No ha registrado comidas esta semana.</p>
+            ) : (
+              <div className="divide-y">
+                {data.diary.map((d) => {
+                  const target = data.target?.kcal ?? null;
+                  const off = target && d.kcal > 0 && Math.abs(d.kcal - target) > target * 0.15;
+                  return (
+                    <details key={d.date.getTime()} className="py-2">
+                      <summary className="flex cursor-pointer flex-wrap items-baseline justify-between gap-2 text-sm">
+                        <span className="font-medium capitalize">
+                          {d.date.toLocaleDateString("es-EC", { timeZone: "UTC", weekday: "long", day: "numeric", month: "short" })}
+                        </span>
+                        <span className={`tabular-nums ${off ? "text-amber-700" : "text-muted-foreground"}`}>
+                          {d.items.length === 0 ? "sin registro" : `${d.kcal}${target ? ` / ${target}` : ""} kcal · P ${d.proteinG} · C ${d.carbsG} · G ${d.fatG}`}
+                        </span>
+                      </summary>
+                      {d.items.length > 0 && (
+                        <table className="mt-2 w-full text-xs">
+                          <tbody>
+                            {d.items.map((e, i) => (
+                              <tr key={i} className="border-t border-muted">
+                                <td className="py-1 pr-2 text-muted-foreground w-24">{label(e.mealKey)}</td>
+                                <td className="py-1 pr-2">{e.name}</td>
+                                <td className="py-1 pr-2 text-muted-foreground whitespace-nowrap">
+                                  {e.servings ? `${e.servings} porc.` : e.grams ? `${Math.round(e.grams)} g` : e.portionLabel ?? ""}
+                                </td>
+                                <td className="py-1 text-right tabular-nums">{Math.round(e.kcal)} kcal</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </details>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Conversación</CardTitle>
