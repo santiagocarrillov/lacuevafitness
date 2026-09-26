@@ -29,6 +29,7 @@ export default async function RecipeEditPage({ params }: { params: Promise<{ id:
       reviewNote: r.reviewNote,
       active: r.active,
       sourceUrl: r.sourceUrl,
+      photoUrl: r.photoUrl,
       author: r.authorMember ? `${r.authorMember.firstName} ${r.authorMember.lastName}` : null,
       macrosFromIngredients: r.macrosFromIngredients,
       manual: { kcal: r.kcal, proteinG: r.proteinG, carbsG: r.carbsG, fatG: r.fatG, fiberG: r.fiberG },
