@@ -166,3 +166,35 @@ export async function setFoodActive(id: string, active: boolean) {
   await prisma.food.update({ where: { id }, data: { active } });
   revalidatePath("/dashboard/nutricion/alimentos");
 }
+
+/** Row by id (after a barcode scan finds an existing food). */
+export async function getFood(id: string): Promise<FoodRow | null> {
+  await requireNutrition();
+  const f = await prisma.food.findUnique({ where: { id }, select: FOOD_SELECT });
+  return f ? toRow(f) : null;
+}
+
+/**
+ * Merges a duplicate (typically a socio's scan of something already in the
+ * base) into `targetId`: diary entries and recipe ingredients now point to the
+ * target, the barcode moves over if the target has none, and the duplicate is
+ * archived. Snapshots in diaries/plans keep their nutrients as logged.
+ */
+export async function mergeFoods(sourceId: string, targetId: string) {
+  const user = await requireNutrition();
+  if (sourceId === targetId) throw new Error("Elige otro alimento.");
+  const [source, target] = await Promise.all([
+    prisma.food.findUniqueOrThrow({ where: { id: sourceId }, select: { barcode: true } }),
+    prisma.food.findUniqueOrThrow({ where: { id: targetId }, select: { barcode: true, verifiedAt: true } }),
+  ]);
+  await prisma.$transaction([
+    prisma.foodLogEntry.updateMany({ where: { foodId: sourceId }, data: { foodId: targetId } }),
+    prisma.recipeIngredient.updateMany({ where: { foodId: sourceId }, data: { foodId: targetId } }),
+    prisma.food.update({ where: { id: sourceId }, data: { active: false, barcode: null } }),
+    ...(source.barcode && !target.barcode
+      ? [prisma.food.update({ where: { id: targetId }, data: { barcode: source.barcode } })]
+      : []),
+    ...(!target.verifiedAt ? [prisma.food.update({ where: { id: targetId }, data: { verifiedAt: new Date(), verifiedById: user.id } })] : []),
+  ]);
+  revalidatePath("/dashboard/nutricion/alimentos");
+}
