@@ -103,7 +103,7 @@ export function CalorieCalculator({ context }: { context: MemberCalcContext | nu
           carbsG: result.carbsG,
           fatG: result.fatG,
           mealSplit: Object.fromEntries(MEAL_KEYS.map((k) => [k, Number(split[k]) || 0])),
-          inputs: { sex, age, weight, height, bodyFat, bmr, activity, goal, proteinPerKg: result.proteinPerKg, fatPct, method: result.bmrMethod },
+          inputs: { sex, age, weight, height, bodyFat, bmr, activity, goal, proteinPerKg: result.proteinPerKg, proteinRefKg: result.proteinRefKg, fatPct, method: result.bmrMethod },
         });
         toast.success(`Meta guardada para ${context.name}.`);
         router.refresh();
@@ -172,7 +172,13 @@ export function CalorieCalculator({ context }: { context: MemberCalcContext | nu
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Proteína" value={proteinPerKg} onChange={setProteinPerKg} unit="g/kg" hint={result ? `auto ${result.proteinPerKg}` : "auto"} />
+            <Field
+              label="Proteína"
+              value={proteinPerKg}
+              onChange={setProteinPerKg}
+              unit="g/kg"
+              hint={result ? `auto ${result.proteinPerKg}${Math.abs(result.proteinRefKg - Number(weight)) > 0.05 ? ` sobre ${result.proteinRefKg} kg` : ""}` : "auto"}
+            />
             <Field label="Grasa" value={fatPct} onChange={setFatPct} unit="% kcal" />
           </div>
         </CardContent>
@@ -209,6 +215,11 @@ export function CalorieCalculator({ context }: { context: MemberCalcContext | nu
                 {result.warnings.map((w) => (
                   <p key={w} className="text-xs text-amber-700">
                     ⚠ {w}
+                  </p>
+                ))}
+                {result.notes.map((n) => (
+                  <p key={n} className="text-xs text-muted-foreground">
+                    {n}
                   </p>
                 ))}
               </>
