@@ -232,3 +232,14 @@ Pizza de queso;;266;11.4;33.3;9.7;2.3;1 porción:107;0;USDA
 Pollo frito (broaster);;260;25;9;13.5;0.4;1 presa:150;0;USDA
 Salchipapa;;290;7;30;16;2.5;1 porción:300;0;Estimación
 Sánduche de jamón y queso;;260;13;28;10.5;1.5;1 sánduche:150;0;Estimación
+# ── Base SRXFIT (sep 2026): alimentos que usan las plantillas por kcal, las recetas en video y los batidos verdes ──
+Yogur light (descremado, sin azúcar);DAIRY;45;4.3;6.2;0.2;0;1 taza:245|1 envase:200;0;Estimación
+Barra de proteína;PROTEIN;380;30;40;12;5;1 barra:45;0;Estimación
+Frutas mixtas picadas (papaya, piña, melón);FRUIT;45;0.6;11.3;0.2;1.3;1 taza:155;0;USDA
+Granola sin azúcar añadida;STARCH;420;11;58;16;7;¼ taza:30|½ taza:60;0;Estimación
+Pollo al jugo (pechuga con salsa de verduras);PROTEIN;140;24;3;3.5;0.5;1 porción:150;0;Estimación
+Galletas de arroz;STARCH;387;8.2;81.5;2.8;4.2;2 galletas:18;0;USDA
+Albacora (atún fresco), cocida;PROTEIN;130;29.2;0;0.6;0;1 porción:120;0;USDA
+Leche de coco (enlatada);FAT;197;2;2.8;21.3;0;¼ taza:60;1;USDA
+Jengibre;FREE;80;1.8;17.8;0.8;2;1 cdta:2;0;USDA
+Menta / hierbabuena;FREE;44;3.3;8.4;0.7;6.8;5 hojas:2;0;USDA

@@ -23,6 +23,7 @@ import { DiaryProgress } from "@/components/portal/nutrition/diary-progress";
 import { getDiaryDay, getDiaryHistory } from "@/lib/portal/food-diary";
 import { addDays } from "@/lib/nutrition/appointments";
 import { ageFrom } from "@/lib/nutrition/calc";
+import { youtubeId } from "@/lib/nutrition/video";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,8 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
     prepMinutes: r.prepMinutes,
     mealKeys: r.mealKeys,
     photoUrl: r.photoUrl,
+    videoId: youtubeId(r.sourceUrl),
+    tags: r.tags,
     kcal: r.kcal,
     proteinG: r.proteinG,
     carbsG: r.carbsG,

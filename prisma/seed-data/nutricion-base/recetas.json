@@ -1,0 +1,1742 @@
+[
+ {
+  "title": "Encebollado saludable",
+  "description": "El encebollado de siempre, alto en proteína y con menos calorías: sin chifles ni aceite en el caldo.",
+  "servings": 6,
+  "prepMinutes": 60,
+  "mealKeys": [
+   "breakfast",
+   "lunch"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/2xMSNryhMrw",
+  "ingredients": [
+   {
+    "label": "700 g de albacora cocida y desmenuzada (2 lb cruda)",
+    "foodName": "Albacora (atún fresco), cocida",
+    "grams": 700
+   },
+   {
+    "label": "600 g de yuca cocida",
+    "foodName": "Yuca, cocida",
+    "grams": 600
+   },
+   {
+    "label": "1 cebolla paiteña",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 110
+   },
+   {
+    "label": "1 pimiento",
+    "foodName": "Pimiento rojo",
+    "grams": 120
+   },
+   {
+    "label": "3 tomates riñón",
+    "foodName": "Tomate riñón",
+    "grams": 360
+   },
+   {
+    "label": "Encurtido: 1 cebolla paiteña, jugo de 2 limones, culantro",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 110
+   },
+   {
+    "label": "Jugo de 2 limones",
+    "foodName": "Limón (jugo)",
+    "grams": 60
+   },
+   {
+    "label": "1 cda de ají, orégano, albahaca, sal y pimienta al gusto",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Pela la yuca y cocínala en agua con sal.\n2. Hierve la albacora limpia con la cebolla, el tomate y el pimiento; sácala y desmenúzala sin huesos.\n3. Licúa las verduras cocidas con un poco del caldo y 2 tomates frescos; cierne.\n4. Licúa ¼ de la yuca cocida con caldo para espesar; majá el resto en trozos.\n5. Junta en el caldo la albacora, la yuca, lo licuado y las hierbas; hierve unos minutos.\n6. Sirve con encurtido de cebolla y limón. Si quieres chifles, 1 onza máximo (cuenta como almidón + grasa).",
+  "reviewNote": "Ingredientes del blog de La Cueva (2019-2020); macros calculadas con la base de alimentos."
+ },
+ {
+  "title": "Tigrillo saludable",
+  "description": "Desayuno costeño con verde majado, queso y huevo, sin manteca: el agua de cocción reemplaza la grasa.",
+  "servings": 2,
+  "prepMinutes": 30,
+  "mealKeys": [
+   "breakfast"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "desayuno",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/5xju0VT5mA4",
+  "ingredients": [
+   {
+    "label": "1 verde (≈200 g cocido)",
+    "foodName": "Verde, cocido",
+    "grams": 200
+   },
+   {
+    "label": "¼ de cebolla paiteña y 1 diente de ajo",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 30
+   },
+   {
+    "label": "1 cda de cebolla blanca picada",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 10
+   },
+   {
+    "label": "1 rodaja de queso mozzarella light (25 g)",
+    "foodName": "Queso mozzarella semidescremado",
+    "grams": 25
+   },
+   {
+    "label": "2 huevos (en sartén de teflón con una cucharada de agua)",
+    "foodName": "Huevo entero",
+    "grams": 100
+   },
+   {
+    "label": "Encurtido: 2 tomates, ⅓ de cebolla paiteña, limón y culantro",
+    "foodName": "Tomate riñón",
+    "grams": 240
+   },
+   {
+    "label": "1 cdta de achiote o unas gotas de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 2
+   },
+   {
+    "label": "Comino, sal y pimienta al gusto",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Pela el verde, córtalo en rodajas y hiérvelo 15–20 min con la cebolla paiteña, el ajo y el comino. Guarda el agua.\n2. Tritura el verde.\n3. Haz un refrito con gotas de achiote, cebolla blanca, sal, pimienta y comino; añade el majado.\n4. Hidrata la masa con el agua de cocción del verde (en vez de manteca) y mezcla con el queso.\n5. Cocina los huevos en sartén de teflón con una cucharada de agua.\n6. Sirve con el encurtido de tomate y cebolla, y un café negro.",
+  "reviewNote": "Ingredientes del blog de La Cueva (2019-2020); macros calculadas con la base de alimentos."
+ },
+ {
+  "title": "Hummus de atún",
+  "description": "Snack rápido con proteína y fibra: garbanzo + atún. Acompaña con palitos de zanahoria y pepino.",
+  "servings": 2,
+  "prepMinutes": 10,
+  "mealKeys": [
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "snack",
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/w_E02IoQwxg",
+  "ingredients": [
+   {
+    "label": "¾ de taza de garbanzo cocido",
+    "foodName": "Garbanzo, cocido",
+    "grams": 125
+   },
+   {
+    "label": "1 lata de atún en agua escurrido",
+    "foodName": "Atún en agua, escurrido",
+    "grams": 120
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "1 cdta de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 4.5
+   },
+   {
+    "label": "1 diente de ajo, comino, sal y un chorrito de agua",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Palitos de zanahoria y pepino para acompañar",
+    "foodName": "Zanahoria, cruda",
+    "grams": 120
+   }
+  ],
+  "instructions": "1. Licúa o procesa el garbanzo con el ajo, el limón, el aceite y un poco de agua hasta que quede cremoso.\n2. Añade el atún escurrido y pulsa unos segundos (que queden trocitos).\n3. Ajusta sal y comino. Sirve con palitos de zanahoria y pepino.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Pan de yuca integral",
+  "description": "Pan de yuca casero con avena y queso light: menos grasa que el de panadería y con proteína.",
+  "servings": 8,
+  "prepMinutes": 40,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "snack",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/9Wti11rto3s",
+  "ingredients": [
+   {
+    "label": "250 g de yuca cocida y majada",
+    "foodName": "Yuca, cocida",
+    "grams": 250
+   },
+   {
+    "label": "100 g de queso mozzarella light rallado",
+    "foodName": "Queso mozzarella semidescremado",
+    "grams": 100
+   },
+   {
+    "label": "1 huevo",
+    "foodName": "Huevo entero",
+    "grams": 50
+   },
+   {
+    "label": "4 cdas de harina de avena",
+    "foodName": "Harina de avena",
+    "grams": 32
+   },
+   {
+    "label": "1 cdta de polvo de hornear y una pizca de sal",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Maja la yuca cocida todavía tibia hasta que no queden grumos.\n2. Mezcla con el queso, el huevo, la harina de avena, el polvo de hornear y la sal hasta tener una masa suave.\n3. Forma 8 bolitas o medias lunas y colócalas en una bandeja con papel encerado.\n4. Hornea a 200 °C por 20–25 minutos, hasta que doren.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Mousse de maracuyá con yogur griego",
+  "description": "Postre frío alto en proteína, sin azúcar: yogur griego, maracuyá y gelatina sin sabor.",
+  "servings": 4,
+  "prepMinutes": 15,
+  "mealKeys": [
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "postre",
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/zalE_iaxJDQ",
+  "ingredients": [
+   {
+    "label": "2 envases de yogur griego natural sin grasa (340 g)",
+    "foodName": "Yogur griego natural sin grasa",
+    "grams": 340
+   },
+   {
+    "label": "Pulpa de 4 maracuyás",
+    "foodName": "Maracuyá (pulpa)",
+    "grams": 72
+   },
+   {
+    "label": "1 sobre de gelatina sin sabor disuelta en ¼ de taza de agua caliente",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Endulzante sin calorías al gusto",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Hidrata la gelatina sin sabor en agua fría y disuélvela con agua caliente.\n2. Licúa la pulpa de maracuyá (sin la mitad de las semillas) con el yogur y el endulzante.\n3. Integra la gelatina tibia batiendo.\n4. Reparte en 4 vasitos y refrigera mínimo 2 horas. Decora con semillas de maracuyá.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Avena con chocolate",
+  "description": "Desayuno tibio con cacao puro, banano y proteína: sabe a postre y te deja satisfecho.",
+  "servings": 1,
+  "prepMinutes": 10,
+  "mealKeys": [
+   "breakfast"
+  ],
+  "tags": [
+   "desayuno",
+   "dulce",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/eD2PycUXF-A",
+  "ingredients": [
+   {
+    "label": "⅓ de taza de avena en hojuelas (40 g)",
+    "foodName": "Avena en hojuelas",
+    "grams": 40
+   },
+   {
+    "label": "1 taza de leche descremada",
+    "foodName": "Leche descremada",
+    "grams": 200
+   },
+   {
+    "label": "1 cda de cacao en polvo 100 %",
+    "foodName": "Cacao en polvo 100%",
+    "grams": 5
+   },
+   {
+    "label": "½ banano en rodajas",
+    "foodName": "Banano (guineo)",
+    "grams": 60
+   },
+   {
+    "label": "½ scoop de proteína en polvo (opcional)",
+    "foodName": "Proteína whey en polvo",
+    "grams": 15
+   },
+   {
+    "label": "Canela y endulzante al gusto",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Cocina la avena con la leche a fuego medio 5 minutos, moviendo.\n2. Apaga, añade el cacao, la canela y el endulzante; si usas proteína, intégrala cuando baje un poco la temperatura.\n3. Sirve con el banano en rodajas.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Batido de proteína con piña",
+  "description": "Post-entreno rápido: proteína + carbohidrato de fruta para recuperar.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "post-entreno",
+   "batido",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/iGmeRinYmIg",
+  "ingredients": [
+   {
+    "label": "1 scoop de proteína en polvo",
+    "foodName": "Proteína whey en polvo",
+    "grams": 30
+   },
+   {
+    "label": "1 taza de piña picada",
+    "foodName": "Piña",
+    "grams": 165
+   },
+   {
+    "label": "2 cdas de avena en hojuelas",
+    "foodName": "Avena en hojuelas",
+    "grams": 20
+   },
+   {
+    "label": "1 vaso de agua fría o hielo",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Licúa todo por 30–40 segundos.\n2. Tómalo en la primera hora después de entrenar.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Seco de pollo",
+  "description": "El seco de siempre con pechuga, naranjilla y culantro, sin cerveza ni exceso de aceite. Acompáñalo con ½ taza de arroz o un trozo de maduro (uno de los dos).",
+  "servings": 4,
+  "prepMinutes": 50,
+  "mealKeys": [
+   "lunch",
+   "dinner"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/sAV96fhdg70",
+  "ingredients": [
+   {
+    "label": "600 g de pechuga de pollo sin piel en presas",
+    "foodName": "Pechuga de pollo sin piel, cruda",
+    "grams": 600
+   },
+   {
+    "label": "1 cebolla paiteña",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 110
+   },
+   {
+    "label": "1 pimiento",
+    "foodName": "Pimiento verde",
+    "grams": 120
+   },
+   {
+    "label": "2 tomates riñón",
+    "foodName": "Tomate riñón",
+    "grams": 240
+   },
+   {
+    "label": "Jugo de 2 naranjillas",
+    "foodName": "Naranjilla (pulpa)",
+    "grams": 120
+   },
+   {
+    "label": "1 taza de culantro picado",
+    "foodName": "Culantro / perejil",
+    "grams": 30
+   },
+   {
+    "label": "3 dientes de ajo",
+    "foodName": "Ajo",
+    "grams": 9
+   },
+   {
+    "label": "1 cdta de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 4.5
+   },
+   {
+    "label": "Comino, achiote, sal y pimienta al gusto",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Licúa la cebolla, el pimiento, el tomate, el ajo, la naranjilla y la mitad del culantro.\n2. Sella el pollo en una olla con la cucharadita de aceite y el achiote.\n3. Agrega lo licuado, el comino, sal y pimienta; tapa y cocina a fuego bajo 30 minutos.\n4. Termina con el resto del culantro. Sirve 1 presa con salsa + ½ taza de arroz o ⅓ de maduro + ensalada.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Fritada saludable",
+  "description": "Fritada de lomo de cerdo cocinada en su jugo y naranja, sin manteca. Con mote, curtido y aguacate.",
+  "servings": 4,
+  "prepMinutes": 70,
+  "mealKeys": [
+   "lunch"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "fin de semana",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/JQB6MHOwYDw",
+  "ingredients": [
+   {
+    "label": "450 g de lomo de cerdo magro (peso cocido) en trozos",
+    "foodName": "Lomo de cerdo magro, cocido",
+    "grams": 450
+   },
+   {
+    "label": "1 vaso de jugo de naranja",
+    "foodName": "Jugo de naranja natural",
+    "grams": 250
+   },
+   {
+    "label": "2 tazas de mote cocido",
+    "foodName": "Mote, cocido",
+    "grams": 320
+   },
+   {
+    "label": "Curtido: 2 tomates y 1 cebolla paiteña con limón",
+    "foodName": "Tomate riñón",
+    "grams": 240
+   },
+   {
+    "label": "Cebolla del curtido",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 110
+   },
+   {
+    "label": "1 aguacate pequeño",
+    "foodName": "Aguacate",
+    "grams": 200
+   },
+   {
+    "label": "3 dientes de ajo, cebolla blanca, comino y sal",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Adoba el cerdo con ajo, comino y sal.\n2. Cocínalo en una paila con el jugo de naranja y 1 taza de agua, tapado, hasta que se evapore el líquido (40–50 min).\n3. Deja que se dore en su propia grasa, sin añadir manteca.\n4. Sirve 1 palma de carne, ½ taza de mote, curtido y ¼ de aguacate.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Encocado de pescado",
+  "description": "Pescado blanco en salsa de coco, tomate y pimiento: la versión ligera usa menos leche de coco.",
+  "servings": 4,
+  "prepMinutes": 35,
+  "mealKeys": [
+   "lunch",
+   "dinner"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "pescado",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/WGtL1UK3amk",
+  "ingredients": [
+   {
+    "label": "600 g de corvina o pescado blanco en filetes",
+    "foodName": "Corvina / robalo, cocido",
+    "grams": 600
+   },
+   {
+    "label": "½ taza de leche de coco",
+    "foodName": "Leche de coco (enlatada)",
+    "grams": 120
+   },
+   {
+    "label": "1 cebolla paiteña",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 110
+   },
+   {
+    "label": "1 pimiento rojo",
+    "foodName": "Pimiento rojo",
+    "grams": 120
+   },
+   {
+    "label": "2 tomates riñón",
+    "foodName": "Tomate riñón",
+    "grams": 240
+   },
+   {
+    "label": "Culantro, 2 dientes de ajo, comino, sal y achiote",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "1 cdta de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 4.5
+   }
+  ],
+  "instructions": "1. Haz un refrito con el aceite, cebolla, pimiento, ajo y achiote.\n2. Añade el tomate picado y cocina 5 minutos.\n3. Incorpora la leche de coco y ½ taza de agua; cuando hierva, agrega el pescado salpimentado.\n4. Cocina tapado 10 minutos a fuego bajo y termina con culantro. Sirve con ½ taza de arroz y ensalada.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Pasta a la boloñesa",
+  "description": "Albóndigas de carne magra sin aceite en el refrito, salsa de tomate natural y pasta integral. Medio plato de ensalada.",
+  "servings": 4,
+  "prepMinutes": 45,
+  "mealKeys": [
+   "lunch"
+  ],
+  "tags": [
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/CCbkj39VGfE",
+  "ingredients": [
+   {
+    "label": "600 g de carne molida magra (peso cocido 450 g)",
+    "foodName": "Carne molida de res 90/10, cocida",
+    "grams": 450
+   },
+   {
+    "label": "2 cebollas perla",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 220
+   },
+   {
+    "label": "½ pimiento verde",
+    "foodName": "Pimiento verde",
+    "grams": 60
+   },
+   {
+    "label": "3 ½ tomates riñón",
+    "foodName": "Tomate riñón",
+    "grams": 420
+   },
+   {
+    "label": "6 dientes de ajo",
+    "foodName": "Ajo",
+    "grams": 18
+   },
+   {
+    "label": "1 cda de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 13.5
+   },
+   {
+    "label": "4 tazas de macarrones integrales cocidos",
+    "foodName": "Pasta integral, cocida",
+    "grams": 560
+   },
+   {
+    "label": "Ensalada: 4 tazas de lechuga con pimiento",
+    "foodName": "Lechuga",
+    "grams": 188
+   },
+   {
+    "label": "2 rodajas de queso mozzarella light",
+    "foodName": "Queso mozzarella semidescremado",
+    "grams": 50
+   },
+   {
+    "label": "Sal, pimienta, comino, orégano y laurel",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Cocina la pasta en agua con sal, sin aceite.\n2. Carameliza cebolla, pimiento, ajo y ½ tomate sin aceite; mézclalo con la carne cruda, sal, pimienta y comino, y forma albóndigas.\n3. Séllalas con 1 cdta de aceite, tapa y cocina 10 minutos a fuego medio.\n4. Para la salsa, carameliza cebolla, ajo y tomate, licúa con ½ taza de agua y cocina 10 minutos con orégano y laurel.\n5. Une albóndigas y salsa. Sirve medio plato de ensalada y medio plato de pasta con boloñesa.",
+  "reviewNote": "Ingredientes del blog de La Cueva (2019-2020); macros calculadas con la base de alimentos."
+ },
+ {
+  "title": "Ensalada completa de pollo",
+  "description": "Almuerzo o cena ligera: pollo, verduras crujientes y aguacate, con vinagreta de limón y mostaza.",
+  "servings": 1,
+  "prepMinutes": 15,
+  "mealKeys": [
+   "lunch",
+   "dinner"
+  ],
+  "tags": [
+   "ensalada",
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/y29-0gGq5o4",
+  "ingredients": [
+   {
+    "label": "100 g de pechuga de pollo a la plancha",
+    "foodName": "Pechuga de pollo sin piel, cocida",
+    "grams": 100
+   },
+   {
+    "label": "2 tazas de lechuga",
+    "foodName": "Lechuga",
+    "grams": 94
+   },
+   {
+    "label": "1 tomate riñón",
+    "foodName": "Tomate riñón",
+    "grams": 120
+   },
+   {
+    "label": "½ pepino",
+    "foodName": "Pepino",
+    "grams": 150
+   },
+   {
+    "label": "⅛ de aguacate",
+    "foodName": "Aguacate",
+    "grams": 25
+   },
+   {
+    "label": "1 cdta de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 4.5
+   },
+   {
+    "label": "1 cdta de mostaza",
+    "foodName": "Mostaza",
+    "grams": 5
+   },
+   {
+    "label": "Jugo de ½ limón, sal y pimienta",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Cocina el pollo a la plancha con sal y pimienta y córtalo en tiras.\n2. Pica la lechuga, el tomate y el pepino.\n3. Mezcla aceite, mostaza, limón, sal y pimienta para la vinagreta.\n4. Arma el plato con las verduras, el pollo y el aguacate; aliña al servir.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Sopa napolitana",
+  "description": "Sopa de tomate con pasta, pollo y queso: reconfortante y con proteína para la cena.",
+  "servings": 4,
+  "prepMinutes": 35,
+  "mealKeys": [
+   "lunch",
+   "dinner"
+  ],
+  "tags": [
+   "sopa",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/YZZH9G_hQ88",
+  "ingredients": [
+   {
+    "label": "6 tomates riñón",
+    "foodName": "Tomate riñón",
+    "grams": 720
+   },
+   {
+    "label": "1 cebolla perla",
+    "foodName": "Cebolla (paiteña o perla)",
+    "grams": 110
+   },
+   {
+    "label": "2 zanahorias",
+    "foodName": "Zanahoria, cruda",
+    "grams": 120
+   },
+   {
+    "label": "1 cda de aceite de oliva",
+    "foodName": "Aceite de oliva",
+    "grams": 13.5
+   },
+   {
+    "label": "1 taza de pasta corta cocida",
+    "foodName": "Pasta, cocida",
+    "grams": 140
+   },
+   {
+    "label": "200 g de pollo cocido desmenuzado",
+    "foodName": "Pechuga de pollo sin piel, cocida",
+    "grams": 200
+   },
+   {
+    "label": "80 g de queso mozzarella light",
+    "foodName": "Queso mozzarella semidescremado",
+    "grams": 80
+   },
+   {
+    "label": "Ajo, albahaca, sal y pimienta",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Sofríe la cebolla, el ajo y la zanahoria con el aceite.\n2. Añade el tomate picado y 4 tazas de agua; cocina 15 minutos y licúa.\n3. Devuelve a la olla con la pasta y el pollo; cocina 5 minutos más.\n4. Sirve con el queso en cubitos y albahaca fresca.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Arepas de chocho",
+  "description": "Arepas sin harina refinada: chocho, huevo y avena. Tres arepas con un café son un desayuno completo.",
+  "servings": 2,
+  "prepMinutes": 25,
+  "mealKeys": [
+   "breakfast",
+   "snack_pm"
+  ],
+  "tags": [
+   "ecuatoriana",
+   "alto en proteína",
+   "video"
+  ],
+  "sourceUrl": "https://youtu.be/a362gYEvJVk",
+  "ingredients": [
+   {
+    "label": "1 taza de chocho desamargado",
+    "foodName": "Chocho desamargado",
+    "grams": 166
+   },
+   {
+    "label": "1 huevo",
+    "foodName": "Huevo entero",
+    "grams": 50
+   },
+   {
+    "label": "4 cdas de harina de avena",
+    "foodName": "Harina de avena",
+    "grams": 32
+   },
+   {
+    "label": "40 g de queso mozzarella light rallado",
+    "foodName": "Queso mozzarella semidescremado",
+    "grams": 40
+   },
+   {
+    "label": "Sal, comino y cebolla blanca picada al gusto",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Procesa el chocho con el huevo hasta tener una pasta.\n2. Mezcla con la harina de avena, el queso, la cebolla blanca y las especias.\n3. Forma 6 arepas delgadas.\n4. Dóralas en sartén antiadherente a fuego medio, 3–4 minutos por lado.",
+  "reviewNote": "Ingredientes y cantidades reconstruidos a partir del video; macros calculadas con la base de alimentos. Verificar contra el video."
+ },
+ {
+  "title": "Batido verde: Manzanaca",
+  "description": "Manzana y espinaca: buena opción para la mañana. Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ manzana",
+    "foodName": "Manzana",
+    "grams": 90
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "¼ de taza de pepinillo o apio",
+    "foodName": "Pepino",
+    "grams": 30
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Piña y jengibre",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ taza de piña",
+    "foodName": "Piña",
+    "grams": 82
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "¼ de taza de pepinillo o apio",
+    "foodName": "Pepino",
+    "grams": 30
+   },
+   {
+    "label": "1 cdta de jengibre rallado",
+    "foodName": "Jengibre",
+    "grams": 2
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Kiwi, manzana y kale",
+  "description": "Buena opción después de entrenar (súmale proteína). Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ kiwi",
+    "foodName": "Kiwi",
+    "grams": 35
+   },
+   {
+    "label": "¼ de manzana verde",
+    "foodName": "Manzana",
+    "grams": 45
+   },
+   {
+    "label": "1 tallo pequeño de apio",
+    "foodName": "Apio",
+    "grams": 30
+   },
+   {
+    "label": "1 hoja de kale",
+    "foodName": "Kale",
+    "grams": 10
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Piña, menta y limón",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ taza de piña",
+    "foodName": "Piña",
+    "grams": 82
+   },
+   {
+    "label": "3–6 hojas de menta",
+    "foodName": "Menta / hierbabuena",
+    "grams": 2
+   },
+   {
+    "label": "¼ de taza de apio",
+    "foodName": "Apio",
+    "grams": 25
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Piña y perejil con té verde",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ taza de piña",
+    "foodName": "Piña",
+    "grams": 82
+   },
+   {
+    "label": "3 ramitas de perejil",
+    "foodName": "Culantro / perejil",
+    "grams": 3
+   },
+   {
+    "label": "¼ de taza de pepinillo o apio",
+    "foodName": "Pepino",
+    "grams": 30
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso de té verde frío (en vez de agua)",
+    "foodName": "Té / aromática sin azúcar",
+    "grams": 180
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Fresas y espinaca",
+  "description": "Como una ensalada en vaso. Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "4 fresas",
+    "foodName": "Frutillas",
+    "grams": 48
+   },
+   {
+    "label": "¼ de manzana",
+    "foodName": "Manzana",
+    "grams": 45
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Fresa, piña y kale",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "4 fresas",
+    "foodName": "Frutillas",
+    "grams": 48
+   },
+   {
+    "label": "¼ de taza de piña",
+    "foodName": "Piña",
+    "grams": 41
+   },
+   {
+    "label": "2 hojas de kale",
+    "foodName": "Kale",
+    "grams": 20
+   },
+   {
+    "label": "1 hojita de menta",
+    "foodName": "Menta / hierbabuena",
+    "grams": 0.5
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Manzana verde y zanahoria",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ manzana verde",
+    "foodName": "Manzana",
+    "grams": 90
+   },
+   {
+    "label": "¼ de taza de zanahoria",
+    "foodName": "Zanahoria, cruda",
+    "grams": 30
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "1 hojita de menta",
+    "foodName": "Menta / hierbabuena",
+    "grams": 0.5
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Pera, espinaca y pepino",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ pera",
+    "foodName": "Pera",
+    "grams": 89
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "¼ de taza de pepinillo o apio",
+    "foodName": "Pepino",
+    "grams": 30
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Uvas y mora con té verde",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "4 uvas verdes",
+    "foodName": "Uvas",
+    "grams": 20
+   },
+   {
+    "label": "⅓ de taza de mora",
+    "foodName": "Mora",
+    "grams": 48
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso de té verde frío",
+    "foodName": "Té / aromática sin azúcar",
+    "grams": 180
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Remolacha y frutos rojos",
+  "description": "Con té de Jamaica. Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ remolacha pequeña",
+    "foodName": "Remolacha, cocida",
+    "grams": 40
+   },
+   {
+    "label": "⅓ de taza de mora",
+    "foodName": "Mora",
+    "grams": 48
+   },
+   {
+    "label": "3 frutillas",
+    "foodName": "Frutillas",
+    "grams": 36
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso de té de Jamaica frío",
+    "foodName": "Té / aromática sin azúcar",
+    "grams": 180
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Naranjilla y kale",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "Zumo de ½ naranjilla",
+    "foodName": "Naranjilla (pulpa)",
+    "grams": 30
+   },
+   {
+    "label": "¼ de manzana verde",
+    "foodName": "Manzana",
+    "grams": 45
+   },
+   {
+    "label": "1 tallo pequeño de apio",
+    "foodName": "Apio",
+    "grams": 30
+   },
+   {
+    "label": "1 hoja de kale",
+    "foodName": "Kale",
+    "grams": 10
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Tomate de árbol",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "1 tomate de árbol",
+    "foodName": "Tomate de árbol",
+    "grams": 80
+   },
+   {
+    "label": "¼ de taza de pepinillo o apio",
+    "foodName": "Pepino",
+    "grams": 30
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Fresa y maracuyá",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "4 fresas",
+    "foodName": "Frutillas",
+    "grams": 48
+   },
+   {
+    "label": "Pulpa de ½ maracuyá",
+    "foodName": "Maracuyá (pulpa)",
+    "grams": 9
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Sandía y kale",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "¼ de taza de sandía",
+    "foodName": "Sandía",
+    "grams": 38
+   },
+   {
+    "label": "¼ de manzana verde",
+    "foodName": "Manzana",
+    "grams": 45
+   },
+   {
+    "label": "1 tallo pequeño de apio",
+    "foodName": "Apio",
+    "grams": 30
+   },
+   {
+    "label": "1 hoja de kale",
+    "foodName": "Kale",
+    "grams": 10
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Kiwi y naranja con acelga",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ kiwi",
+    "foodName": "Kiwi",
+    "grams": 35
+   },
+   {
+    "label": "¼ de naranja",
+    "foodName": "Naranja",
+    "grams": 32
+   },
+   {
+    "label": "1 tallo pequeño de apio",
+    "foodName": "Apio",
+    "grams": 30
+   },
+   {
+    "label": "1 hoja de acelga",
+    "foodName": "Acelga, cocida",
+    "grams": 15
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Maracuyá y zanahoria",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "Pulpa de ½ maracuyá",
+    "foodName": "Maracuyá (pulpa)",
+    "grams": 9
+   },
+   {
+    "label": "¼ de taza de zanahoria",
+    "foodName": "Zanahoria, cruda",
+    "grams": 30
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "2 hojitas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 6
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Tomate de árbol y uvas",
+  "description": "Con té verde. Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "4 uvas verdes",
+    "foodName": "Uvas",
+    "grams": 20
+   },
+   {
+    "label": "½ tomate de árbol",
+    "foodName": "Tomate de árbol",
+    "grams": 40
+   },
+   {
+    "label": "7 hojas de espinaca",
+    "foodName": "Espinaca, cruda",
+    "grams": 21
+   },
+   {
+    "label": "Jugo de 1 limón",
+    "foodName": "Limón (jugo)",
+    "grams": 30
+   },
+   {
+    "label": "½ vaso de té verde frío",
+    "foodName": "Té / aromática sin azúcar",
+    "grams": 180
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Kiwi, manzana y lechuga",
+  "description": "Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ kiwi",
+    "foodName": "Kiwi",
+    "grams": 35
+   },
+   {
+    "label": "¼ de manzana verde",
+    "foodName": "Manzana",
+    "grams": 45
+   },
+   {
+    "label": "1 tallo pequeño de apio",
+    "foodName": "Apio",
+    "grams": 30
+   },
+   {
+    "label": "1 hoja de lechuga",
+    "foodName": "Lechuga",
+    "grams": 10
+   },
+   {
+    "label": "½ vaso (180 ml) de agua fría",
+    "foodName": null,
+    "grams": null
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ },
+ {
+  "title": "Batido verde: Remolacha, mora y jengibre",
+  "description": "Con té de Jamaica. Batido verde de la guía La Cueva (Reto 60X). Suma verduras y fibra a tu día; no \"desintoxica\" (eso lo hacen tu hígado y tus riñones). Licúa la fruta entera, sin colar. Versión SRXFIT: añade 1 scoop de proteína o ½ taza de yogur griego y se vuelve una colación completa.",
+  "servings": 1,
+  "prepMinutes": 5,
+  "mealKeys": [
+   "breakfast",
+   "snack_am",
+   "snack_pm"
+  ],
+  "tags": [
+   "batidos verdes",
+   "sin azúcar"
+  ],
+  "sourceUrl": null,
+  "ingredients": [
+   {
+    "label": "½ remolacha pequeña",
+    "foodName": "Remolacha, cocida",
+    "grams": 40
+   },
+   {
+    "label": "⅓ de taza de mora",
+    "foodName": "Mora",
+    "grams": 48
+   },
+   {
+    "label": "3 uvas verdes",
+    "foodName": "Uvas",
+    "grams": 15
+   },
+   {
+    "label": "1 pizca de jengibre",
+    "foodName": "Jengibre",
+    "grams": 1
+   },
+   {
+    "label": "½ vaso de té de Jamaica frío",
+    "foodName": "Té / aromática sin azúcar",
+    "grams": 180
+   },
+   {
+    "label": "Opcional SRXFIT: 1 scoop de proteína o ½ taza de yogur griego",
+    "foodName": null,
+    "grams": null
+   }
+  ],
+  "instructions": "1. Lava bien las hojas y la fruta.\n2. Licúa todo con el agua (o el té frío) 40 segundos; no lo cueles.\n3. Tómalo recién hecho.",
+  "reviewNote": "Guía de jugos y batidos del Reto 60X (2017-18), recalculada: el original repetía 47 kcal en casi todas las tablas."
+ }
+]

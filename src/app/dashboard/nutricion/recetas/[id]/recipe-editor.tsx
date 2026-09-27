@@ -11,6 +11,7 @@ import { FoodPicker } from "@/components/nutrition/food-picker";
 import { PhotoUpload } from "@/components/nutrition/photo-upload";
 import { saveRecipe, setRecipeActive, setRecipeStatus, type RecipeInput } from "@/lib/actions/recipes";
 import { MEAL_KEYS, MEAL_LABEL } from "@/lib/nutrition/meals";
+import { youtubeId } from "@/lib/nutrition/video";
 import { recipePerServing, scaleFood, type Portion } from "@/lib/nutrition/nutrients";
 
 type Status = "PRIVATE" | "SUBMITTED" | "PUBLISHED" | "REJECTED";
@@ -79,6 +80,9 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
   }));
   const [reviewNote, setReviewNote] = useState(recipe?.reviewNote ?? "");
   const [photoUrl, setPhotoUrl] = useState<string | null>(recipe?.photoUrl ?? null);
+  // sourceUrl holds either the recipe's YouTube video or (blog imports) the original post.
+  const originalIsVideo = Boolean(youtubeId(recipe?.sourceUrl));
+  const [video, setVideo] = useState(originalIsVideo ? (recipe?.sourceUrl ?? "") : "");
   const [linkingKey, setLinkingKey] = useState<string | null>(null);
 
   const computed = useMemo(
@@ -105,6 +109,8 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       mealKeys,
       photoUrl,
+      // Empty field keeps a blog link untouched; clears a previous video.
+      videoUrl: video.trim() || (originalIsVideo ? null : undefined),
       macrosFromIngredients: fromIngredients,
       manual: {
         kcal: Number(manual.kcal),
@@ -166,6 +172,16 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
               </div>
             </div>
             <PhotoUpload value={photoUrl} onChange={setPhotoUrl} />
+            <div className="space-y-1">
+              <Label htmlFor="r-video">Video de YouTube (opcional)</Label>
+              <Input
+                id="r-video"
+                value={video}
+                onChange={(e) => setVideo(e.target.value)}
+                placeholder="https://youtu.be/…"
+              />
+              <p className="text-xs text-muted-foreground">Los socios lo ven dentro de la receta. Sin foto, se usa la miniatura del video.</p>
+            </div>
             <div className="flex flex-wrap gap-3 text-sm">
               {MEAL_KEYS.map((k) => (
                 <label key={k} className="flex items-center gap-1.5">
@@ -360,7 +376,7 @@ export function RecipeEditor({ recipe }: { recipe: EditorRecipe | null }) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {recipe.sourceUrl && (
+              {recipe.sourceUrl && !originalIsVideo && (
                 <a href={recipe.sourceUrl} target="_blank" rel="noreferrer" className="block text-xs text-muted-foreground hover:underline">
                   Ver publicación original ↗
                 </a>

@@ -2,6 +2,7 @@
 // own recipes. Pure — callers fetch the linked foods and pass them in.
 import { recipePerServing, type FoodPer100 } from "./nutrients";
 import { isMealKey } from "./meals";
+import { youtubeId, youtubeWatch } from "./video";
 
 export type RecipeInput = {
   title: string;
@@ -12,6 +13,8 @@ export type RecipeInput = {
   tags?: string[];
   mealKeys?: string[];
   photoUrl?: string | null;
+  // Staff only: YouTube link stored in Recipe.sourceUrl. undefined = leave sourceUrl as is.
+  videoUrl?: string | null;
   macrosFromIngredients: boolean;
   // Used only when macrosFromIngredients = false (typed from a label/table).
   manual?: { kcal: number; proteinG: number; carbsG: number; fatG: number; fiberG?: number | null };
@@ -38,6 +41,13 @@ export function normalizeRecipeInput(input: RecipeInput) {
     .slice(0, 60);
   const photoUrl = input.photoUrl?.trim() || null;
   if (photoUrl && !/^https:\/\//.test(photoUrl)) throw new Error("Foto inválida.");
+  let sourceUrl: string | null | undefined = undefined;
+  if (input.videoUrl !== undefined) {
+    const raw = input.videoUrl?.trim() || null;
+    const vid = youtubeId(raw);
+    if (raw && !vid) throw new Error("El video debe ser un enlace de YouTube.");
+    sourceUrl = vid ? youtubeWatch(vid) : null;
+  }
   return {
     base: {
       title,
@@ -48,6 +58,7 @@ export function normalizeRecipeInput(input: RecipeInput) {
       tags: (input.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 10),
       mealKeys: (input.mealKeys ?? []).filter(isMealKey),
       photoUrl,
+      ...(sourceUrl !== undefined ? { sourceUrl } : {}),
       macrosFromIngredients: input.macrosFromIngredients,
     },
     ingredients,
