@@ -26,7 +26,7 @@ async function ownEditable(memberId: string, id: string) {
 /** Create (id = null) or update the socio's own recipe. It stays PRIVATE until they send it. */
 export async function saveMyRecipe(id: string | null, input: RecipeInput) {
   const { member } = await requireMember();
-  const { base, ingredients, foodIds } = normalizeRecipeInput({ ...input, macrosFromIngredients: true });
+  const { base, ingredients, foodIds } = normalizeRecipeInput({ ...input, videoUrl: undefined, macrosFromIngredients: true });
   // Socios can only use foods they can see.
   const foods = await prisma.food.findMany({
     where: { id: { in: foodIds }, ...foodVisibleToMember(member.id) },

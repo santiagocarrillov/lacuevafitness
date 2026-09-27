@@ -15,6 +15,8 @@ import { normalizeMealSplit } from "../src/lib/nutrition/meals";
 import { parseFoodsCsv } from "../src/lib/nutrition/foods-csv";
 import { cleanTitle, gramsFromLabel, parseBlogRecipe } from "../src/lib/nutrition/blog-recipe-parser";
 import { normalizeRecipeInput, recipeMacros } from "../src/lib/nutrition/recipe-input";
+import { youtubeId } from "../src/lib/nutrition/video";
+import { planContentSchema } from "../src/lib/nutrition/plan-schema";
 
 let fallos = 0;
 function check(nombre: string, ok: boolean, detalle?: unknown) {
@@ -161,6 +163,35 @@ const mac = recipeMacros(rin, nr.ingredients, nr.base.servings, new Map([["pollo
 check("receta: macros por porción desde ingredientes", mac.kcal === 248 && mac.proteinG === 46.5, mac);
 check("receta: foto debe ser https", throws(() => normalizeRecipeInput({ ...rin, photoUrl: "javascript:alert(1)" })));
 check("receta: porciones fuera de rango", throws(() => normalizeRecipeInput({ ...rin, servings: 0 })));
+
+check("receta: video de YouTube se normaliza", normalizeRecipeInput({ ...rin, videoUrl: "https://www.youtube.com/watch?v=sAV96fhdg70&t=3" }).base.sourceUrl === "https://youtu.be/sAV96fhdg70");
+check("receta: video que no es YouTube falla", throws(() => normalizeRecipeInput({ ...rin, videoUrl: "https://vimeo.com/123" })));
+check("receta: sin videoUrl no toca sourceUrl", !("sourceUrl" in normalizeRecipeInput(rin).base));
+check("receta: videoUrl vacío borra el video", normalizeRecipeInput({ ...rin, videoUrl: "" }).base.sourceUrl === null);
+
+// ── Videos de YouTube ──────────────────────────────────────────────────────
+check("youtube: youtu.be", youtubeId("https://youtu.be/2xMSNryhMrw") === "2xMSNryhMrw");
+check("youtube: watch?v=", youtubeId("https://m.youtube.com/watch?v=2xMSNryhMrw&feature=share") === "2xMSNryhMrw");
+check("youtube: shorts", youtubeId("https://www.youtube.com/shorts/2xMSNryhMrw") === "2xMSNryhMrw");
+check("youtube: otros sitios → null", youtubeId("https://lacuevafitnesscenter.com/receta-cevichocho/") === null && youtubeId(null) === null && youtubeId("no es url") === null);
+
+// ── Semillas SRXFIT (sep 2026) ─────────────────────────────────────────────
+const baseDir = resolve(process.cwd(), "prisma/seed-data/nutricion-base");
+const csvNames = new Set(parseFoodsCsv(readFileSync(resolve(process.cwd(), "prisma/seed-data/foods-ec.csv"), "utf8")).map((f) => normalizeSearch(f.name)));
+type SeedRec = { title: string; ingredients: { foodName: string | null }[] };
+const srxRecipes: SeedRec[] = JSON.parse(readFileSync(resolve(baseDir, "recetas.json"), "utf8"));
+const missingFoods = srxRecipes.flatMap((r) => r.ingredients.filter((i) => i.foodName && !csvNames.has(normalizeSearch(i.foodName))).map((i) => `${r.title}: ${i.foodName}`));
+check("semilla: recetas usan alimentos del CSV", missingFoods.length === 0, missingFoods);
+type SeedTpl = { name: string; content: { days: { meals: { options: { items: { food?: string; recipe?: string }[] }[] }[] }[] } };
+const srxTemplates: SeedTpl[] = JSON.parse(readFileSync(resolve(baseDir, "plantillas.json"), "utf8"));
+const recipeTitles = new Set(srxRecipes.map((r) => normalizeSearch(r.title)));
+const badItems = srxTemplates.flatMap((t) =>
+  t.content.days.flatMap((d) => d.meals.flatMap((m) => m.options.flatMap((o) => o.items)))
+    .filter((i) => (i.food ? !csvNames.has(normalizeSearch(i.food)) : !i.recipe || !recipeTitles.has(normalizeSearch(i.recipe))))
+    .map((i) => `${t.name}: ${i.food ?? i.recipe}`),
+);
+check("semilla: plantillas usan alimentos/recetas existentes", badItems.length === 0, badItems);
+check("semilla: plantillas tienen la forma del plan v2", srxTemplates.every((t) => planContentSchema.safeParse(t.content).success));
 
 console.log(fallos === 0 ? "\nTodo OK" : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);

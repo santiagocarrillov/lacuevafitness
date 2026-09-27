@@ -14,6 +14,7 @@ import { recipePerServing } from "@/lib/nutrition/nutrients";
 import { MEAL_KEYS, MEAL_LABEL, isMealKey } from "@/lib/nutrition/meals";
 import { useDebouncedSearch } from "@/components/nutrition/use-debounced-search";
 import { PhotoUpload } from "@/components/nutrition/photo-upload";
+import { youtubeEmbed, youtubeThumb } from "@/lib/nutrition/video";
 import { SheetHeader, inputStyle, primaryBtn, sheetStyle } from "./add-food-sheet";
 
 export type PortalRecipe = {
@@ -25,6 +26,8 @@ export type PortalRecipe = {
   prepMinutes: number | null;
   mealKeys: string[];
   photoUrl: string | null;
+  videoId: string | null; // YouTube video of the recipe (library recipes)
+  tags: string[];
   kcal: number;
   proteinG: number;
   carbsG: number;
@@ -57,13 +60,35 @@ function RecipeCard({ r, onEdit }: { r: PortalRecipe; onEdit?: () => void }) {
       }
     });
   const meals = r.mealKeys.filter(isMealKey).map((k) => MEAL_LABEL[k]);
+  const cover = r.photoUrl ?? (r.videoId ? youtubeThumb(r.videoId) : null);
+  // Mount the player only once opened — a closed card costs one thumbnail.
+  const [open, setOpen] = useState(false);
 
   return (
-    <details className="portal-card" style={{ padding: 0, overflow: "hidden" }}>
+    <details className="portal-card" style={{ padding: 0, overflow: "hidden" }} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary style={{ cursor: "pointer", listStyle: "none" }}>
-        {r.photoUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={r.photoUrl} alt="" style={{ width: "100%", height: 150, objectFit: "cover", display: "block" }} />
+        {cover && (
+          <div style={{ position: "relative" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={cover} alt="" loading="lazy" style={{ width: "100%", height: 150, objectFit: "cover", display: "block" }} />
+            {r.videoId && (
+              <span
+                style={{
+                  position: "absolute",
+                  left: 10,
+                  bottom: 10,
+                  background: "rgba(0,0,0,.72)",
+                  color: "#fff",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "3px 8px",
+                  borderRadius: 12,
+                }}
+              >
+                ▶ Video
+              </span>
+            )}
+          </div>
         )}
         <div style={{ padding: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
@@ -86,6 +111,18 @@ function RecipeCard({ r, onEdit }: { r: PortalRecipe; onEdit?: () => void }) {
         {r.mine && r.reviewNote && (
           <div className="portal-card-alt" style={{ padding: 10, marginBottom: 10, fontSize: 13 }}>
             <strong>Tu nutricionista:</strong> {r.reviewNote}
+          </div>
+        )}
+        {open && r.videoId && (
+          <div style={{ position: "relative", paddingTop: "56.25%", margin: "0 -14px 12px", background: "#000" }}>
+            <iframe
+              src={youtubeEmbed(r.videoId)}
+              title={r.title}
+              loading="lazy"
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+            />
           </div>
         )}
         {r.description && <p style={{ fontSize: 13, color: "var(--pt-ink-2)", marginTop: 0 }}>{r.description}</p>}
@@ -335,7 +372,20 @@ function RecipeEditorSheet({ recipe, onClose }: { recipe: PortalRecipe | null; o
 export function RecipesTab({ library, mine }: { library: PortalRecipe[]; mine: PortalRecipe[] }) {
   const [editing, setEditing] = useState<PortalRecipe | "new" | null>(null);
   const [filter, setFilter] = useState<string>("todas");
-  const shown = filter === "todas" ? library : library.filter((r) => r.mealKeys.includes(filter));
+  // Chips: meals, then the library's most common tags ("batidos verdes", "ecuatoriana"…).
+  const topTags = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const r of library) for (const t of r.tags) n.set(t, (n.get(t) ?? 0) + 1);
+    return [...n.entries()].filter(([, c]) => c >= 3).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t]) => t);
+  }, [library]);
+  const shown =
+    filter === "todas"
+      ? library
+      : filter.startsWith("#")
+        ? library.filter((r) => r.tags.includes(filter.slice(1)))
+        : library.filter((r) => r.mealKeys.includes(filter));
+  const chipLabel = (k: string) =>
+    k === "todas" ? "Todas" : k.startsWith("#") ? k.charAt(1).toUpperCase() + k.slice(2) : MEAL_LABEL[k as keyof typeof MEAL_LABEL];
 
   return (
     <div>
@@ -362,7 +412,7 @@ export function RecipesTab({ library, mine }: { library: PortalRecipe[]; mine: P
         <h4>Recetario La Cueva</h4>
       </div>
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 10 }}>
-        {["todas", ...MEAL_KEYS].map((k) => (
+        {["todas", ...MEAL_KEYS, ...topTags.map((t) => `#${t}`)].map((k) => (
           <button
             key={k}
             type="button"
@@ -378,7 +428,7 @@ export function RecipesTab({ library, mine }: { library: PortalRecipe[]; mine: P
               cursor: "pointer",
             }}
           >
-            {k === "todas" ? "Todas" : MEAL_LABEL[k as keyof typeof MEAL_LABEL]}
+            {chipLabel(k)}
           </button>
         ))}
       </div>
