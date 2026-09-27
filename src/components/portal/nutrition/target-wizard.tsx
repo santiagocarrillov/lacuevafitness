@@ -102,6 +102,11 @@ export function TargetWizard({ prefill, onClose }: { prefill: WizardPrefill; onC
             <div style={{ fontSize: 13, color: "var(--pt-ink-2)" }}>
               Proteína {result.proteinG} g · Carbos {result.carbsG} g · Grasa {result.fatG} g
             </div>
+            {result.notes.map((n) => (
+              <p key={n} style={{ fontSize: 12, color: "var(--pt-ink-2)", margin: "8px 0 0", textAlign: "left" }}>
+                {n}
+              </p>
+            ))}
           </div>
         )}
         {error && <p style={{ color: "var(--pt-red)", fontSize: 13, margin: 0 }}>{error}</p>}

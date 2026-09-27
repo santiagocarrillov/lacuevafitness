@@ -46,6 +46,70 @@ const r4 = calculateTarget({ ...base, weightKg: 45, heightCm: 150, ageYears: 60,
 check("nunca baja de 1200 en mujeres", r4.kcal >= 1200 && r4.warnings.length > 0, r4);
 check("déficit baja la meta", calculateTarget({ ...base, goal: "lose" }).kcal < r1.kcal);
 
+// Proteína con obesidad (Weijs 2024): peso de referencia con tope en IMC 30.
+const legacyPerKg = { lose_fast: 2.2, lose: 2.0, recomp: 2.0, maintain: 1.6, gain: 1.8 } as const;
+const goals = Object.keys(legacyPerKg) as (keyof typeof legacyPerKg)[];
+const hasta30 = [
+  { weightKg: 65, heightCm: 165 },
+  { weightKg: 90, heightCm: 180 },
+  { weightKg: 76.8, heightCm: 160 }, // IMC 30 exacto
+];
+const igualQueAntes = hasta30.every((w) =>
+  goals.every((goal) => {
+    const r = calculateTarget({ ...base, ...w, goal });
+    return r.proteinG === Math.round(w.weightKg * legacyPerKg[goal]) && r.proteinPerKg === legacyPerKg[goal] && r.proteinRefKg === w.weightKg;
+  }),
+);
+check("IMC ≤ 30: proteína igual que antes (peso total × g/kg del objetivo)", igualQueAntes);
+check("IMC ≤ 30: override g/kg igual que antes", calculateTarget({ ...base, proteinPerKg: 1.8 }).proteinG === Math.round(65 * 1.8));
+check("IMC ≤ 30: sin notas", calculateTarget(base).notes.length === 0);
+
+const obesa = { ...base, weightKg: 95, heightCm: 160, goal: "lose_fast" as const };
+const o1 = calculateTarget(obesa);
+check("95 kg / 160 cm: ~123 g (1,6 × 76,8 kg), no 209", o1.proteinG === 123 && o1.proteinRefKg === 76.8 && o1.proteinPerKg === 1.6, o1);
+check("95 kg / 160 cm: IMC y nota", o1.bmi === 37.1 && o1.notes.some((n) => n.includes("76,8 kg")), o1);
+check("obesidad: macros cuadran (±15)", near(o1.proteinG * 4 + o1.carbsG * 4 + o1.fatG * 9, o1.kcal, 15), o1);
+const perKgCuadra = [31, 33, 36, 40].every((bmiX) => {
+  const r = calculateTarget({ ...obesa, weightKg: bmiX * 1.6 * 1.6 });
+  return near(r.proteinPerKg * r.proteinRefKg, r.proteinG, 4);
+});
+check("obesidad: g/kg mostrado × peso de referencia ≈ proteína", perKgCuadra);
+const sinSalto = goals.every((goal) => {
+  const a = calculateTarget({ ...base, heightCm: 160, weightKg: 76.7, goal });
+  const b = calculateTarget({ ...base, heightCm: 160, weightKg: 76.9, goal });
+  return Math.abs(a.proteinG - b.proteinG) <= 1;
+});
+check("sin salto al cruzar IMC 30", sinSalto);
+let noSube = true;
+for (let w = 77; w <= 110; w += 0.5) {
+  const r = calculateTarget({ ...obesa, weightKg: w, goal: "lose" });
+  if (r.proteinG > Math.round(w * 2.0) || r.proteinG < Math.round(76.8 * 1.2)) noSube = false;
+}
+check("obesidad: entre 1,2 g/kg de referencia y lo que daba el peso total", noSube);
+check("obesidad + override: g/kg sobre el peso de referencia", calculateTarget({ ...obesa, proteinPerKg: 2.0 }).proteinG === Math.round(2.0 * 76.8));
+
+// Con % de grasa: g/kg de masa libre de grasa.
+const o2 = calculateTarget({ ...obesa, goal: "lose", bodyFatPct: 45 });
+check("con % grasa: 2,4 g/kg de masa libre de grasa (52,25 kg → 125 g)", o2.proteinG === 125 && o2.notes.some((n) => n.includes("masa libre de grasa")), o2);
+const o3 = calculateTarget({ ...obesa, goal: "lose", bodyFatPct: 62 });
+check("con % grasa muy alto: piso de 1,2 g/kg de referencia (92 g)", o3.proteinG === 92, o3);
+const musculoso = calculateTarget({ sex: "MALE", ageYears: 30, weightKg: 120, heightCm: 185, bodyFatPct: 12, activity: "active", goal: "lose_fast" });
+check("musculoso IMC 35: tope en lo que daba el peso total (264 g)", musculoso.proteinG === 264, musculoso);
+
+// Déficit de 20% solo con % de grasa alto.
+const kcalLose = (x: Parameters<typeof calculateTarget>[0]) => calculateTarget({ ...x, goal: "lose" }).kcal;
+const magra = { ...base, goal: "lose_fast" as const, bodyFatPct: 24 };
+const d1 = calculateTarget(magra);
+check("20% con grasa normal → 12% y nota", d1.kcal === kcalLose(magra) && d1.notes.some((n) => n.includes("12%")), d1);
+const sinGrasa = { ...base, goal: "lose_fast" as const };
+check("20% sin % grasa e IMC < 30 → 12%", calculateTarget(sinGrasa).kcal === kcalLose(sinGrasa));
+const alta = { ...base, goal: "lose_fast" as const, bodyFatPct: 35 };
+const d2 = calculateTarget(alta);
+check("20% con grasa alta se mantiene", d2.kcal < kcalLose(alta) && d2.notes.length === 0, d2);
+check("20% con IMC ≥ 30 sin medición se mantiene", o1.kcal < kcalLose(obesa));
+const hombre = { sex: "MALE" as const, ageYears: 30, weightKg: 85, heightCm: 178, activity: "moderate" as const, goal: "lose_fast" as const };
+check("umbral hombres: 25% grasa sí, 20% no", calculateTarget({ ...hombre, bodyFatPct: 25 }).kcal < kcalLose({ ...hombre, bodyFatPct: 25 }) && calculateTarget({ ...hombre, bodyFatPct: 20 }).kcal === kcalLose({ ...hombre, bodyFatPct: 20 }));
+
 // ── Nutrientes ─────────────────────────────────────────────────────────────
 const pollo = { kcal: 165, proteinG: 31, carbsG: 0, fatG: 3.6, fiberG: 0 };
 const arroz = { kcal: 130, proteinG: 2.7, carbsG: 28.2, fatG: 0.3, fiberG: 0.4 };

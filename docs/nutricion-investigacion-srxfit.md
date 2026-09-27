@@ -55,6 +55,7 @@ Fuentes: *SRXFit_Metodologia_v1 2026.docx* y *SRXFit_Onboarding_Evaluacion_v1.do
 - Ejemplo, *cálculo propio*: una socia de 95 kg y 1,60 m (IMC ≈ 37) recibiría 2,2 × 95 = **209 g/día**.
 - Con el criterio de Weijs, el peso de referencia se topa en IMC 30: 30 × 1,60² ≈ 76,8 kg. Con 1,6 g/kg salen **≈ 123 g/día**.
 - **Recomendación:** si el IMC pasa de 30, calcular la proteína con el peso topado en IMC 30, o usar g/kg de masa libre de grasa cuando haya bioimpedancia. Esa es justamente la cifra que ya mide la nutricionista.
+- **Aplicado (sep 2026):** con IMC > 30, `calc.ts` usa el peso de referencia (1,6 g/kg de ese peso) o, si hay % de grasa, g/kg de masa libre de grasa (2,4–2,6 en déficit, 2,0–2,2 al mantener o ganar), con piso de 1,2 g/kg de referencia y sin pasar de lo que daba el peso total. Entre IMC 30 y 35 la cifra pasa gradualmente de la fórmula normal a la de obesidad para que no salte. Esa transición es *decisión de diseño*, no evidencia. Con IMC ≤ 30 no cambia nada.
 
 ### 2.2 Déficit y velocidad de pérdida
 
@@ -66,6 +67,7 @@ Fuentes: *SRXFit_Metodologia_v1 2026.docx* y *SRXFit_Onboarding_Evaluacion_v1.do
   - La ISSN recoge **0,5–1,0 % del peso por semana**.
   - Además: **cuanto más grasa corporal de partida, más agresivo puede ser el déficit**, y cuanto más magra la persona, más lento conviene ir ([ISSN, Aragon 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5470183/)).
 - **Coherencia con la app:** los déficits de la calculadora (20 % "rápido", 12 % "suave", 5 % recomposición) caen dentro de lo que respalda Garthe (~19 %). **Propuesta:** usar el 20 % solo cuando el % de grasa es alto, y el 12 % como punto de partida por defecto.
+  - **Aplicado (sep 2026):** el 20 % se aplica con grasa ≥ 32 % en mujeres o ≥ 25 % en hombres (cortes de "obesidad" del ACE, *decisión de diseño*). Sin medición, se aplica con IMC ≥ 30. Si no, se aplica 12 % y la calculadora lo avisa.
 - **Superávit para ganar músculo:** **~10–20 % sobre el mantenimiento**, buscando **0,25–0,5 % del peso por semana** en novatos e intermedios. Los avanzados, más conservadores ([Iraki 2019](https://pmc.ncbi.nlm.nih.gov/articles/PMC6680710/)). La app usa +10 %, que es coherente.
 - **La fuerza protege el músculo en déficit:**
   - En adultos de mediana edad y mayores, el ejercicio ayuda a preservar masa libre de grasa durante la restricción ([Weinheimer 2010](https://pubmed.ncbi.nlm.nih.gov/20591106/)).
