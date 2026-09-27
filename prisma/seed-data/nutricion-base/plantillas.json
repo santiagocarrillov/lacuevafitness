@@ -2,7 +2,7 @@
  {
   "name": "Estándar SRXFIT 1200 kcal",
   "calorieLevel": 1200,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
@@ -672,7 +672,7 @@
  {
   "name": "Estándar SRXFIT 1400 kcal",
   "calorieLevel": 1400,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
@@ -1372,7 +1372,7 @@
  {
   "name": "Estándar SRXFIT 1600 kcal",
   "calorieLevel": 1600,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
@@ -2102,7 +2102,7 @@
  {
   "name": "Estándar SRXFIT 1800 kcal",
   "calorieLevel": 1800,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
@@ -2842,7 +2842,7 @@
  {
   "name": "Estándar SRXFIT 2000 kcal",
   "calorieLevel": 2000,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
@@ -3592,7 +3592,7 @@
  {
   "name": "Estándar SRXFIT 2200 kcal",
   "calorieLevel": 2200,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
@@ -4312,7 +4312,7 @@
  {
   "name": "Estándar SRXFIT 2400 kcal",
   "calorieLevel": 2400,
-  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban ~18 % las calorías (p. ej. la de \"1200\" daba ~1450 kcal reales), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
+  "notes": "Plantilla base SRXFIT, sep 2026. Viene de las hojas \"Planes de nutrición 1200–2400 calorías\" de La Cueva, recalculada con la base de alimentos de la app: las hojas originales subestimaban 10–13 % las calorías (p. ej. la de \"1200\" daba ~1350 kcal reales; la proteína animal y los cereales estaban contados bajos), así que las porciones se ajustaron para que el total real coincida con el nivel. Se quitaron recomendaciones sin respaldo (agua tibia con limón y vinagre en ayunas, 30–45 min de cardio diario, \"mantener el metabolismo activo\"). Revísala y ajústala a tu criterio.",
   "content": {
    "schemaVersion": 2,
    "kind": "MENU",
