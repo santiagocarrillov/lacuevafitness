@@ -8,52 +8,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  completeStaffTask,
-  reopenStaffTask,
-  type StaffTaskRow,
-} from "@/lib/actions/staff-tasks";
+import { completeStaffTask, reopenStaffTask } from "@/lib/actions/staff-tasks";
+import { SEDE_LABEL, dueBucket, dueLabel, type TaskListItem } from "@/lib/tasks/meta";
 
-const SEDE_LABEL = { FITNESS_CENTER: "Fitness", XTREME: "Xtreme" } as const;
-
+/** "Mis tareas de hoy" on the Resumen: mine plus my sede's front-desk pool. */
 export function StaffTasksCard({
   tasks,
   showSede,
+  today,
 }: {
-  tasks: StaffTaskRow[];
+  tasks: TaskListItem[];
   showSede: boolean;
+  today: string;
 }) {
   if (tasks.length === 0) return null;
-  const pending = tasks.filter((t) => !t.done).length;
+  const pending = tasks.filter((t) => t.status !== "DONE").length;
 
   return (
     <Card className={pending > 0 ? "border-primary/50" : ""}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
-          Tareas de hoy
+          Mis tareas de hoy
           {pending > 0 ? (
             <Badge variant="destructive">{pending} pendiente{pending === 1 ? "" : "s"}</Badge>
           ) : (
             <Badge variant="secondary">Todo listo</Badge>
           )}
+          <Link href="/dashboard/tareas" className="ml-auto text-xs font-medium text-primary hover:underline">
+            Ver todas →
+          </Link>
         </CardTitle>
         <CardDescription>
-          Al cerrar una tarea cuenta en una línea qué pasó: queda en el historial del lead.
+          Las tuyas y las de la recepción. Al cerrar una con socio o lead, cuenta en una línea qué pasó: queda en su historial.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {tasks.map((t) => (
-          <TaskItem key={t.id} task={t} showSede={showSede} />
+          <TaskItem key={t.id} task={t} showSede={showSede} today={today} />
         ))}
       </CardContent>
     </Card>
   );
 }
 
-function TaskItem({ task, showSede }: { task: StaffTaskRow; showSede: boolean }) {
+function TaskItem({ task, showSede, today }: { task: TaskListItem; showSede: boolean; today: string }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState("");
   const [isPending, start] = useTransition();
+  const done = task.status === "DONE";
+  const needsOutcome = task.person !== null;
 
   const complete = () =>
     start(async () => {
@@ -74,45 +77,46 @@ function TaskItem({ task, showSede }: { task: StaffTaskRow; showSede: boolean })
       else router.refresh();
     });
 
-  const leadHref = task.lead
-    ? task.lead.conversationId
-      ? `/dashboard/comunicacion?c=${task.lead.conversationId}`
-      : `/dashboard/leads?q=${encodeURIComponent(task.lead.name)}`
-    : null;
+  const overdue = dueBucket(task.dueDate, today) === "overdue";
 
   return (
-    <div
-      className={`rounded-md border p-3 space-y-2 ${
-        task.done ? "bg-muted/40 border-border" : "border-border"
-      }`}
-    >
+    <div className={`rounded-md border p-3 space-y-2 ${done ? "bg-muted/40 border-border" : "border-border"}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1 min-w-0">
-          <p className={`text-sm font-medium ${task.done ? "line-through text-muted-foreground" : ""}`}>
-            {showSede && task.sede && (
+          <p className={`text-sm font-medium ${done ? "line-through text-muted-foreground" : ""}`}>
+            {showSede && task.sede && !task.assignee && (
               <Badge variant="outline" className="mr-2 text-[10px]">
                 {SEDE_LABEL[task.sede]}
               </Badge>
             )}
             {task.title}
           </p>
-          {task.detail && !task.done && (
-            <p className="text-xs text-muted-foreground whitespace-pre-line">{task.detail}</p>
-          )}
-          {task.done && (
+          {done ? (
             <p className="text-xs text-muted-foreground">
-              ✓ {task.doneByName ?? "Alguien"}: {task.outcome}
+              ✓ {task.doneByName ?? "Alguien"}
+              {task.outcome ? `: ${task.outcome}` : ""}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              <span className={overdue ? "text-destructive" : ""}>
+                {dueLabel(task.dueDate, task.dueMinutes, today)}
+              </span>
+              {task.person && ` · ${task.person.name}`}
+              {!task.assignee && " · Recepción"}
             </p>
           )}
         </div>
-        {leadHref && !task.done && (
-          <Link href={leadHref} className="shrink-0 text-xs font-medium text-primary hover:underline">
-            {task.lead?.conversationId ? "Abrir chat ↗" : "Ver lead ↗"}
+        {!done && (
+          <Link
+            href={`/dashboard/tareas?view=${task.assignee ? "mine" : "pool"}&t=${task.id}`}
+            className="shrink-0 text-xs font-medium text-primary hover:underline"
+          >
+            Abrir ↗
           </Link>
         )}
       </div>
 
-      {task.done ? (
+      {done ? (
         <button
           type="button"
           onClick={reopen}
@@ -132,11 +136,11 @@ function TaskItem({ task, showSede }: { task: StaffTaskRow; showSede: boolean })
           <Input
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
-            placeholder="¿Qué pasó? (confirmó, no contesta, reagendó…)"
+            placeholder={needsOutcome ? "¿Qué pasó? (confirmó, no contesta, reagendó…)" : "¿Qué pasó? (opcional)"}
             className="h-8 text-sm"
             disabled={isPending}
           />
-          <Button type="submit" size="sm" disabled={isPending || !outcome.trim()}>
+          <Button type="submit" size="sm" disabled={isPending || (needsOutcome && !outcome.trim())}>
             {isPending ? "Guardando…" : "Hecho"}
           </Button>
         </form>

@@ -28,6 +28,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // nav (sep 2026): la agenda es la herramienta diaria de la nutricionista.
   const nav = [
     { href: "/dashboard", label: "Resumen", show: true },
+    { href: "/dashboard/tareas", label: "Tareas", show: true },
     { href: "/dashboard/asistencia", label: "Asistencia", show: true },
     { href: "/dashboard/socios", label: "Socios", show: can.viewMembers(user) },
     { href: "/dashboard/pagos", label: "Pagos", show: can.viewPayments(user) },
