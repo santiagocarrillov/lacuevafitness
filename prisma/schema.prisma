@@ -56,6 +56,10 @@ model User {
   mealPlansAuthored       MealPlan[]              @relation("MealPlanAuthor")
   nutritionAppointments   NutritionAppointment[]  @relation("NutritionAppointmentStaff")
   staffTasksDone          StaffTask[]             @relation("StaffTaskDoneBy")
+  staffTasksAssigned      StaffTask[]             @relation("StaffTaskAssignee")
+  staffTasksCreated       StaffTask[]             @relation("StaffTaskCreatedBy")
+  staffTaskLinks          StaffTaskLink[]         @relation("StaffTaskLinkAddedBy")
+  staffTaskEntries        StaffTaskEntry[]        @relation("StaffTaskEntryAuthor")
 
   @@index([sede, role])
 }
@@ -129,6 +133,7 @@ model Member {
   foodLogEntries        FoodLogEntry[]
   foodsCreated          Food[]                    @relation("FoodCreatedByMember")
   recipesAuthored       Recipe[]                  @relation("RecipeAuthorMember")
+  staffTasks            StaffTask[]
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -402,27 +407,101 @@ model LeadInteraction {
   @@index([leadId])
 }
 
-// Tareas del día para la recepción de cada sede. Salen arriba del Resumen
-// desde `dueDate` hasta que alguien las marca hechas. Casi siempre apuntan a
-// un lead: al cerrarla, el resultado queda también en su historial.
-model StaffTask {
-  id           String    @id @default(cuid())
-  sede         Sede? // null = las dos sedes
-  title        String
-  detail       String?   @db.Text
-  leadId       String?
-  lead         Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  dueDate      DateTime  @db.Date // día (Ecuador) desde el que aparece
-  priority     Int       @default(0) // mayor = más arriba
-  doneAt       DateTime?
-  doneByUserId String?
-  doneBy       User?     @relation("StaffTaskDoneBy", fields: [doneByUserId], references: [id])
-  outcome      String?   @db.Text
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+enum StaffTaskStatus {
+  TODO
+  IN_PROGRESS
+  WAITING
+  DONE
+  CANCELED // soft delete: tasks are never DELETEd
+}
 
-  @@index([sede, doneAt, dueDate])
+enum StaffTaskType {
+  TASK
+  CALL
+  WHATSAPP
+  COLLECTION
+  PAPERWORK
+}
+
+enum StaffTaskEntryKind {
+  COMMENT // written by a person
+  EVENT // logged by the app: "Santiago asignó a Majo", "Estado → Hecha"
+}
+
+// Tareas del staff (/dashboard/tareas). One responsible person (`assignee`),
+// like HubSpot/Salesforce: several owners means nobody owns it. With no
+// assignee the task sits in its sede's pool ("Recepción Xtreme"; sede null =
+// both) and anyone at the front desk can take it — that's how the first
+// version (PR #97) worked, and the tasks seeded then still live there.
+// A task points to at most one person (lead OR member — CHECK in the DB); its
+// WhatsApp thread is derived from that person, never stored twice. Closing a
+// task tied to a person asks for an outcome that also lands in their history.
+model StaffTask {
+  id           String          @id @default(cuid())
+  sede         Sede? // pool when unassigned; null = both sedes
+  title        String
+  detail       String?         @db.Text // notas
+  type         StaffTaskType   @default(TASK)
+  status       StaffTaskStatus @default(TODO)
+  assigneeId   String?
+  assignee     User?           @relation("StaffTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById  String? // null = loaded by SQL before the UI existed
+  createdBy    User?           @relation("StaffTaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  leadId       String?
+  lead         Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  memberId     String?
+  member       Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  // Subtasks are full tasks (own assignee, status, date), one level deep.
+  parentId     String?
+  parent       StaffTask?      @relation("StaffTaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks     StaffTask[]     @relation("StaffTaskSubtasks")
+  dueDate      DateTime?       @db.Date // Ecuador-local day; null = sin fecha
+  dueMinutes   Int? // optional time of day, minutes since 00:00 Ecuador
+  priority     Int             @default(0) // >0 alta, <0 baja; higher sorts first
+  doneAt       DateTime? // set iff status = DONE
+  doneByUserId String?
+  doneBy       User?           @relation("StaffTaskDoneBy", fields: [doneByUserId], references: [id])
+  outcome      String?         @db.Text
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  links   StaffTaskLink[]
+  entries StaffTaskEntry[]
+
+  @@index([assigneeId, status])
+  @@index([sede, status, dueDate])
+  @@index([createdById])
+  @@index([parentId])
   @@index([leadId])
+  @@index([memberId])
+}
+
+// Links to documents (contracts, etc.). We share a Google Drive, so no uploads.
+model StaffTaskLink {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  url       String
+  label     String?
+  addedById String?
+  addedBy   User?     @relation("StaffTaskLinkAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+
+  @@index([taskId])
+}
+
+// The task's activity feed: comments and app-logged events, in one timeline.
+model StaffTaskEntry {
+  id        String             @id @default(cuid())
+  taskId    String
+  task      StaffTask          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kind      StaffTaskEntryKind
+  authorId  String?
+  author    User?              @relation("StaffTaskEntryAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  body      String             @db.Text
+  createdAt DateTime           @default(now())
+
+  @@index([taskId, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────

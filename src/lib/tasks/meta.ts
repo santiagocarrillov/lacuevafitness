@@ -1,0 +1,158 @@
+// Shared, non-"use server" pieces of the tasks module: labels, row types and
+// the date/time helpers both the server actions and the client panels use.
+
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "WAITING" | "DONE" | "CANCELED";
+export type TaskType = "TASK" | "CALL" | "WHATSAPP" | "COLLECTION" | "PAPERWORK";
+export type SedeValue = "FITNESS_CENTER" | "XTREME";
+export type TaskView = "mine" | "assigned" | "pool" | "all";
+
+export const STATUS_LABEL: Record<TaskStatus, string> = {
+  TODO: "Por hacer",
+  IN_PROGRESS: "En curso",
+  WAITING: "Esperando respuesta",
+  DONE: "Hecha",
+  CANCELED: "Cancelada",
+};
+
+/** Tailwind classes for the status pill. */
+export const STATUS_TONE: Record<TaskStatus, string> = {
+  TODO: "bg-muted text-foreground",
+  IN_PROGRESS: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
+  WAITING: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  DONE: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  CANCELED: "bg-muted text-muted-foreground line-through",
+};
+
+export const OPEN_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "WAITING"];
+
+export const TYPE_LABEL: Record<TaskType, string> = {
+  TASK: "Tarea",
+  CALL: "Llamada",
+  WHATSAPP: "WhatsApp",
+  COLLECTION: "Cobro",
+  PAPERWORK: "Trámite",
+};
+
+export const SEDE_LABEL: Record<SedeValue, string> = {
+  FITNESS_CENTER: "Fitness",
+  XTREME: "Xtreme",
+};
+
+export const VIEW_LABEL: Record<TaskView, string> = {
+  mine: "Mis tareas",
+  assigned: "Asignadas por mí",
+  pool: "Recepción",
+  all: "Todas",
+};
+
+export function priorityLabel(p: number): "Alta" | "Normal" | "Baja" {
+  return p > 0 ? "Alta" : p < 0 ? "Baja" : "Normal";
+}
+
+export type PersonRef = {
+  kind: "lead" | "member";
+  id: string;
+  name: string;
+};
+
+export type TaskUser = { id: string; name: string };
+
+export type TaskListItem = {
+  id: string;
+  title: string;
+  type: TaskType;
+  status: TaskStatus;
+  priority: number;
+  sede: SedeValue | null;
+  dueDate: string | null; // YYYY-MM-DD (Ecuador day)
+  dueMinutes: number | null;
+  assignee: TaskUser | null;
+  person: PersonRef | null;
+  parentTitle: string | null;
+  subtaskCount: number;
+  subtaskDone: number;
+  doneAt: string | null;
+  doneByName: string | null;
+  outcome: string | null;
+};
+
+export type TaskEntry = {
+  id: string;
+  kind: "COMMENT" | "EVENT";
+  authorName: string | null;
+  authorId: string | null;
+  body: string;
+  createdAt: string;
+};
+
+export type TaskDetail = TaskListItem & {
+  detail: string | null;
+  createdBy: TaskUser | null;
+  createdAt: string;
+  parent: { id: string; title: string } | null;
+  conversationId: string | null;
+  subtasks: TaskListItem[];
+  links: { id: string; url: string; label: string | null }[];
+  entries: TaskEntry[];
+};
+
+export type AssignableUser = {
+  id: string;
+  name: string;
+  role: string;
+  sede: SedeValue | null;
+};
+
+export type PersonSearchResult = PersonRef & { detail: string };
+
+/** "17:00" for 1020; "" for null. */
+export function minutesToTime(m: number | null): string {
+  if (m === null) return "";
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+/** 1020 for "17:00"; null for "" or garbage. */
+export function timeToMinutes(t: string | null | undefined): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((t ?? "").trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+const WEEKDAY = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+const MONTH = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/**
+ * Human due label relative to `today` (both YYYY-MM-DD): "Hoy 17:00",
+ * "Mañana", "Ayer", "vie 3 oct".
+ */
+export function dueLabel(date: string | null, minutes: number | null, today: string): string {
+  if (!date) return "Sin fecha";
+  const d = new Date(`${date}T00:00:00Z`);
+  const t = new Date(`${today}T00:00:00Z`);
+  const diff = Math.round((d.getTime() - t.getTime()) / 86_400_000);
+  const day =
+    diff === 0
+      ? "Hoy"
+      : diff === 1
+        ? "Mañana"
+        : diff === -1
+          ? "Ayer"
+          : `${WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`;
+  return minutes === null ? day : `${day} ${minutesToTime(minutes)}`;
+}
+
+export type DueBucket = "overdue" | "today" | "upcoming" | "undated";
+
+export function dueBucket(date: string | null, today: string): DueBucket {
+  if (!date) return "undated";
+  if (date < today) return "overdue";
+  if (date === today) return "today";
+  return "upcoming";
+}
+
+export function isDriveUrl(url: string): boolean {
+  return /^https:\/\/(drive|docs)\.google\.com\//i.test(url);
+}

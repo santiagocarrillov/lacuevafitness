@@ -9,8 +9,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/actions/attendance";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
-import { getTodayStaffTasks } from "@/lib/actions/staff-tasks";
+import { getTodayTasksForHome } from "@/lib/actions/staff-tasks";
 import { StaffTasksCard } from "./staff-tasks-card";
+import { ecuadorDateString } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function DashboardHome() {
   const scopedSede = getSedeScope(user);
   const [stats, tasks] = await Promise.all([
     getDashboardStats(scopedSede ?? undefined),
-    getTodayStaffTasks(),
+    getTodayTasksForHome(),
   ]);
   const canReports = can.viewReports(user);
 
@@ -95,7 +96,7 @@ export default async function DashboardHome() {
         </p>
       </header>
 
-      <StaffTasksCard tasks={tasks} showSede={scopedSede === null} />
+      <StaffTasksCard tasks={tasks} showSede={scopedSede === null} today={ecuadorDateString()} />
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((k) => {
