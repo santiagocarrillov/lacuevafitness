@@ -6,7 +6,12 @@ import { Inbox } from "./inbox";
 
 export const dynamic = "force-dynamic";
 
-export default async function ComunicacionPage() {
+export default async function ComunicacionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
+  const { c: openId } = await searchParams;
   const user = await requireAuth();
   if (!can.manageLeads(user)) redirect("/dashboard?forbidden=1");
 
@@ -37,6 +42,7 @@ export default async function ComunicacionPage() {
         initialConversations={conversations}
         staff={staff}
         currentUserId={user.id}
+        initialOpenId={openId ?? null}
       />
     </div>
   );

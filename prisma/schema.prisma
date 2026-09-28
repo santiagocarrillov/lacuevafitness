@@ -55,6 +55,7 @@ model User {
   clinicalRecordsAuthored ClinicalRecord[]        @relation("ClinicalRecordAuthor")
   mealPlansAuthored       MealPlan[]              @relation("MealPlanAuthor")
   nutritionAppointments   NutritionAppointment[]  @relation("NutritionAppointmentStaff")
+  staffTasksDone          StaffTask[]             @relation("StaffTaskDoneBy")
 
   @@index([sede, role])
 }
@@ -72,17 +73,17 @@ enum MemberStatus {
 }
 
 model Member {
-  id                        String       @id @default(cuid())
-  userId                    String?      @unique
-  user                      User?        @relation(fields: [userId], references: [id])
+  id                        String        @id @default(cuid())
+  userId                    String?       @unique
+  user                      User?         @relation(fields: [userId], references: [id])
   // Portal access: one-time invite code an admin issues and sends (e.g. WhatsApp).
   // The socio redeems it once at /portal/signup to claim their account and set a
   // password. Nulled on redemption; expiresAt bounds the redemption window.
-  portalInviteCode          String?      @unique
+  portalInviteCode          String?       @unique
   portalInviteCodeExpiresAt DateTime?
   firstName                 String
   lastName                  String
-  email                     String?      @unique
+  email                     String?       @unique
   phone                     String?
   dateOfBirth               DateTime?
   sex                       Sex?
@@ -93,41 +94,41 @@ model Member {
   preferredHour             String? // "morning", "evening", "afternoon" — derived from attendance
   sede                      Sede // primary/billing sede — drives reports & payments (unchanged)
   secondarySede             Sede? // optional 2nd sede the member also trains at (attendance only)
-  status                    MemberStatus @default(LEAD)
-  joinedAt                  DateTime     @default(now())
+  status                    MemberStatus  @default(LEAD)
+  joinedAt                  DateTime      @default(now())
   churnedAt                 DateTime?
   churnReason               String?
-  leadId                    String?      @unique
-  lead                      Lead?        @relation(fields: [leadId], references: [id])
+  leadId                    String?       @unique
+  lead                      Lead?         @relation(fields: [leadId], references: [id])
   conversation              Conversation?
-  stripeCustomerId          String?      @unique
+  stripeCustomerId          String?       @unique
   notes                     String?
-  createdAt                 DateTime     @default(now())
-  updatedAt                 DateTime     @updatedAt
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
 
-  memberships       Membership[]
-  payments          Payment[]
-  attendance        Attendance[]
-  evaluations       Evaluation[]
-  bodyCompositions  BodyComposition[]
-  clinicalMarkers   ClinicalMarker[]
-  testResults       TestResult[]
-  trainingLevels    TrainingLevelAssignment[]
-  goals             MemberGoal[]
-  memberNotes       MemberNote[]
-  clinicalRecords   ClinicalRecord[]
-  mealPlans         MealPlan[]
-  mealLogs          MealLog[]
-  nutritionFocus    NutritionFocus?
-  menstrualPeriods  MenstrualPeriod[]
-  pushSubscriptions PushSubscription[]
-  challengeProgress ChallengeProgress[]
+  memberships           Membership[]
+  payments              Payment[]
+  attendance            Attendance[]
+  evaluations           Evaluation[]
+  bodyCompositions      BodyComposition[]
+  clinicalMarkers       ClinicalMarker[]
+  testResults           TestResult[]
+  trainingLevels        TrainingLevelAssignment[]
+  goals                 MemberGoal[]
+  memberNotes           MemberNote[]
+  clinicalRecords       ClinicalRecord[]
+  mealPlans             MealPlan[]
+  mealLogs              MealLog[]
+  nutritionFocus        NutritionFocus?
+  menstrualPeriods      MenstrualPeriod[]
+  pushSubscriptions     PushSubscription[]
+  challengeProgress     ChallengeProgress[]
   nutritionAppointments NutritionAppointment[]
-  nutritionTarget   NutritionTarget?
-  nutritionMessages NutritionMessage[]
-  foodLogEntries    FoodLogEntry[]
-  foodsCreated      Food[]            @relation("FoodCreatedByMember")
-  recipesAuthored   Recipe[]          @relation("RecipeAuthorMember")
+  nutritionTarget       NutritionTarget?
+  nutritionMessages     NutritionMessage[]
+  foodLogEntries        FoodLogEntry[]
+  foodsCreated          Food[]                    @relation("FoodCreatedByMember")
+  recipesAuthored       Recipe[]                  @relation("RecipeAuthorMember")
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -381,6 +382,7 @@ model Lead {
   interactions LeadInteraction[]
   member       Member?
   conversation Conversation?
+  staffTasks   StaffTask[]
 
   @@index([sede, stage])
   @@index([source])
@@ -397,6 +399,29 @@ model LeadInteraction {
   summary    String
   occurredAt DateTime   @default(now())
 
+  @@index([leadId])
+}
+
+// Tareas del día para la recepción de cada sede. Salen arriba del Resumen
+// desde `dueDate` hasta que alguien las marca hechas. Casi siempre apuntan a
+// un lead: al cerrarla, el resultado queda también en su historial.
+model StaffTask {
+  id           String    @id @default(cuid())
+  sede         Sede? // null = las dos sedes
+  title        String
+  detail       String?   @db.Text
+  leadId       String?
+  lead         Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  dueDate      DateTime  @db.Date // día (Ecuador) desde el que aparece
+  priority     Int       @default(0) // mayor = más arriba
+  doneAt       DateTime?
+  doneByUserId String?
+  doneBy       User?     @relation("StaffTaskDoneBy", fields: [doneByUserId], references: [id])
+  outcome      String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([sede, doneAt, dueDate])
   @@index([leadId])
 }
 
@@ -519,27 +544,27 @@ model TestResult {
 }
 
 model BodyComposition {
-  id              String      @id @default(cuid())
-  memberId        String
-  member          Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  evaluationId    String?
-  evaluation      Evaluation? @relation(fields: [evaluationId], references: [id])
-  measuredAt      DateTime    @default(now())
-  weightKg        Float?
-  heightCm        Float?
-  bodyFatPct      Float?
-  muscleMassKg    Float? // legacy — superseded by muscleMassPct
-  muscleMassPct   Float?
-  waistCm         Float?
-  hipCm           Float?
-  chestCm         Float?
-  armCm           Float?
-  thighCm         Float?
-  waterPct        Float? // legacy, no longer captured
-  basalMetabolism Int?
-  notes           String?
-  recordedById    String?
-  recordedBy      User?       @relation("BodyCompositionRecordedBy", fields: [recordedById], references: [id])
+  id               String      @id @default(cuid())
+  memberId         String
+  member           Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  evaluationId     String?
+  evaluation       Evaluation? @relation(fields: [evaluationId], references: [id])
+  measuredAt       DateTime    @default(now())
+  weightKg         Float?
+  heightCm         Float?
+  bodyFatPct       Float?
+  muscleMassKg     Float? // legacy — superseded by muscleMassPct
+  muscleMassPct    Float?
+  waistCm          Float?
+  hipCm            Float?
+  chestCm          Float?
+  armCm            Float?
+  thighCm          Float?
+  waterPct         Float? // legacy, no longer captured
+  basalMetabolism  Int?
+  notes            String?
+  recordedById     String?
+  recordedBy       User?       @relation("BodyCompositionRecordedBy", fields: [recordedById], references: [id])
   // Provenance + verification. A socio weighing themselves at home records a
   // MEMBER entry; it charts immediately for them but stays out of official
   // body-fat reports and challenge rankings until a coach verifies it.
@@ -743,7 +768,7 @@ enum MessageDirection {
 }
 
 model Conversation {
-  id String @id @default(cuid())
+  id             String              @id @default(cuid())
   // Una conversación pertenece a un NÚMERO, no a un lead. Lead y Member son dos
   // vistas de la misma persona en momentos distintos de su vida con nosotros, y
   // atar la conversación solo al lead dejaba sin canal a los 1441 socios (1437
@@ -941,17 +966,17 @@ model MealPlan {
 // "comí mi plan" check; `freeText` is what they actually ate. Upsert on the
 // unique key so re-taps are idempotent.
 model MealLog {
-  id         String    @id @default(cuid())
+  id         String          @id @default(cuid())
   memberId   String
-  member     Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member     Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
   mealPlanId String?
-  mealPlan   MealPlan? @relation(fields: [mealPlanId], references: [id])
-  date       DateTime  @db.Date // Ecuador local day
-  followed   Boolean   @default(false) // legacy sí/no check (kept for back-compat)
+  mealPlan   MealPlan?       @relation(fields: [mealPlanId], references: [id])
+  date       DateTime        @db.Date // Ecuador local day
+  followed   Boolean         @default(false) // legacy sí/no check (kept for back-compat)
   adherence  AdherenceLevel? // semáforo diario: verde/amarillo/naranja/rojo; null = sin marcar
-  freeText   String?   @db.Text
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  freeText   String?         @db.Text
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   entries MealLogEntry[] // empty in v1 — the per-meal extension point
 
