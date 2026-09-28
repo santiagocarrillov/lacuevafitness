@@ -117,9 +117,11 @@ type Props = {
   initialConversations: ConversationRow[];
   staff: Array<{ id: string; name: string }>;
   currentUserId: string;
+  /** Conversación a abrir al entrar (`?c=`), p. ej. desde una tarea del Resumen. */
+  initialOpenId?: string | null;
 };
 
-export function Inbox({ initialConversations, staff, currentUserId }: Props) {
+export function Inbox({ initialConversations, staff, currentUserId, initialOpenId = null }: Props) {
   const [filter, setFilter] = useState<InboxFilter>("all");
   /** Cuántas esperan a una persona — se pinta en la pestaña para que no pasen desapercibidas. */
   const [waiting, setWaiting] = useState(0);
@@ -318,6 +320,10 @@ export function Inbox({ initialConversations, staff, currentUserId }: Props) {
     },
     [refreshThread],
   );
+
+  useEffect(() => {
+    if (initialOpenId) openConversation(initialOpenId);
+  }, [initialOpenId, openConversation]);
 
   /** Volver al final del hilo: suelta el ancla y recarga la cola. */
   const goToLatest = useCallback(() => {

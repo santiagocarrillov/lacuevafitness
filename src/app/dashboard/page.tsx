@@ -9,6 +9,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/actions/attendance";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
+import { getTodayStaffTasks } from "@/lib/actions/staff-tasks";
+import { StaffTasksCard } from "./staff-tasks-card";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,10 @@ function fmt$(cents: number) {
 export default async function DashboardHome() {
   const user = await requireAuth();
   const scopedSede = getSedeScope(user);
-  const stats = await getDashboardStats(scopedSede ?? undefined);
+  const [stats, tasks] = await Promise.all([
+    getDashboardStats(scopedSede ?? undefined),
+    getTodayStaffTasks(),
+  ]);
   const canReports = can.viewReports(user);
 
   const today = isoDate(new Date());
@@ -89,6 +94,8 @@ export default async function DashboardHome() {
           Indicadores en vivo de La Cueva Fitness Center.
         </p>
       </header>
+
+      <StaffTasksCard tasks={tasks} showSede={scopedSede === null} />
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((k) => {
