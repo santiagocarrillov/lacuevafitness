@@ -34,8 +34,10 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientsList) => {
+        // Staff notifications (tasks) open the dashboard; socio ones the portal.
+        const section = url.startsWith("/dashboard") ? "/dashboard" : "/portal";
         for (const client of clientsList) {
-          if (client.url.includes("/portal") && "focus" in client) {
+          if (client.url.includes(section) && "focus" in client) {
             client.navigate(url).catch(() => {});
             return client.focus();
           }

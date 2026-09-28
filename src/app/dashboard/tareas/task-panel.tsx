@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -23,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import {
   addTaskComment,
   addTaskLink,
+  addTaskWatcher,
+  removeTaskWatcher,
   completeStaffTask,
   createStaffTask,
   removeTaskLink,
@@ -31,6 +33,7 @@ import {
   type TaskPatch,
 } from "@/lib/actions/staff-tasks";
 import {
+  REPEAT_LABEL,
   STATUS_LABEL,
   STATUS_TONE,
   TYPE_LABEL,
@@ -40,6 +43,7 @@ import {
   type AssignableUser,
   type SedeValue,
   type TaskDetail,
+  type TaskRepeat,
   type TaskStatus,
   type TaskType,
 } from "@/lib/tasks/meta";
@@ -105,7 +109,12 @@ export function TaskPanel({ task, users, today, currentUserId, canPool, baseQuer
           onSave={(title) => patch({ title })}
         />
         <p className="text-xs text-muted-foreground">
-          {task.createdBy ? `Creada por ${task.createdBy.name}` : "Cargada por el sistema"} ·{" "}
+          {task.isAuto
+            ? "Creada automáticamente"
+            : task.createdBy
+              ? `Creada por ${task.createdBy.name}`
+              : "Cargada por el sistema"}{" "}
+          ·{" "}
           {new Date(task.createdAt).toLocaleDateString("es-EC", { day: "numeric", month: "short" })}
         </p>
       </div>
@@ -171,6 +180,14 @@ export function TaskPanel({ task, users, today, currentUserId, canPool, baseQuer
           options={[["1", "Alta"], ["0", "Normal"], ["-1", "Baja"]]}
           onChange={(v) => patch({ priority: Number(v) })}
         />
+        {!task.parent && (
+          <InlineSelect
+            label="Se repite"
+            value={task.repeat ?? ""}
+            options={[["", "No"], ...(Object.entries(REPEAT_LABEL) as [string, string][])]}
+            onChange={(v) => patch({ repeat: (v || null) as TaskRepeat | null })}
+          />
+        )}
         {!task.assignee && (
           <InlineSelect
             label="Recepción de"
@@ -298,6 +315,17 @@ export function TaskPanel({ task, users, today, currentUserId, canPool, baseQuer
         <LinkForm pending={isPending} onAdd={(url, label, reset) => run(() => addTaskLink(task.id, url, label), reset)} />
       </Section>
 
+      {/* Followers */}
+      <Section title="Seguidores">
+        <Watchers
+          task={task}
+          users={users}
+          currentUserId={currentUserId}
+          onAdd={(uid) => run(() => addTaskWatcher(task.id, uid))}
+          onRemove={(uid) => run(() => removeTaskWatcher(task.id, uid))}
+        />
+      </Section>
+
       {/* Activity */}
       <Section title="Actividad">
         <ul className="space-y-2">
@@ -314,13 +342,20 @@ export function TaskPanel({ task, users, today, currentUserId, canPool, baseQuer
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium text-foreground">{e.authorName ?? "Alguien"}</span> · {when(e.createdAt)}
                   </p>
-                  <p className="text-sm whitespace-pre-line break-words">{e.body}</p>
+                  <p className="text-sm whitespace-pre-line break-words">
+                    <WithMentions text={e.body} users={users} />
+                  </p>
                 </div>
               </li>
             ),
           )}
         </ul>
-        <CommentForm pending={isPending} onSend={(body, reset) => run(() => addTaskComment(task.id, body), reset)} />
+        <CommentForm
+          users={users}
+          currentUserId={currentUserId}
+          pending={isPending}
+          onSend={(body, reset) => run(() => addTaskComment(task.id, body), reset)}
+        />
       </Section>
     </div>
   );
@@ -605,35 +640,187 @@ function LinkForm({
 }
 
 function CommentForm({
+  users,
+  currentUserId,
   pending,
   onSend,
 }: {
+  users: AssignableUser[];
+  currentUserId: string;
   pending: boolean;
   onSend: (body: string, reset: () => void) => void;
 }) {
   const [body, setBody] = useState("");
+  // The "@algo" being typed right before the caret, if any.
+  const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const track = (value: string, caret: number) => {
+    const m = /(^|\s)@([^\s@]{0,20})$/.exec(value.slice(0, caret));
+    setMention(m ? { query: m[2].toLocaleLowerCase("es"), start: caret - m[2].length - 1 } : null);
+  };
+
+  const matches = mention
+    ? users
+        .filter((u) => u.id !== currentUserId)
+        .filter((u) =>
+          u.name
+            .toLocaleLowerCase("es")
+            .split(/\s+/)
+            .some((w) => w.normalize("NFD").replace(/[̀-ͯ]/g, "").startsWith(
+              mention.query.normalize("NFD").replace(/[̀-ͯ]/g, ""),
+            )),
+        )
+        .slice(0, 6)
+    : [];
+
+  const pick = (u: AssignableUser) => {
+    if (!mention) return;
+    const caret = ref.current?.selectionStart ?? body.length;
+    const next = `${body.slice(0, mention.start)}@${u.name} ${body.slice(caret)}`;
+    setBody(next);
+    setMention(null);
+    requestAnimationFrame(() => {
+      const pos = mention.start + u.name.length + 2;
+      ref.current?.focus();
+      ref.current?.setSelectionRange(pos, pos);
+    });
+  };
+
+  const send = () => {
+    if (body.trim()) onSend(body, () => setBody(""));
+  };
+
   return (
     <form
-      className="space-y-2"
+      className="relative space-y-2"
       onSubmit={(e) => {
         e.preventDefault();
-        if (body.trim()) onSend(body, () => setBody(""));
+        send();
       }}
     >
       <textarea
+        ref={ref}
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => {
+          setBody(e.target.value);
+          track(e.target.value, e.target.selectionStart);
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && body.trim()) onSend(body, () => setBody(""));
+          if (mention && matches.length > 0 && (e.key === "Enter" || e.key === "Tab")) {
+            e.preventDefault();
+            pick(matches[0]);
+            return;
+          }
+          if (e.key === "Escape") setMention(null);
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
         }}
         rows={2}
-        placeholder="Escribe un comentario…"
+        placeholder="Escribe un comentario… usa @ para mencionar a alguien"
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
       />
+      {mention && matches.length > 0 && (
+        <ul className="absolute left-2 top-full z-10 -mt-1 w-64 overflow-hidden rounded-md border border-border bg-background text-sm shadow-md">
+          {matches.map((u) => (
+            <li key={u.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pick(u);
+                }}
+                className="block w-full px-3 py-1.5 text-left hover:bg-accent"
+              >
+                {u.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {body.trim() && (
         <Button type="submit" size="sm" disabled={pending}>Comentar</Button>
       )}
     </form>
+  );
+}
+
+/** Comment text with "@Nombre Apellido" of staff shown in bold. */
+function WithMentions({ text, users }: { text: string; users: AssignableUser[] }) {
+  const names = users.map((u) => u.name).sort((a, b) => b.length - a.length);
+  if (names.length === 0 || !text.includes("@")) return <>{text}</>;
+  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = text.split(new RegExp(`(@(?:${escaped.join("|")}))`, "gi"));
+  return (
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="font-medium text-primary">{p}</span>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function Watchers({
+  task,
+  users,
+  currentUserId,
+  onAdd,
+  onRemove,
+}: {
+  task: TaskDetail;
+  users: AssignableUser[];
+  currentUserId: string;
+  onAdd: (userId: string) => void;
+  onRemove: (userId: string) => void;
+}) {
+  const following = task.watchers.some((w) => w.id === currentUserId);
+  const involved = new Set([task.assignee?.id, task.createdBy?.id, ...task.watchers.map((w) => w.id)]);
+  const candidates = users.filter((u) => !involved.has(u.id) && u.id !== currentUserId);
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5 text-sm">
+        {task.watchers.length === 0 && (
+          <span className="text-xs text-muted-foreground">
+            Nadie más. Los seguidores reciben los comentarios y pueden abrir la tarea.
+          </span>
+        )}
+        {task.watchers.map((w) => (
+          <span key={w.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs">
+            {w.name}
+            <button type="button" aria-label={`Quitar a ${w.name}`} onClick={() => onRemove(w.id)}>
+              <X className="size-3 text-muted-foreground hover:text-destructive" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {task.assignee?.id !== currentUserId && task.createdBy?.id !== currentUserId && (
+          <button
+            type="button"
+            onClick={() => (following ? onRemove(currentUserId) : onAdd(currentUserId))}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {following ? "Dejar de seguir" : "Seguir esta tarea"}
+          </button>
+        )}
+        {candidates.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => e.target.value && onAdd(e.target.value)}
+            className="rounded-md border border-border bg-background px-2 py-1"
+            aria-label="Agregar seguidor"
+          >
+            <option value="">+ Agregar seguidor…</option>
+            {candidates.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+    </div>
   );
 }
 

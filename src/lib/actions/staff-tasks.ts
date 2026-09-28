@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyUsers } from "@/lib/push/notify-staff";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import {
@@ -11,7 +13,8 @@ import {
 } from "@/lib/timezone";
 import { getConversationThread, type ThreadData } from "@/lib/actions/comunicacion";
 import { MEMBER_STATUS_LABEL, STAGE_LABEL } from "@/lib/leads/stages";
-import type { Prisma, User, UserRole } from "@/generated/prisma/client";
+import type { Prisma, User } from "@/generated/prisma/client";
+import { TASK_ROLES, mineOrPoolWhere, poolWhere } from "@/lib/tasks/scope";
 import {
   OPEN_STATUSES,
   STATUS_LABEL,
@@ -20,6 +23,8 @@ import {
   priorityLabel,
   timeToMinutes,
   POSTPONE_LABEL,
+  REPEAT_LABEL,
+  nextRepeatDate,
   type AssignableUser,
   type FocusQueueItem,
   type PersonRef,
@@ -29,6 +34,7 @@ import {
   type SedeValue,
   type TaskDetail,
   type TaskListItem,
+  type TaskRepeat,
   type TaskStatus,
   type TaskType,
   type TaskView,
@@ -36,8 +42,6 @@ import {
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
-// Everyone on staff can send and receive tasks (decided 28 sep 2026).
-const TASK_ROLES: UserRole[] = ["OWNER", "ACCOUNTING", "ADMIN", "COACH", "NUTRITIONIST"];
 
 async function requireTaskUser(): Promise<User> {
   const user = await requireAuth();
@@ -50,28 +54,20 @@ function seesAll(user: User) {
   return user.role === "OWNER" || user.role === "ACCOUNTING";
 }
 
-/**
- * Unassigned tasks of a sede — the front desk's pool. Only the roles that run
- * the front desk work it; an admin sees their sede plus the both-sedes pool.
- */
-function poolWhere(user: User): Prisma.StaffTaskWhereInput | null {
-  if (!can.manageLeads(user)) return null;
-  const scope = getSedeScope(user);
-  return {
-    assigneeId: null,
-    ...(scope ? { OR: [{ sede: scope }, { sede: null }] } : {}),
-  };
-}
 
 /**
- * What a user may see (and therefore edit): tasks they hold or handed out,
- * their pool, and the parent/children of any of those so a subtask never
- * dangles without context.
+ * What a user may see (and therefore edit): tasks they hold, handed out or
+ * follow, their pool, and the parent/children of any of those so a subtask
+ * never dangles without context.
  */
 function visibleWhere(user: User): Prisma.StaffTaskWhereInput {
   if (seesAll(user)) return {};
   const own: Prisma.StaffTaskWhereInput = {
-    OR: [{ assigneeId: user.id }, { createdById: user.id }],
+    OR: [
+      { assigneeId: user.id },
+      { createdById: user.id },
+      { watchers: { some: { userId: user.id } } },
+    ],
   };
   const pool = poolWhere(user);
   const base = pool ? { OR: [own, pool] } : own;
@@ -147,6 +143,7 @@ function toListItem(t: ListRow): TaskListItem {
     doneAt: t.doneAt?.toISOString() ?? null,
     doneByName: t.doneBy?.fullName ?? null,
     outcome: t.outcome,
+    repeat: t.repeat,
   };
 }
 
@@ -228,6 +225,10 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
         include: listInclude,
       },
       links: { orderBy: { createdAt: "asc" } },
+      watchers: {
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, fullName: true } } },
+      },
       entries: {
         orderBy: { createdAt: "asc" },
         include: { author: { select: { id: true, fullName: true } } },
@@ -245,6 +246,8 @@ export async function getTaskDetail(id: string): Promise<TaskDetail | null> {
   return {
     ...toListItem({ ...t, parent: t.parent, subtasks: t.subtasks }),
     detail: t.detail,
+    isAuto: t.autoKey !== null,
+    watchers: t.watchers.map((w) => ({ id: w.user.id, name: w.user.fullName })),
     createdBy: t.createdBy ? { id: t.createdBy.id, name: t.createdBy.fullName } : null,
     createdAt: t.createdAt.toISOString(),
     parent: t.parent ? { id: t.parent.id, title: t.parent.title } : null,
@@ -331,10 +334,7 @@ export async function getTodayTasksForHome(): Promise<TaskListItem[]> {
   if (!TASK_ROLES.includes(user.role)) return [];
   const today = todayDateUtc();
   const startOfToday = ecuadorDateAt(today, 0, 0);
-  const pool = poolWhere(user);
-  const mineOrPool: Prisma.StaffTaskWhereInput = pool
-    ? { OR: [{ assigneeId: user.id }, pool] }
-    : { assigneeId: user.id };
+  const mineOrPool = mineOrPoolWhere(user);
 
   const rows = await prisma.staffTask.findMany({
     where: {
@@ -378,6 +378,20 @@ function logEvent(tx: Prisma.TransactionClient, taskId: string, userId: string, 
   });
 }
 
+const taskUrl = (id: string) => `/dashboard/tareas?t=${id}`;
+
+/** Push "te asignaron una tarea" after the response, unless you gave it to yourself. */
+function notifyAssigned(actor: User, assigneeId: string | null, taskId: string, title: string) {
+  if (!assigneeId || assigneeId === actor.id) return;
+  after(() =>
+    notifyUsers([assigneeId], {
+      title: `${actor.fullName.split(" ")[0]} te asignó una tarea`,
+      body: title,
+      url: taskUrl(taskId),
+    }),
+  );
+}
+
 function parseDate(s: string | null | undefined): Date | null {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
   return new Date(`${s}T00:00:00Z`);
@@ -418,6 +432,7 @@ export type NewTaskInput = {
   dueTime?: string | null;
   person?: { kind: "lead" | "member"; id: string } | null;
   parentId?: string | null;
+  repeat?: TaskRepeat | null;
 };
 
 export async function createStaffTask(input: NewTaskInput): Promise<Result<{ id: string }>> {
@@ -471,6 +486,8 @@ export async function createStaffTask(input: NewTaskInput): Promise<Result<{ id:
         parentId: parent?.id ?? null,
         dueDate: parseDate(input.dueDate),
         dueMinutes: parseDate(input.dueDate) ? timeToMinutes(input.dueTime) : null,
+        // Subtasks don't repeat on their own; a repeating task needs a date to step from.
+        repeat: !parent && parseDate(input.dueDate) ? (input.repeat ?? null) : null,
       },
     });
     const who = assignee
@@ -485,6 +502,7 @@ export async function createStaffTask(input: NewTaskInput): Promise<Result<{ id:
     return created;
   });
 
+  notifyAssigned(user, task.assigneeId, task.id, title);
   revalidate();
   return { ok: true, id: task.id };
 }
@@ -500,6 +518,7 @@ export type TaskPatch = {
   dueTime?: string | null;
   person?: { kind: "lead" | "member"; id: string } | null;
   status?: Exclude<TaskStatus, "DONE">; // DONE goes through completeStaffTask
+  repeat?: TaskRepeat | null;
 };
 
 export async function updateStaffTask(id: string, patch: TaskPatch): Promise<Result> {
@@ -557,11 +576,11 @@ export async function updateStaffTask(id: string, patch: TaskPatch): Promise<Res
           ? timeToMinutes(patch.dueTime)
           : task.dueMinutes;
     const before = dueLabel(dateOnly(task.dueDate), task.dueMinutes, today);
-    const after = dueLabel(dateOnly(date), minutes, today);
-    if (before !== after) {
+    const afterLabel = dueLabel(dateOnly(date), minutes, today);
+    if (before !== afterLabel) {
       data.dueDate = date;
       data.dueMinutes = minutes;
-      events.push(`Cambió la fecha a ${after}.`);
+      events.push(`Cambió la fecha a ${afterLabel}.`);
     }
   }
   if (patch.person !== undefined) {
@@ -583,12 +602,23 @@ export async function updateStaffTask(id: string, patch: TaskPatch): Promise<Res
     events.push(`Cambió el estado a ${STATUS_LABEL[patch.status]}.`);
   }
 
+  if (patch.repeat !== undefined && patch.repeat !== task.repeat) {
+    if (patch.repeat && task.parentId) return { ok: false, error: "Las subtareas no se repiten solas." };
+    const hasDate = data.dueDate !== undefined ? data.dueDate !== null : task.dueDate !== null;
+    if (patch.repeat && !hasDate) return { ok: false, error: "Ponle una fecha para poder repetirla." };
+    data.repeat = patch.repeat;
+    events.push(
+      patch.repeat ? `La puso a repetirse: ${REPEAT_LABEL[patch.repeat].toLowerCase()}.` : "Dejó de repetirse.",
+    );
+  }
+
   if (Object.keys(data).length === 0) return { ok: true };
 
   await prisma.$transaction(async (tx) => {
     await tx.staffTask.update({ where: { id }, data });
     for (const e of events) await logEvent(tx, id, user.id, e);
   });
+  if (data.assigneeId) notifyAssigned(user, data.assigneeId as string, id, task.title);
   revalidate();
   return { ok: true };
 }
@@ -626,6 +656,30 @@ export async function completeStaffTask(id: string, outcome: string): Promise<Re
         data: { memberId: task.memberId, authorId: user.id, content: summary },
       });
     }
+    if (task.repeat && !task.parentId && task.dueDate) {
+      const nextDate = nextRepeatDate(task.repeat, dateOnly(task.dueDate)!, ecuadorDateString());
+      const next = await tx.staffTask.create({
+        data: {
+          title: task.title,
+          detail: task.detail,
+          type: task.type,
+          priority: task.priority,
+          assigneeId: task.assigneeId,
+          createdById: task.createdById,
+          sede: task.sede,
+          leadId: task.leadId,
+          memberId: task.memberId,
+          dueDate: parseDate(nextDate),
+          dueMinutes: task.dueMinutes,
+          repeat: task.repeat,
+        },
+      });
+      // The recurrence moves to the new one: reopening this one won't fork it.
+      await tx.staffTask.update({ where: { id }, data: { repeat: null } });
+      const label = dueLabel(nextDate, task.dueMinutes, ecuadorDateString());
+      await logEvent(tx, id, user.id, `Se repite: la siguiente vence ${label}.`);
+      await logEvent(tx, next.id, user.id, `Siguiente de una tarea que se repite (${REPEAT_LABEL[task.repeat].toLowerCase()}).`);
+    }
   });
 
   revalidate();
@@ -650,14 +704,104 @@ export async function reopenStaffTask(id: string): Promise<Result> {
   return { ok: true };
 }
 
+/**
+ * Comments. "@Nombre Apellido" mentions someone: they become a follower (so
+ * they can open the task) and get a push. Everyone involved — assignee,
+ * creator, followers — hears about the comment, except its author.
+ */
 export async function addTaskComment(id: string, body: string): Promise<Result> {
   const user = await requireTaskUser();
   const text = body.trim();
   if (!text) return { ok: false, error: "Escribe algo." };
-  if (!(await loadVisible(user, id))) return { ok: false, error: "La tarea ya no existe o no es tuya." };
+  const task = await loadVisible(user, id);
+  if (!task) return { ok: false, error: "La tarea ya no existe o no es tuya." };
 
-  await prisma.staffTaskEntry.create({
-    data: { taskId: id, authorId: user.id, kind: "COMMENT", body: text },
+  const staff = await prisma.user.findMany({
+    where: { active: true, role: { in: TASK_ROLES } },
+    select: { id: true, fullName: true },
+  });
+  const lower = text.toLocaleLowerCase("es");
+  const mentioned = staff.filter(
+    (u) => u.id !== user.id && lower.includes(`@${u.fullName.toLocaleLowerCase("es")}`),
+  );
+
+  const watchers = await prisma.$transaction(async (tx) => {
+    await tx.staffTaskEntry.create({
+      data: { taskId: id, authorId: user.id, kind: "COMMENT", body: text },
+    });
+    for (const u of mentioned) {
+      await tx.staffTaskWatcher.upsert({
+        where: { taskId_userId: { taskId: id, userId: u.id } },
+        create: { taskId: id, userId: u.id },
+        update: {},
+      });
+    }
+    return tx.staffTaskWatcher.findMany({ where: { taskId: id }, select: { userId: true } });
+  });
+
+  const mentionedIds = new Set(mentioned.map((u) => u.id));
+  const others = [task.assigneeId, task.createdById, ...watchers.map((w) => w.userId)].filter(
+    (uid): uid is string => !!uid && uid !== user.id && !mentionedIds.has(uid),
+  );
+  const first = user.fullName.split(" ")[0];
+  const snippet = text.replace(/\s+/g, " ").slice(0, 120);
+  after(async () => {
+    await notifyUsers([...mentionedIds], {
+      title: `${first} te mencionó en «${task.title}»`,
+      body: snippet,
+      url: taskUrl(id),
+    });
+    await notifyUsers(others, {
+      title: `${first} comentó en «${task.title}»`,
+      body: snippet,
+      url: taskUrl(id),
+    });
+  });
+
+  revalidatePath("/dashboard/tareas");
+  return { ok: true };
+}
+
+/** Follow a task (yourself or someone else) without owning it. */
+export async function addTaskWatcher(id: string, userId: string): Promise<Result> {
+  const user = await requireTaskUser();
+  if (!(await loadVisible(user, id))) return { ok: false, error: "La tarea ya no existe o no es tuya." };
+  const target = await resolveAssignee(userId);
+  if (!target) return { ok: false, error: "Esa persona no puede seguir tareas." };
+
+  const existing = await prisma.staffTaskWatcher.findUnique({
+    where: { taskId_userId: { taskId: id, userId } },
+  });
+  if (existing) return { ok: true };
+  await prisma.$transaction(async (tx) => {
+    await tx.staffTaskWatcher.create({ data: { taskId: id, userId } });
+    await logEvent(
+      tx,
+      id,
+      user.id,
+      userId === user.id ? "Empezó a seguirla." : `Agregó a ${target.fullName} como seguidor.`,
+    );
+  });
+  revalidatePath("/dashboard/tareas");
+  return { ok: true };
+}
+
+export async function removeTaskWatcher(id: string, userId: string): Promise<Result> {
+  const user = await requireTaskUser();
+  if (!(await loadVisible(user, id))) return { ok: false, error: "La tarea ya no existe o no es tuya." };
+  const w = await prisma.staffTaskWatcher.findUnique({
+    where: { taskId_userId: { taskId: id, userId } },
+    include: { user: { select: { fullName: true } } },
+  });
+  if (!w) return { ok: true };
+  await prisma.$transaction(async (tx) => {
+    await tx.staffTaskWatcher.delete({ where: { id: w.id } });
+    await logEvent(
+      tx,
+      id,
+      user.id,
+      userId === user.id ? "Dejó de seguirla." : `Quitó a ${w.user.fullName} de los seguidores.`,
+    );
   });
   revalidatePath("/dashboard/tareas");
   return { ok: true };
@@ -891,11 +1035,10 @@ export async function getFocusContext(id: string): Promise<FocusContext | null> 
 export async function countMyDueTasks(): Promise<number> {
   const user = await requireAuth();
   if (!TASK_ROLES.includes(user.role)) return 0;
-  const pool = poolWhere(user);
   return prisma.staffTask.count({
     where: {
       AND: [
-        pool ? { OR: [{ assigneeId: user.id }, pool] } : { assigneeId: user.id },
+        mineOrPoolWhere(user),
         { status: { in: OPEN_STATUSES } },
         { dueDate: { lte: todayDateUtc() } },
       ],

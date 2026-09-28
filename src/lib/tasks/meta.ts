@@ -5,6 +5,14 @@ export type TaskStatus = "TODO" | "IN_PROGRESS" | "WAITING" | "DONE" | "CANCELED
 export type TaskType = "TASK" | "CALL" | "WHATSAPP" | "COLLECTION" | "PAPERWORK";
 export type SedeValue = "FITNESS_CENTER" | "XTREME";
 export type TaskView = "mine" | "assigned" | "pool" | "all";
+export type TaskRepeat = "DAILY" | "WEEKDAYS" | "WEEKLY" | "MONTHLY";
+
+export const REPEAT_LABEL: Record<TaskRepeat, string> = {
+  DAILY: "Cada día",
+  WEEKDAYS: "Días hábiles (L–V)",
+  WEEKLY: "Cada semana",
+  MONTHLY: "Cada mes",
+};
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   TODO: "Por hacer",
@@ -74,6 +82,7 @@ export type TaskListItem = {
   doneAt: string | null;
   doneByName: string | null;
   outcome: string | null;
+  repeat: TaskRepeat | null;
 };
 
 export type TaskEntry = {
@@ -87,6 +96,8 @@ export type TaskEntry = {
 
 export type TaskDetail = TaskListItem & {
   detail: string | null;
+  isAuto: boolean;
+  watchers: TaskUser[];
   createdBy: TaskUser | null;
   createdAt: string;
   parent: { id: string; title: string } | null;
@@ -187,4 +198,38 @@ export function whatsappDigits(phone: string | null): string | null {
   if (d.length === 10 && d.startsWith("0")) d = `593${d.slice(1)}`;
   if (d.length === 9 && d.startsWith("9")) d = `593${d}`;
   return d.length >= 10 ? d : null;
+}
+
+/**
+ * The day after `from` (YYYY-MM-DD, UTC-midnight semantics) on which a
+ * repeating task falls next, never earlier than `notBefore`.
+ */
+export function nextRepeatDate(repeat: TaskRepeat, from: string, notBefore: string): string {
+  const step = (d: Date): Date => {
+    const n = new Date(d);
+    switch (repeat) {
+      case "DAILY":
+        n.setUTCDate(n.getUTCDate() + 1);
+        return n;
+      case "WEEKDAYS":
+        do n.setUTCDate(n.getUTCDate() + 1);
+        while (n.getUTCDay() === 0 || n.getUTCDay() === 6);
+        return n;
+      case "WEEKLY":
+        n.setUTCDate(n.getUTCDate() + 7);
+        return n;
+      case "MONTHLY": {
+        // Day 31 in a 30-day month lands on the 30th, not on the 1st.
+        const day = new Date(`${from}T00:00:00Z`).getUTCDate();
+        const target = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() + 1, 1));
+        const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+        target.setUTCDate(Math.min(day, last));
+        return target;
+      }
+    }
+  };
+  let d = step(new Date(`${from}T00:00:00Z`));
+  const floor = new Date(`${notBefore}T00:00:00Z`);
+  while (d < floor) d = step(d);
+  return d.toISOString().slice(0, 10);
 }
