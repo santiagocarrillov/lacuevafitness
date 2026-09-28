@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions/auth";
 import { ChangePasswordButton } from "./change-password-button";
 
-type NavItem = { href: string; label: string };
+type NavItem = { href: string; label: string; badge?: number };
 
 type Props = {
   children: ReactNode;
@@ -83,9 +83,17 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             <Link
               key={item.href}
               href={item.href}
-              className="block px-3 py-2 rounded-md hover:bg-accent transition"
+              className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent transition"
             >
               {item.label}
+              {item.badge ? (
+                <span
+                  className="min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-medium leading-5 text-white"
+                  title="Tareas tuyas o de tu recepción para hoy o vencidas"
+                >
+                  {item.badge}
+                </span>
+              ) : null}
             </Link>
           ))}
         </nav>

@@ -156,3 +156,35 @@ export function dueBucket(date: string | null, today: string): DueBucket {
 export function isDriveUrl(url: string): boolean {
   return /^https:\/\/(drive|docs)\.google\.com\//i.test(url);
 }
+
+export type PostponePreset = "hour" | "tomorrow" | "week";
+
+export const POSTPONE_LABEL: Record<PostponePreset, string> = {
+  hour: "1 hora",
+  tomorrow: "Mañana",
+  week: "Próxima semana",
+};
+
+/** What focus mode shows about the person next to the task. */
+export type PersonSummary = PersonRef & {
+  href: string;
+  phone: string | null;
+  sede: SedeValue;
+  status: string; // "Activo", "Agendado"…
+  facts: string[]; // "Mensual · vence 12 oct", "Última asistencia: hace 3 días"
+  recent: { when: string; text: string; author: string | null }[];
+};
+
+export type FocusQueueItem = { id: string; title: string };
+
+/**
+ * wa.me wants international digits. Ecuadorian numbers are often stored as
+ * 09XXXXXXXX; those become 5939XXXXXXXX. null if there's nothing usable.
+ */
+export function whatsappDigits(phone: string | null): string | null {
+  if (!phone) return null;
+  let d = phone.replace(/\D/g, "");
+  if (d.length === 10 && d.startsWith("0")) d = `593${d.slice(1)}`;
+  if (d.length === 9 && d.startsWith("9")) d = `593${d}`;
+  return d.length >= 10 ? d : null;
+}
