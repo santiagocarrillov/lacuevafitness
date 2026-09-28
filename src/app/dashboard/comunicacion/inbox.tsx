@@ -23,6 +23,11 @@ import {
 import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import { isSearchable } from "@/lib/whatsapp/search";
 import { InboxSearchResults } from "./inbox-search";
+import {
+  NewTaskDialog,
+  type TaskDialogBase,
+  type TaskPrefill,
+} from "@/app/dashboard/tareas/new-task-dialog";
 import { Highlight } from "./highlight";
 import { SEDE_LABEL, dayLabel, timeShort } from "./format";
 import {
@@ -119,9 +124,18 @@ type Props = {
   currentUserId: string;
   /** Conversación a abrir al entrar (`?c=`), p. ej. desde una tarea del Resumen. */
   initialOpenId?: string | null;
+  /** Para crear una tarea desde la conversación o desde un mensaje. */
+  taskDialog: TaskDialogBase;
 };
 
-export function Inbox({ initialConversations, staff, currentUserId, initialOpenId = null }: Props) {
+export function Inbox({
+  initialConversations,
+  staff,
+  currentUserId,
+  initialOpenId = null,
+  taskDialog,
+}: Props) {
+  const [taskPrefill, setTaskPrefill] = useState<TaskPrefill | null>(null);
   const [filter, setFilter] = useState<InboxFilter>("all");
   /** Cuántas esperan a una persona — se pinta en la pestaña para que no pasen desapercibidas. */
   const [waiting, setWaiting] = useState(0);
@@ -610,6 +624,13 @@ export function Inbox({ initialConversations, staff, currentUserId, initialOpenI
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => setTaskPrefill({ person: threadPerson(thread) })}
+                  title="Crear una tarea sobre esta persona"
+                  className="text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-accent"
+                >
+                  + Tarea
+                </button>
+                <button
                   onClick={() => {
                     if (threadSearchOpen) {
                       closeThreadSearch();
@@ -875,7 +896,21 @@ export function Inbox({ initialConversations, staff, currentUserId, initialOpenI
                             )}
                           </details>
                         )}
-                        <span className="block text-[10px] text-muted-foreground mt-1 text-right">
+                        <span className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground mt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setTaskPrefill({
+                                title: `Seguimiento a ${thread.contactName.split(" ")[0]}`,
+                                detail: `${m.senderLabel} escribió el ${dayLabel(m.createdAt)} a las ${timeShort(m.createdAt)}:\n«${m.body}»`,
+                                person: threadPerson(thread),
+                              })
+                            }
+                            title="Crear una tarea a partir de este mensaje"
+                            className="opacity-60 hover:opacity-100 hover:text-foreground"
+                          >
+                            + tarea
+                          </button>
                           {timeShort(m.createdAt)}
                         </span>
                       </div>
@@ -925,6 +960,20 @@ export function Inbox({ initialConversations, staff, currentUserId, initialOpenI
           </>
         )}
       </div>
+      <NewTaskDialog
+        {...taskDialog}
+        open={taskPrefill !== null}
+        onOpenChange={(o) => {
+          if (!o) setTaskPrefill(null);
+        }}
+        prefill={taskPrefill ?? undefined}
+      />
     </div>
   );
+}
+
+/** La persona de la conversación, para asociarla a la tarea. */
+function threadPerson(thread: ThreadData): TaskPrefill["person"] {
+  const id = thread.contactKind === "member" ? thread.memberId : thread.leadId;
+  return id ? { kind: thread.contactKind, id, name: thread.contactName } : null;
 }

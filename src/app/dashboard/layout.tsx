@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
+import { countMyDueTasks } from "@/lib/actions/staff-tasks";
 
 const roleLabels: Record<string, string> = {
   OWNER: "Fundador",
@@ -28,7 +29,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // nav (sep 2026): la agenda es la herramienta diaria de la nutricionista.
   const nav = [
     { href: "/dashboard", label: "Resumen", show: true },
-    { href: "/dashboard/tareas", label: "Tareas", show: true },
+    { href: "/dashboard/tareas", label: "Tareas", show: true, badge: await countMyDueTasks() },
     { href: "/dashboard/asistencia", label: "Asistencia", show: true },
     { href: "/dashboard/socios", label: "Socios", show: can.viewMembers(user) },
     { href: "/dashboard/pagos", label: "Pagos", show: can.viewPayments(user) },
@@ -39,7 +40,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
     { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },
-  ].filter((n) => n.show).map(({ href, label }) => ({ href, label }));
+  ].filter((n) => n.show).map(({ href, label, badge }) => ({ href, label, badge }));
 
   const userMeta = `${roleLabels[user.role] ?? user.role}${
     user.sede ? ` · ${sedeLabels[user.sede]}` : ""

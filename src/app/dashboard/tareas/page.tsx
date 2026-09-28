@@ -9,7 +9,7 @@ import {
   getTaskDetail,
   listTasks,
 } from "@/lib/actions/staff-tasks";
-import { VIEW_LABEL, SEDE_LABEL, type TaskView } from "@/lib/tasks/meta";
+import { VIEW_LABEL, SEDE_LABEL, dueBucket, type TaskView } from "@/lib/tasks/meta";
 import { TaskList } from "./task-list";
 import { TaskPanel } from "./task-panel";
 import { NewTaskButton } from "./new-task-dialog";
@@ -40,6 +40,13 @@ export default async function TareasPage({
 
   const base = `view=${view}${closed ? "&closed=1" : ""}`;
   const today = ecuadorDateString();
+  // Same rule as the focus queue: open and due today or earlier.
+  const focusCount = closed
+    ? 0
+    : tasks.filter((t) => {
+        const b = dueBucket(t.dueDate, today);
+        return b === "overdue" || b === "today";
+      }).length;
   const poolLabel =
     user.role === "ADMIN" && user.sede ? `Recepción ${SEDE_LABEL[user.sede]}` : VIEW_LABEL.pool;
 
@@ -53,6 +60,16 @@ export default async function TareasPage({
               Asigna, sigue y cierra pendientes del equipo. Lo que cierres con una persona asociada queda en su historial.
             </p>
           </div>
+          <div className="flex shrink-0 items-center gap-2">
+          {focusCount > 0 && (
+            <Link
+              href={`/dashboard/tareas/enfocar?view=${view}`}
+              className="inline-flex items-center justify-center rounded-lg border border-primary/50 text-sm font-medium h-8 px-3 hover:bg-primary/10"
+              title="Recorre las tareas de hoy una por una, con la persona y su WhatsApp al lado"
+            >
+              Enfocar ({focusCount})
+            </Link>
+          )}
           <NewTaskButton
             users={users}
             currentUserId={user.id}
@@ -60,6 +77,7 @@ export default async function TareasPage({
             defaultSede={user.sede}
             baseQuery={base}
           />
+          </div>
         </div>
         <nav className="flex flex-wrap items-center gap-1.5 text-sm">
           {views.map((v) => (
