@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
-import { todayDateUtc, ecuadorDateAt, ecuadorDateString } from "@/lib/timezone";
+import {
+  todayDateUtc,
+  ecuadorDateAt,
+  ecuadorDateString,
+  ecuadorTimeOfDayMinutes,
+} from "@/lib/timezone";
+import { getConversationThread, type ThreadData } from "@/lib/actions/comunicacion";
+import { MEMBER_STATUS_LABEL, STAGE_LABEL } from "@/lib/leads/stages";
 import type { Prisma, User, UserRole } from "@/generated/prisma/client";
 import {
   OPEN_STATUSES,
@@ -12,8 +19,12 @@ import {
   dueLabel,
   priorityLabel,
   timeToMinutes,
+  POSTPONE_LABEL,
   type AssignableUser,
+  type FocusQueueItem,
   type PersonRef,
+  type PersonSummary,
+  type PostponePreset,
   type PersonSearchResult,
   type SedeValue,
   type TaskDetail,
@@ -690,4 +701,227 @@ export async function removeTaskLink(linkId: string): Promise<Result> {
   });
   revalidatePath("/dashboard/tareas");
   return { ok: true };
+}
+
+// ─── focus mode, counters, per-person lists ─────────────────────────────────
+
+/**
+ * Moves a task out of the way without closing it: one hour later today,
+ * tomorrow, or a week out. Keeps the time of day when there is one.
+ */
+export async function postponeStaffTask(id: string, preset: PostponePreset): Promise<Result> {
+  const user = await requireTaskUser();
+  const task = await loadVisible(user, id);
+  if (!task) return { ok: false, error: "La tarea ya no existe o no es tuya." };
+
+  const today = todayDateUtc();
+  let dueDate: Date;
+  let dueMinutes = task.dueMinutes;
+  if (preset === "hour") {
+    // Rounded up to the quarter hour; past midnight it becomes tomorrow 8:00.
+    const inAnHour = Math.ceil((ecuadorTimeOfDayMinutes() + 60) / 15) * 15;
+    if (inAnHour >= 24 * 60) {
+      dueDate = new Date(today.getTime() + 86_400_000);
+      dueMinutes = 8 * 60;
+    } else {
+      dueDate = today;
+      dueMinutes = inAnHour;
+    }
+  } else {
+    dueDate = new Date(today.getTime() + (preset === "tomorrow" ? 1 : 7) * 86_400_000);
+  }
+
+  const label = dueLabel(dateOnly(dueDate), dueMinutes, ecuadorDateString());
+  await prisma.$transaction(async (tx) => {
+    await tx.staffTask.update({ where: { id }, data: { dueDate, dueMinutes } });
+    await logEvent(tx, id, user.id, `La pospuso (${POSTPONE_LABEL[preset].toLowerCase()}): ${label}.`);
+  });
+  revalidate();
+  return { ok: true };
+}
+
+/** Open tasks of a tab that are due today or overdue, in working order. */
+export async function getFocusQueue(view: TaskView): Promise<FocusQueueItem[]> {
+  const user = await requireTaskUser();
+  const scope = viewWhere(user, view);
+  if (!scope) return [];
+  const rows = await prisma.staffTask.findMany({
+    where: {
+      AND: [
+        visibleWhere(user),
+        scope,
+        { status: { in: OPEN_STATUSES } },
+        { dueDate: { lte: todayDateUtc() } },
+      ],
+    },
+    orderBy: listOrder,
+    select: { id: true, title: true },
+    take: 100,
+  });
+  return rows;
+}
+
+const ago = (d: Date) => {
+  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  return days <= 0 ? "hoy" : days === 1 ? "ayer" : `hace ${days} días`;
+};
+const shortDate = (d: Date) =>
+  d.toLocaleDateString("es-EC", { timeZone: "America/Guayaquil", day: "numeric", month: "short" });
+
+async function summarizePerson(person: PersonRef): Promise<PersonSummary | null> {
+  if (person.kind === "member") {
+    const m = await prisma.member.findUnique({
+      where: { id: person.id },
+      select: {
+        id: true,
+        phone: true,
+        sede: true,
+        status: true,
+        memberships: {
+          where: { plan: { billingCycle: { not: "ONE_TIME" } } },
+          orderBy: { endsAt: "desc" },
+          take: 1,
+          select: { state: true, endsAt: true, plan: { select: { name: true } } },
+        },
+        attendance: { orderBy: { recordedAt: "desc" }, take: 1, select: { recordedAt: true } },
+        memberNotes: {
+          orderBy: { createdAt: "desc" },
+          take: 3,
+          select: { content: true, createdAt: true, author: { select: { fullName: true } } },
+        },
+      },
+    });
+    if (!m) return null;
+    const facts: string[] = [];
+    const ms = m.memberships[0];
+    if (ms) {
+      // The date says whether it has run out; the state adds what's odd about it.
+      const future = ms.endsAt >= new Date();
+      const note =
+        ms.state === "PENDING_PAYMENT"
+          ? " · pago pendiente"
+          : ms.state === "PAUSED"
+            ? " · congelada"
+            : ms.state === "CANCELED"
+              ? " · cancelada"
+              : "";
+      facts.push(`${ms.plan.name} · ${future ? "vence" : "venció"} el ${shortDate(ms.endsAt)}${note}`);
+    } else {
+      facts.push("Sin mensualidad registrada");
+    }
+    const last = m.attendance[0]?.recordedAt;
+    facts.push(last ? `Última asistencia: ${ago(last)}` : "Nunca ha registrado asistencia");
+    return {
+      ...person,
+      href: `/dashboard/socios/${m.id}`,
+      phone: m.phone,
+      sede: m.sede,
+      status: MEMBER_STATUS_LABEL[m.status],
+      facts,
+      recent: m.memberNotes.map((n) => ({
+        when: n.createdAt.toISOString(),
+        text: n.content,
+        author: n.author?.fullName ?? null,
+      })),
+    };
+  }
+
+  const l = await prisma.lead.findUnique({
+    where: { id: person.id },
+    select: {
+      id: true,
+      phone: true,
+      sede: true,
+      stage: true,
+      trialScheduledAt: true,
+      createdAt: true,
+      owner: { select: { fullName: true } },
+      interactions: {
+        orderBy: { occurredAt: "desc" },
+        take: 3,
+        select: { summary: true, occurredAt: true, user: { select: { fullName: true } } },
+      },
+    },
+  });
+  if (!l) return null;
+  const facts = [`Llegó ${ago(l.createdAt)}`];
+  if (l.trialScheduledAt) facts.push(`Evaluación: ${shortDate(l.trialScheduledAt)}`);
+  if (l.owner) facts.push(`Lo lleva ${l.owner.fullName}`);
+  return {
+    ...person,
+    href: `/dashboard/leads?q=${encodeURIComponent(person.name)}`,
+    phone: l.phone,
+    sede: l.sede,
+    status: STAGE_LABEL[l.stage],
+    facts,
+    recent: l.interactions.map((i) => ({
+      when: i.occurredAt.toISOString(),
+      text: i.summary,
+      author: i.user?.fullName ?? null,
+    })),
+  };
+}
+
+export type FocusContext = {
+  task: TaskDetail;
+  person: PersonSummary | null;
+  /** Only for the front desk, and only the tail of the thread. */
+  thread: ThreadData | null;
+};
+
+/** Everything focus mode shows for one task: the task, the person, the chat. */
+export async function getFocusContext(id: string): Promise<FocusContext | null> {
+  const user = await requireTaskUser();
+  const task = await getTaskDetail(id);
+  if (!task) return null;
+  const [person, thread] = await Promise.all([
+    task.person ? summarizePerson(task.person) : Promise.resolve(null),
+    task.conversationId && can.manageLeads(user)
+      ? getConversationThread(task.conversationId).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  return {
+    task,
+    person,
+    thread: thread ? { ...thread, messages: thread.messages.slice(-40) } : null,
+  };
+}
+
+/** The nav badge: my open tasks due today or earlier, plus my sede's pool. */
+export async function countMyDueTasks(): Promise<number> {
+  const user = await requireAuth();
+  if (!TASK_ROLES.includes(user.role)) return 0;
+  const pool = poolWhere(user);
+  return prisma.staffTask.count({
+    where: {
+      AND: [
+        pool ? { OR: [{ assigneeId: user.id }, pool] } : { assigneeId: user.id },
+        { status: { in: OPEN_STATUSES } },
+        { dueDate: { lte: todayDateUtc() } },
+      ],
+    },
+  });
+}
+
+/** Tasks tied to one person that this user may see: open first, then the last closed. */
+export async function getPersonTasks(
+  person: { kind: "lead" | "member"; id: string },
+): Promise<{ open: TaskListItem[]; closed: TaskListItem[] }> {
+  const user = await requireTaskUser();
+  const who = person.kind === "member" ? { memberId: person.id } : { leadId: person.id };
+  const [open, closed] = await Promise.all([
+    prisma.staffTask.findMany({
+      where: { AND: [visibleWhere(user), who, { status: { in: OPEN_STATUSES } }] },
+      orderBy: listOrder,
+      include: listInclude,
+      take: 20,
+    }),
+    prisma.staffTask.findMany({
+      where: { AND: [visibleWhere(user), who, { status: "DONE" }] },
+      orderBy: { doneAt: "desc" },
+      include: listInclude,
+      take: 3,
+    }),
+  ]);
+  return { open: open.map(toListItem), closed: closed.map(toListItem) };
 }
