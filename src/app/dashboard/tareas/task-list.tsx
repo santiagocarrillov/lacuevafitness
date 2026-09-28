@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CornerDownRight, ListChecks, MessageCircle, Phone, User } from "lucide-react";
+import { CornerDownRight, ListChecks, MessageCircle, Phone, Repeat, User } from "lucide-react";
 import {
   STATUS_LABEL,
   STATUS_TONE,
@@ -119,8 +119,9 @@ function Row({
           {TypeIcon && <TypeIcon className="size-3.5 shrink-0 mt-0.5 text-muted-foreground" />}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <span className={overdue ? "text-destructive" : ""}>
+          <span className={`inline-flex items-center gap-1 ${overdue ? "text-destructive" : ""}`}>
             {dueLabel(task.dueDate, task.dueMinutes, today)}
+            {task.repeat && <Repeat className="size-3" aria-label="Se repite" />}
           </span>
           {task.person && (
             <span className="inline-flex items-center gap-1 truncate max-w-[12rem]">

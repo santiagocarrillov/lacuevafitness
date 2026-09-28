@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions/auth";
 import { ChangePasswordButton } from "./change-password-button";
+import { StaffPushToggle } from "./staff-push-toggle";
 
 type NavItem = { href: string; label: string; badge?: number };
 
@@ -110,6 +111,7 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
               Ver mi app de socio →
             </Link>
           )}
+          <StaffPushToggle />
           <ChangePasswordButton />
           <form action={signOut}>
             <button

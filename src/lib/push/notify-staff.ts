@@ -121,3 +121,27 @@ export async function notifyStaffOfBotHandoff(opts: {
   await Promise.all(targets.map((id) => pushToMember(id, payload).catch(() => undefined)));
   return { notified: targets.length };
 }
+
+/**
+ * Push to specific staff users (task assigned, comment, mention). Like the
+ * rest, it reaches staff through their linked member record, so only people
+ * who turned on "Activar avisos" hear it. Best-effort: never throws.
+ */
+export async function notifyUsers(
+  userIds: string[],
+  payload: PushPayload,
+): Promise<{ notified: number }> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return { notified: 0 };
+  try {
+    const users = await prisma.user.findMany({
+      where: { id: { in: ids }, active: true },
+      select: { member: { select: { id: true } } },
+    });
+    const targets = users.map((u) => u.member?.id).filter((id): id is string => Boolean(id));
+    await Promise.all(targets.map((id) => pushToMember(id, payload).catch(() => undefined)));
+    return { notified: targets.length };
+  } catch {
+    return { notified: 0 };
+  }
+}

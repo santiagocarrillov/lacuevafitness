@@ -60,6 +60,7 @@ model User {
   staffTasksCreated       StaffTask[]             @relation("StaffTaskCreatedBy")
   staffTaskLinks          StaffTaskLink[]         @relation("StaffTaskLinkAddedBy")
   staffTaskEntries        StaffTaskEntry[]        @relation("StaffTaskEntryAuthor")
+  staffTasksWatched       StaffTaskWatcher[]      @relation("StaffTaskWatcher")
 
   @@index([sede, role])
 }
@@ -423,6 +424,13 @@ enum StaffTaskType {
   PAPERWORK
 }
 
+enum StaffTaskRepeat {
+  DAILY
+  WEEKDAYS // lunes a viernes
+  WEEKLY
+  MONTHLY
+}
+
 enum StaffTaskEntryKind {
   COMMENT // written by a person
   EVENT // logged by the app: "Santiago asignó a Majo", "Estado → Hecha"
@@ -458,6 +466,12 @@ model StaffTask {
   dueDate      DateTime?       @db.Date // Ecuador-local day; null = sin fecha
   dueMinutes   Int? // optional time of day, minutes since 00:00 Ecuador
   priority     Int             @default(0) // >0 alta, <0 baja; higher sorts first
+  // Closing a repeating task creates the next one (same fields, next date).
+  repeat       StaffTaskRepeat?
+  // Tasks the app creates on its own carry a key naming the reason
+  // ("eval:<leadId>:<day>", "renewal:<membershipId>") so a rerun never
+  // duplicates one. null = created by a person.
+  autoKey      String?         @unique
   doneAt       DateTime? // set iff status = DONE
   doneByUserId String?
   doneBy       User?           @relation("StaffTaskDoneBy", fields: [doneByUserId], references: [id])
@@ -465,8 +479,9 @@ model StaffTask {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  links   StaffTaskLink[]
-  entries StaffTaskEntry[]
+  links    StaffTaskLink[]
+  entries  StaffTaskEntry[]
+  watchers StaffTaskWatcher[]
 
   @@index([assigneeId, status])
   @@index([sede, status, dueDate])
@@ -488,6 +503,20 @@ model StaffTaskLink {
   createdAt DateTime  @default(now())
 
   @@index([taskId])
+}
+
+// People who follow a task without owning it: they hear about its comments
+// and can see it. @mentioning someone in a comment makes them a follower.
+model StaffTaskWatcher {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation("StaffTaskWatcher", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([taskId, userId])
+  @@index([userId])
 }
 
 // The task's activity feed: comments and app-logged events, in one timeline.

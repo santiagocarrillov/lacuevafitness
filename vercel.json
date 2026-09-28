@@ -2,6 +2,8 @@
   "crons": [
     { "path": "/api/cron/followups", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/weekly-checkin", "schedule": "0 14 * * 0" },
-    { "path": "/api/cron/nutrition-reminders", "schedule": "0 23 * * *" }
+    { "path": "/api/cron/nutrition-reminders", "schedule": "0 23 * * *" },
+    { "path": "/api/cron/tasks-auto", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/tasks-digest", "schedule": "30 12 * * *" }
   ]
 }

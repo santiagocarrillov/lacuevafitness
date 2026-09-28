@@ -17,10 +17,12 @@ import {
 import { createStaffTask } from "@/lib/actions/staff-tasks";
 import { ecuadorDateString } from "@/lib/timezone";
 import {
+  REPEAT_LABEL,
   TYPE_LABEL,
   type AssignableUser,
   type PersonRef,
   type SedeValue,
+  type TaskRepeat,
   type TaskType,
 } from "@/lib/tasks/meta";
 import { PersonPicker } from "./person-picker";
@@ -119,6 +121,7 @@ function NewTaskForm({
     dueTime: "",
     type: "TASK" as TaskType,
     priority: 0,
+    repeat: "" as TaskRepeat | "",
   });
   const [person, setPerson] = useState<PersonRef | null>(prefill?.person ?? null);
 
@@ -143,6 +146,7 @@ function NewTaskForm({
         dueDate: form.dueDate || null,
         dueTime: form.dueTime || null,
         person: person ? { kind: person.kind, id: person.id } : null,
+        repeat: form.repeat || null,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -238,7 +242,23 @@ function NewTaskForm({
           </select>
         </div>
       </div>
-      {form.assignee === POOL && typeSelect}
+      <div className="grid grid-cols-2 gap-3">
+        {form.assignee === POOL ? typeSelect : <div />}
+        <div className="space-y-1">
+          <Label>Se repite</Label>
+          <select
+            value={form.repeat}
+            onChange={(e) => set("repeat", e.target.value as TaskRepeat | "")}
+            disabled={!form.dueDate}
+            className={SELECT_CLASS}
+          >
+            <option value="">No</option>
+            {Object.entries(REPEAT_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       <div className="space-y-1">
         <Label>Socio o lead (opcional)</Label>
         {person ? (
