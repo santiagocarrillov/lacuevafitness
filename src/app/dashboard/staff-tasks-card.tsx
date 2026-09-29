@@ -6,66 +6,94 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { completeStaffTask, reopenStaffTask } from "@/lib/actions/staff-tasks";
 import { SEDE_LABEL, dueBucket, dueLabel, type TaskListItem } from "@/lib/tasks/meta";
 
-/** "Mis tareas de hoy" on the Resumen: mine plus my sede's front-desk pool. */
+const VISIBLE = 6;
+
+/**
+ * "Tareas de hoy" on the Resumen: mine plus my sede's front-desk pool, as a
+ * compact checklist. The title opens the task; the box closes it (or reopens it).
+ */
 export function StaffTasksCard({
   tasks,
+  meId,
   showSede,
   today,
 }: {
   tasks: TaskListItem[];
+  meId: string;
   showSede: boolean;
   today: string;
 }) {
-  if (tasks.length === 0) return null;
   const pending = tasks.filter((t) => t.status !== "DONE").length;
+  const shown = tasks.slice(0, VISIBLE);
+  const hidden = tasks.length - shown.length;
 
   return (
-    <Card className={pending > 0 ? "border-primary/50" : ""}>
-      <CardHeader className="pb-3">
+    <Card className="h-full">
+      <CardHeader className="pb-0">
         <CardTitle className="flex items-center gap-2">
-          Mis tareas de hoy
+          Tareas de hoy
           {pending > 0 ? (
-            <Badge variant="destructive">{pending} pendiente{pending === 1 ? "" : "s"}</Badge>
-          ) : (
-            <Badge variant="secondary">Todo listo</Badge>
-          )}
+            <Badge variant="destructive" className="text-xs">{pending}</Badge>
+          ) : tasks.length > 0 ? (
+            <Badge variant="secondary" className="text-xs">Todo listo</Badge>
+          ) : null}
           <Link href="/dashboard/tareas" className="ml-auto text-xs font-medium text-primary hover:underline">
             Ver todas →
           </Link>
         </CardTitle>
-        <CardDescription>
-          Las tuyas y las de la recepción. Al cerrar una con socio o lead, cuenta en una línea qué pasó: queda en su historial.
-        </CardDescription>
+        <CardDescription>Las tuyas y las de la recepción.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {tasks.map((t) => (
-          <TaskItem key={t.id} task={t} showSede={showSede} today={today} />
-        ))}
+      <CardContent>
+        {tasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nada pendiente para hoy.</p>
+        ) : (
+          <ul className="divide-y">
+            {shown.map((t) => (
+              <TaskRow key={t.id} task={t} meId={meId} showSede={showSede} today={today} />
+            ))}
+          </ul>
+        )}
+        {hidden > 0 && (
+          <Link href="/dashboard/tareas" className="mt-2 block text-xs text-muted-foreground hover:text-foreground">
+            +{hidden} más
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function TaskItem({ task, showSede, today }: { task: TaskListItem; showSede: boolean; today: string }) {
+function TaskRow({
+  task,
+  meId,
+  showSede,
+  today,
+}: {
+  task: TaskListItem;
+  meId: string;
+  showSede: boolean;
+  today: string;
+}) {
   const router = useRouter();
-  const [outcome, setOutcome] = useState("");
   const [isPending, start] = useTransition();
+  const [asking, setAsking] = useState(false);
+  const [outcome, setOutcome] = useState("");
   const done = task.status === "DONE";
+  // Tied to a socio or lead: closing it needs one line of what happened (it goes to their history).
   const needsOutcome = task.person !== null;
 
-  const complete = () =>
+  const complete = (note: string) =>
     start(async () => {
-      const res = await completeStaffTask(task.id, outcome);
+      const res = await completeStaffTask(task.id, note);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success("Tarea cerrada.");
+      setAsking(false);
       setOutcome("");
       router.refresh();
     });
@@ -77,74 +105,71 @@ function TaskItem({ task, showSede, today }: { task: TaskListItem; showSede: boo
       else router.refresh();
     });
 
-  const overdue = dueBucket(task.dueDate, today) === "overdue";
+  const toggle = () => {
+    if (done) reopen();
+    else if (needsOutcome) setAsking((a) => !a);
+    else complete("");
+  };
+
+  const overdue = !done && dueBucket(task.dueDate, today) === "overdue";
+  const who = task.assignee
+    ? task.assignee.id === meId
+      ? "Tú"
+      : task.assignee.name.split(" ")[0]
+    : showSede && task.sede
+      ? `Recepción ${SEDE_LABEL[task.sede]}`
+      : "Recepción";
+  const href = `/dashboard/tareas?view=${task.assignee ? "mine" : "pool"}&t=${task.id}`;
 
   return (
-    <div className={`rounded-md border p-3 space-y-2 ${done ? "bg-muted/40 border-border" : "border-border"}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-1 min-w-0">
-          <p className={`text-sm font-medium ${done ? "line-through text-muted-foreground" : ""}`}>
-            {showSede && task.sede && !task.assignee && (
-              <Badge variant="outline" className="mr-2 text-[10px]">
-                {SEDE_LABEL[task.sede]}
-              </Badge>
-            )}
-            {task.title}
-          </p>
-          {done ? (
-            <p className="text-xs text-muted-foreground">
-              ✓ {task.doneByName ?? "Alguien"}
-              {task.outcome ? `: ${task.outcome}` : ""}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              <span className={overdue ? "text-destructive" : ""}>
-                {dueLabel(task.dueDate, task.dueMinutes, today)}
-              </span>
-              {task.person && ` · ${task.person.name}`}
-              {!task.assignee && " · Recepción"}
-            </p>
-          )}
-        </div>
-        {!done && (
+    <li className="py-2 first:pt-0 last:pb-0">
+      <div className="flex items-start gap-2.5">
+        <input
+          type="checkbox"
+          checked={done || asking}
+          onChange={toggle}
+          disabled={isPending}
+          aria-label={done ? `Reabrir «${task.title}»` : `Marcar «${task.title}» como hecha`}
+          className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary disabled:opacity-50"
+        />
+        <div className="min-w-0 flex-1">
           <Link
-            href={`/dashboard/tareas?view=${task.assignee ? "mine" : "pool"}&t=${task.id}`}
-            className="shrink-0 text-xs font-medium text-primary hover:underline"
+            href={href}
+            className={`block truncate text-sm font-medium hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
+            title={task.title}
           >
-            Abrir ↗
+            {task.title}
           </Link>
-        )}
+          <p className="truncate text-xs text-muted-foreground">
+            {who}
+            {" · "}
+            <span className={overdue ? "text-destructive" : ""}>{dueLabel(task.dueDate, task.dueMinutes, today)}</span>
+            {task.person && ` · ${task.person.name}`}
+          </p>
+        </div>
       </div>
 
-      {done ? (
-        <button
-          type="button"
-          onClick={reopen}
-          disabled={isPending}
-          className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-        >
-          deshacer
-        </button>
-      ) : (
+      {asking && !done && (
         <form
-          className="flex flex-col sm:flex-row gap-2"
+          className="mt-2 ml-6.5"
           onSubmit={(e) => {
             e.preventDefault();
-            complete();
+            if (outcome.trim()) complete(outcome);
           }}
         >
           <Input
+            autoFocus
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
-            placeholder={needsOutcome ? "¿Qué pasó? (confirmó, no contesta, reagendó…)" : "¿Qué pasó? (opcional)"}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setAsking(false);
+            }}
+            placeholder="¿Qué pasó? Enter para cerrar"
             className="h-8 text-sm"
             disabled={isPending}
           />
-          <Button type="submit" size="sm" disabled={isPending || (needsOutcome && !outcome.trim())}>
-            {isPending ? "Guardando…" : "Hecho"}
-          </Button>
         </form>
       )}
-    </div>
+    </li>
   );
 }

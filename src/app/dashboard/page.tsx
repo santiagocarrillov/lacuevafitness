@@ -10,7 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/actions/attendance";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { getTodayTasksForHome } from "@/lib/actions/staff-tasks";
+import { TASK_ROLES } from "@/lib/tasks/scope";
+import { getFunnelPanel, getSrxfitPanel } from "@/lib/home-panels";
 import { StaffTasksCard } from "./staff-tasks-card";
+import { FunnelCard, SrxfitCard } from "./home-panel-cards";
 import { ecuadorDateString } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +32,15 @@ function fmt$(cents: number) {
 export default async function DashboardHome() {
   const user = await requireAuth();
   const scopedSede = getSedeScope(user);
-  const [stats, tasks] = await Promise.all([
+  const canLeads = can.manageLeads(user);
+  const [stats, tasks, funnel, srxfit] = await Promise.all([
     getDashboardStats(scopedSede ?? undefined),
     getTodayTasksForHome(),
+    canLeads ? getFunnelPanel(scopedSede) : null,
+    getSrxfitPanel(scopedSede),
   ]);
   const canReports = can.viewReports(user);
+  const showTasks = TASK_ROLES.includes(user.role);
 
   const today = isoDate(new Date());
   const detailBase = `/dashboard/reportes/detalle?from=${today}&to=${today}`;
@@ -96,8 +103,6 @@ export default async function DashboardHome() {
         </p>
       </header>
 
-      <StaffTasksCard tasks={tasks} showSede={scopedSede === null} today={ecuadorDateString()} />
-
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((k) => {
           const card = (
@@ -123,31 +128,25 @@ export default async function DashboardHome() {
         })}
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Discrepancias del día</CardTitle>
-            <CardDescription>
-              Admin vs. coach — antifraude de conteo de clases.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {stats.todayDiscrepancies === 0
-              ? "Sin discrepancias hoy."
-              : `${stats.todayDiscrepancies} clase(s) con conteo distinto.`}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>SRXFit — Próximo ciclo</CardTitle>
-            <CardDescription>
-              Semana 9 de re-evaluación y benchmarks.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            (Pendiente: módulo SRXFit — Fase 2)
-          </CardContent>
-        </Card>
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {funnel && (
+          <FunnelCard
+            funnel={funnel}
+            href={canReports ? "/dashboard/reportes?tab=comercial" : "/dashboard/leads"}
+          />
+        )}
+        <SrxfitCard
+          data={srxfit}
+          links={{
+            prs: can.editTests(user) || can.manageMembers(user) ? "/dashboard/srxfit/evaluaciones" : undefined,
+            seen: can.scheduleNutrition(user) ? "/dashboard/nutricion/cobertura" : undefined,
+            plans: can.manageNutrition(user) ? "/dashboard/nutricion/planes" : undefined,
+            app: can.managePortalAccess(user) ? "/dashboard/nutricion/app" : undefined,
+          }}
+        />
+        {showTasks && (
+          <StaffTasksCard tasks={tasks} meId={user.id} showSede={scopedSede === null} today={ecuadorDateString()} />
+        )}
       </section>
     </div>
   );
