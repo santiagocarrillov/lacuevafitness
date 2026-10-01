@@ -18,12 +18,15 @@ sede. QuickBooks se cancela cuando un mes completo cuadre igual en los dos siste
   siguen `PENDING` (≈ $1,900–2,700/mes). El reporte actual solo suma `SUCCEEDED`, así que
   **subcuenta los ingresos de Xtreme**.
 - 389 pagos `PENDING` en total (muchos arrastrados de la importación de HubSpot).
-- Tres formatos de estado de cuenta (ver `bank-reconciliation` en la memoria):
-  1. Banco Guayaquil empresa (`Movimientos_*.xlsx`: TipoMov N/C · N/D, Nut, Valor, SaldoDespMov).
-  2. Cuenta personal Santiago/Isabel (`Movimientos_cuenta_*.xlsx`: Fecha/Concepto/Tipo/Monto,
-     documento en la fila siguiente). Ahí cobran socios de la **Fitness** mezclado con gastos
-     personales.
-  3. Produbanco Santiago (`ProdXXXX*.xlsx`: FECHA, REFERENCIA, DESCRIPCION, +/-, VALOR, SALDO).
+- Cuentas (Santiago, 1 oct): **Xtreme usa solo Banco del Pacífico**. La Fitness cobraba en
+  Pichincha (de Isabel o de Santiago) y en Produbanco de Santiago; Santiago pidió que de ahora en
+  adelante se deposite solo en **una** cuenta Pichincha suya.
+- Tres formatos de estado de cuenta (verificados: el saldo corre continuo línea a línea):
+  1. `PACIFICO` (`Movimientos_*.xlsx`: TipoMov N/C · N/D, Nut, Valor, SaldoDespMov,
+     NombreOrdenante). La transferencia, su comisión y el IVA de la comisión comparten Nut.
+  2. `PICHINCHA` ("Movimientos de Cuenta", `Movimientos_cuenta_*.xlsx`): dos filas por línea
+     (documento en la segunda), montos `-$1.500,00`.
+  3. `PRODUBANCO` (`ProdXXXX*.xlsx`: cabecera con CUENTA, luego FECHA/REFERENCIA/DESCRIPCION/+/-).
 
 ## Entidades legales
 
@@ -82,7 +85,7 @@ registran en la entidad que los pagó y, si se quiere, se reparten solo en la vi
 | PR | Contenido |
 |---|---|
 | **1a** ✅ | Schema (todo lo anterior) + Gastos + Aportes + Otros ingresos + Resumen por entidad (ingresos confirmados vs sin conciliar). Lógica en `src/lib/finance/queries.ts`; prueba de solo lectura `npm run test:finanzas`. |
-| **1b** | Banco: importadores de los 3 formatos, bandeja de conciliación, reglas, comisión de Pagoplux automática. |
+| **1b** ✅ | Banco: importadores de los 3 formatos (`src/lib/finance/bank-parsers.ts`), bandeja con sugerencias (`bank-suggest.ts`: comisiones, SRI, IESS, Gatorade, dueños, pagos de socios por monto+nombre, uno que paga por dos, Pagoplux neto de comisión), clasificación con **deshacer exacto** (`appliedJson`) y reglas aprendidas. Un gasto del banco se enlaza a uno ya registrado (por pagar / SRI) del mismo monto en vez de duplicarlo. Pruebas: `npm run test:banco` (incluye clasificar/deshacer contra la BD real dentro de una transacción revertida). |
 | **1c** | SRI comprobantes recibidos (adelantado desde la Fase 2: junto con el banco cubre todos los gastos mayores) + histórico de QuickBooks para comparar un mes en paralelo. |
 
 ## Fase 2 (después)

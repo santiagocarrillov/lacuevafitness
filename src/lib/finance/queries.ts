@@ -62,8 +62,10 @@ export async function computeIncomeStatement(ym: string): Promise<EntityStatemen
 
   return ENTITY_ORDER.map((sede) => {
     const p = payments.filter((x) => x.sede === sede);
-    // Member payments: confirmed vs still unreconciled. Pool entries are bank
-    // deposits not yet assigned — real money, shown on their own line.
+    // Member payments: confirmed vs still unreconciled. Pool entries still
+    // PENDING are bank deposits not yet assigned to a socio — real money, on
+    // their own line. A SUCCEEDED pool entry was already consumed by a member
+    // payment (confirmPendingPayment) and must not be counted twice.
     const membershipsConfirmedCents = p
       .filter((x) => !x.isPoolEntry && x.memberId && x.status === "SUCCEEDED")
       .reduce((s, x) => s + x.amountCents, 0);
@@ -71,7 +73,7 @@ export async function computeIncomeStatement(ym: string): Promise<EntityStatemen
       .filter((x) => !x.isPoolEntry && x.memberId && x.status === "PENDING")
       .reduce((s, x) => s + x.amountCents, 0);
     const unassignedDepositsCents = p
-      .filter((x) => x.isPoolEntry && x.status === "SUCCEEDED")
+      .filter((x) => x.isPoolEntry && x.status === "PENDING")
       .reduce((s, x) => s + x.amountCents, 0);
 
     const o = sumBy(others.filter((x) => x.sede === sede), (x) => x.category, (x) => x.amountCents);
@@ -127,7 +129,7 @@ export async function computeFinanceTrend(ym: string, months = 12): Promise<Tren
       where: {
         paidAt: { gte: start, lt: end },
         status: { in: ["SUCCEEDED", "PENDING"] },
-        OR: [{ isPoolEntry: false, memberId: { not: null } }, { isPoolEntry: true, status: "SUCCEEDED" }],
+        OR: [{ isPoolEntry: false, memberId: { not: null } }, { isPoolEntry: true, status: "PENDING" }],
       },
       select: { sede: true, amountCents: true, paidAt: true },
     }),

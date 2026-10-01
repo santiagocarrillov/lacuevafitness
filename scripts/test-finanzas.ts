@@ -57,7 +57,7 @@ async function main() {
       Number(raw.find((x) => x.sede === s.sede && x.status === status && x.pool === pool)?.cents ?? 0);
     check(`${s.sede} confirmadas = SQL`, s.membershipsConfirmedCents === sum("SUCCEEDED", false), fmtMoney(s.membershipsConfirmedCents));
     check(`${s.sede} sin conciliar = SQL`, s.membershipsUnreconciledCents === sum("PENDING", false), fmtMoney(s.membershipsUnreconciledCents));
-    check(`${s.sede} depósitos sin asignar = SQL`, s.unassignedDepositsCents === sum("SUCCEEDED", true), fmtMoney(s.unassignedDepositsCents));
+    check(`${s.sede} depósitos sin asignar = SQL (pool PENDING; SUCCEEDED ya consumido)`, s.unassignedDepositsCents === sum("PENDING", true), fmtMoney(s.unassignedDepositsCents));
     check(
       `${s.sede} resultado = ingresos − gastos`,
       s.resultCents === s.incomeCents - s.expensesCents,
