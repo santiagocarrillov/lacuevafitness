@@ -7,11 +7,13 @@ import { ResumenTab } from "./resumen-tab";
 import { GastosTab } from "./gastos-tab";
 import { AportesTab } from "./aportes-tab";
 import { OtrosIngresosTab } from "./otros-ingresos-tab";
+import { BancoTab } from "./banco-tab";
 
 export const dynamic = "force-dynamic";
 
 const TABS = [
   { key: "resumen", label: "Estado de resultados" },
+  { key: "banco", label: "Banco" },
   { key: "gastos", label: "Gastos" },
   { key: "aportes", label: "Aportes y préstamos" },
   { key: "otros", label: "Otros ingresos" },
@@ -21,7 +23,7 @@ type Tab = (typeof TABS)[number]["key"];
 export default async function FinanzasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; mes?: string }>;
+  searchParams: Promise<{ tab?: string; mes?: string; cuenta?: string }>;
 }) {
   const user = await requireAuth();
   if (!can.viewFinancials(user)) redirect("/dashboard?forbidden=1");
@@ -80,6 +82,7 @@ export default async function FinanzasPage({
       </div>
 
       {tab === "resumen" && <ResumenTab ym={ym} />}
+      {tab === "banco" && <BancoTab accountId={params.cuenta || undefined} canEdit={can.editFinancials(user)} />}
       {tab === "gastos" && <GastosTab ym={ym} canEdit={can.editFinancials(user)} />}
       {tab === "aportes" && <AportesTab ym={ym} canEdit={can.editFinancials(user)} />}
       {tab === "otros" && <OtrosIngresosTab ym={ym} canEdit={can.editFinancials(user)} />}

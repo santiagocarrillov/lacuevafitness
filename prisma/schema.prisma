@@ -892,8 +892,8 @@ enum BankAccountKind {
 }
 
 enum BankStatementFormat {
-  GUAYAQUIL // Movimientos_*.xlsx (TipoMov N/C · N/D)
-  PERSONAL // Movimientos_cuenta_*.xlsx
+  PACIFICO // Banco del Pacífico (Xtreme): Movimientos_*.xlsx (TipoMov N/C · N/D)
+  PICHINCHA // "Movimientos de Cuenta": Movimientos_cuenta_*.xlsx
   PRODUBANCO // ProdXXXX*.xlsx (+/-)
 }
 
@@ -931,22 +931,26 @@ enum BankTxnKind {
 
 // Una línea del estado de cuenta (Fase 1b: importación y conciliación).
 model BankTransaction {
-  id           String        @id @default(cuid())
-  accountId    String
-  account      BankAccount   @relation(fields: [accountId], references: [id])
-  postedAt     DateTime
-  amountCents  Int // con signo: + crédito, − débito
-  description  String
-  counterparty String?
-  reference    String?
-  balanceCents Int?
-  fingerprint  String        @unique // reimportar el mismo archivo no duplica
-  status       BankTxnStatus @default(PENDING)
-  kind         BankTxnKind?
-  importBatch  String?
-  notes        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  accountId      String
+  account        BankAccount   @relation(fields: [accountId], references: [id])
+  postedAt       DateTime
+  amountCents    Int // con signo: + crédito, − débito
+  description    String
+  counterparty   String?
+  reference      String?
+  balanceCents   Int?
+  fingerprint    String        @unique // reimportar el mismo archivo no duplica
+  status         BankTxnStatus @default(PENDING)
+  kind           BankTxnKind?
+  importBatch    String?
+  notes          String?
+  // What the classification created/changed, so it can be undone exactly.
+  appliedJson    Json?
+  classifiedAt   DateTime?
+  classifiedById String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   payments         Payment[]
   expenses         Expense[]

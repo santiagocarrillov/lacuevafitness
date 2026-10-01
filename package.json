@@ -28,7 +28,8 @@
     "test:nutricion-planes": "tsx scripts/test-nutricion-planes.ts",
     "test:nutricion-diario": "tsx scripts/test-nutricion-diario.ts",
     "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts",
-    "test:finanzas": "tsx scripts/test-finanzas.ts"
+    "test:finanzas": "tsx scripts/test-finanzas.ts",
+    "test:banco": "tsx scripts/test-banco.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
@@ -50,6 +51,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.1",
+    "read-excel-file": "^9.3.10",
     "recharts": "^3.8.1",
     "resend": "^6.18.0",
     "shadcn": "^4.2.0",
