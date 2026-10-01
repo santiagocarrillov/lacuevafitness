@@ -27,7 +27,8 @@
     "db:seed:demo-nutricion": "tsx scripts/seed-demo-nutricion.ts",
     "test:nutricion-planes": "tsx scripts/test-nutricion-planes.ts",
     "test:nutricion-diario": "tsx scripts/test-nutricion-diario.ts",
-    "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts"
+    "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts",
+    "test:finanzas": "tsx scripts/test-finanzas.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { ACTIVE_BASE } from "@/lib/member-status";
-import { Sede, ExpenseCategory } from "@/generated/prisma/client";
+import { Sede } from "@/generated/prisma/client";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -433,11 +433,11 @@ export async function getMonthlyFinancials(
           },
         }),
         prisma.expense.aggregate({
-          where: { ...sedeFilter, date: { gte: start, lte: end } },
+          where: { ...sedeFilter, voidedAt: null, date: { gte: start, lte: end } },
           _sum: { amountCents: true },
         }),
         prisma.expense.aggregate({
-          where: { ...sedeFilter, category: "PAYROLL", date: { gte: start, lte: end } },
+          where: { ...sedeFilter, voidedAt: null, category: "PAYROLL", date: { gte: start, lte: end } },
           _sum: { amountCents: true },
         }),
       ]);
@@ -616,60 +616,6 @@ export async function upsertMonthlyTarget(data: {
 
   revalidatePath("/dashboard/reportes");
   return target;
-}
-
-// ── Expense CRUD ────────────────────────────────────────────────────
-
-export async function createExpense(data: {
-  sede?: Sede;
-  category: ExpenseCategory;
-  description: string;
-  amountCents: number;
-  date: string;
-  recurring?: boolean;
-  notes?: string;
-}) {
-  const expense = await prisma.expense.create({
-    data: {
-      sede: data.sede,
-      category: data.category,
-      description: data.description,
-      amountCents: data.amountCents,
-      date: new Date(data.date),
-      recurring: data.recurring ?? false,
-      notes: data.notes,
-    },
-  });
-
-  revalidatePath("/dashboard/reportes");
-  return expense;
-}
-
-export async function getExpenses(sede: Sede | undefined, year: number, month: number) {
-  const { start, end } = monthBounds(year, month);
-  return prisma.expense.findMany({
-    where: {
-      ...(sede ? { sede } : {}),
-      date: { gte: start, lte: end },
-    },
-    orderBy: { date: "desc" },
-  });
-}
-
-export async function getExpensesByRange(sede: Sede | undefined, from: string, to: string) {
-  const { start, end } = rangeBounds(from, to);
-  return prisma.expense.findMany({
-    where: {
-      ...(sede ? { sede } : {}),
-      date: { gte: start, lte: end },
-    },
-    orderBy: { date: "desc" },
-  });
-}
-
-export async function deleteExpense(id: string) {
-  await prisma.expense.delete({ where: { id } });
-  revalidatePath("/dashboard/reportes");
 }
 
 // ── Commercial pipeline (Comercial) ────────────────────────────────
