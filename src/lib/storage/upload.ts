@@ -49,7 +49,7 @@ export async function uploadPublicImage(file: File, folder: string): Promise<str
 // Financial documents must never be public: private bucket, served through
 // short-lived signed URLs generated server-side for OWNER/ACCOUNTING only.
 export const FINANCE_BUCKET = "finance-docs";
-const FINANCE_ALLOWED = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
+const FINANCE_ALLOWED = ["image/jpeg", "image/png", "image/webp", "application/pdf", "application/xml"] as const;
 // Server actions accept 1 MB bodies: images are compressed in the browser first.
 const FINANCE_MAX_BYTES = 1024 * 1024;
 
@@ -59,7 +59,15 @@ function ensureFinanceBucket(): Promise<void> {
   financeBucketReady ??= (async () => {
     const supabase = createSupabaseAdminClient();
     const { data } = await supabase.storage.getBucket(FINANCE_BUCKET);
-    if (data) return;
+    if (data) {
+      // Keep the allowed types in sync when the list grows (SRI XML, oct 2026).
+      await supabase.storage.updateBucket(FINANCE_BUCKET, {
+        public: false,
+        fileSizeLimit: FINANCE_MAX_BYTES,
+        allowedMimeTypes: [...FINANCE_ALLOWED],
+      });
+      return;
+    }
     const { error } = await supabase.storage.createBucket(FINANCE_BUCKET, {
       public: false,
       fileSizeLimit: FINANCE_MAX_BYTES,
@@ -89,6 +97,19 @@ export async function uploadFinanceDoc(file: File, folder: string): Promise<stri
     .from(FINANCE_BUCKET)
     .upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type, upsert: false });
   if (error) throw new Error("No se pudo subir el comprobante.");
+  return path;
+}
+
+/** Stores an SRI XML under its access key (idempotent) and returns its path. */
+export async function storeSriXml(accessKey: string, xml: string): Promise<string> {
+  if (!/^\d{49}$/.test(accessKey)) throw new Error("Clave de acceso inválida.");
+  await ensureFinanceBucket();
+  const path = `sri/${accessKey}.xml`;
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.storage
+    .from(FINANCE_BUCKET)
+    .upload(path, Buffer.from(xml, "utf8"), { contentType: "application/xml", upsert: true });
+  if (error) throw new Error("No se pudo guardar el XML.");
   return path;
 }
 

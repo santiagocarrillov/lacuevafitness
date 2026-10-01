@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<factura id="comprobante" version="1.0.0">
+  <infoTributaria>
+    <ambiente>2</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>EMPRESA ELECTRICA DE PRUEBA S.A.</razonSocial>
+    <nombreComercial>EMPRESA ELECTRICA DE PRUEBA S.A.</nombreComercial>
+    <ruc>1790000000001</ruc>
+    <claveAcceso>1509202601179000000000120010010000012341234567811</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000001234</secuencial>
+    <dirMatriz>AV ALONSO DE TORRES Y AV DEL PARQUE</dirMatriz>
+    <agenteRetencion>1</agenteRetencion>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>15/09/2026</fechaEmision>
+    <dirEstablecimiento>AV ALONSO DE TORRES Y AV DEL PARQUE</dirEstablecimiento>
+    <contribuyenteEspecial>301E</contribuyenteEspecial>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <tipoIdentificacionComprador>05</tipoIdentificacionComprador>
+    <razonSocialComprador>COMPRADOR DE PRUEBA</razonSocialComprador>
+    <identificacionComprador>1700000000</identificacionComprador>
+    <direccionComprador>DIRECCION DE PRUEBA</direccionComprador>
+    <totalSinImpuestos>120.00</totalSinImpuestos>
+    <totalDescuento>0</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>0</codigoPorcentaje>
+        <baseImponible>20.00</baseImponible>
+        <valor>0.00</valor>
+      </totalImpuesto>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>100.00</baseImponible>
+        <valor>15.00</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0</propina>
+    <importeTotal>135.00</importeTotal>
+    <moneda>DOLAR</moneda>
+    <pagos>
+      <pago>
+        <formaPago>20</formaPago>
+        <total>135.00</total>
+        <plazo>30</plazo>
+        <unidadTiempo>DIAS</unidadTiempo>
+      </pago>
+    </pagos>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>4140101011</codigoPrincipal>
+      <descripcion>CONSUMO DE ENERGIA SEPTIEMBRE</descripcion>
+      <cantidad>1</cantidad>
+      <precioUnitario>4.99</precioUnitario>
+      <descuento>0</descuento>
+      <precioTotalSinImpuesto>4.99</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15</tarifa>
+          <baseImponible>4.99</baseImponible>
+          <valor>0.75</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+  <infoAdicional>
+    <campoAdicional nombre="Sistema">FENIX API</campoAdicional>
+    <campoAdicional nombre="Vendedor">CAMUNDA</campoAdicional>
+    <campoAdicional nombre="Telefono">0999999999</campoAdicional>
+    <campoAdicional nombre="Correo">prueba@example.com</campoAdicional>
+    <campoAdicional nombre="Forma Pago">TARJETA DE CREDITO UDS-5,74</campoAdicional>
+    <campoAdicional nombre="Observacion">C-2755283 RECUPERACION CLAVE PERSONA NATURAL ARCHIVO X DIAS - F.ON.P.A.N.VRPass.</campoAdicional>
+    <campoAdicional nombre="Codigo">1700000000</campoAdicional>
+  </infoAdicional>
+  
+</factura>

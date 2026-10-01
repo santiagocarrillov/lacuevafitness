@@ -296,3 +296,20 @@ export async function voidOtherIncome(id: string) {
   await prisma.otherIncome.update({ where: { id, voidedAt: null }, data: { voidedAt: new Date() } });
   revalidatePath(PATH);
 }
+
+// ── Review ──────────────────────────────────────────────────────────────────
+
+/** Fix an expense's category (e.g. an SRI invoice from a new supplier). The
+ *  next invoice from the same RUC inherits it. */
+export async function updateExpenseCategory(id: string, category: ExpenseCategory) {
+  await requireFinanceEdit();
+  if (!CATEGORIES.includes(category)) throw new Error("Categoría inválida.");
+  const e = await prisma.expense.findUnique({ where: { id }, select: { notes: true } });
+  // Clear only the automatic review notes, never someone's own notes.
+  const autoNote = e?.notes === "Categoría por revisar" || e?.notes === "Categoría sugerida por el proveedor";
+  await prisma.expense.update({
+    where: { id, voidedAt: null },
+    data: { category, ...(autoNote ? { notes: null } : {}) },
+  });
+  revalidatePath(PATH);
+}

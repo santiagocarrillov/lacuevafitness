@@ -86,14 +86,16 @@ registran en la entidad que los pagó y, si se quiere, se reparten solo en la vi
 |---|---|
 | **1a** ✅ | Schema (todo lo anterior) + Gastos + Aportes + Otros ingresos + Resumen por entidad (ingresos confirmados vs sin conciliar). Lógica en `src/lib/finance/queries.ts`; prueba de solo lectura `npm run test:finanzas`. |
 | **1b** ✅ | Banco: importadores de los 3 formatos (`src/lib/finance/bank-parsers.ts`), bandeja con sugerencias (`bank-suggest.ts`: comisiones, SRI, IESS, Gatorade, dueños, pagos de socios por monto+nombre, uno que paga por dos, Pagoplux neto de comisión), clasificación con **deshacer exacto** (`appliedJson`) y reglas aprendidas. Un gasto del banco se enlaza a uno ya registrado (por pagar / SRI) del mismo monto en vez de duplicarlo. Pruebas: `npm run test:banco` (incluye clasificar/deshacer contra la BD real dentro de una transacción revertida). |
-| **1c** | SRI comprobantes recibidos (adelantado desde la Fase 2: junto con el banco cubre todos los gastos mayores) + histórico de QuickBooks para comparar un mes en paralelo. |
+| **1c** ✅ | Facturas recibidas del SRI: se suben los XML autorizados (del correo o de SRI en Línea), se crea el gasto con IVA, proveedor y número, o se **enlaza al débito del banco** del mismo monto. La entidad sale del RUC/cédula del comprador. La categoría se aprende por RUC del proveedor. El reporte TXT de "recibidos" se usa como control de faltantes, leyendo solo las claves de acceso (no depende de sus columnas). XML guardado en el bucket privado. `npm run test:sri`. |
+| **1d** | Histórico de QuickBooks (2025–2026) para comparar un mes en paralelo antes de cancelarlo. |
 
 ## Fase 2 (después)
 
 - **Ecuafact**: tiene API REST (plan Corporativo). Emitir la factura automáticamente al
   confirmarse un pago. Requiere cotizar el plan y credenciales.
-- **SRI — comprobantes recibidos**: descargar el listado de facturas de proveedores y su XML por
-  clave de acceso → los gastos se cargan solos con IVA. Resumen para el formulario 104 y ATS.
+- **SRI**: el web service público de autorización (`AutorizacionComprobantesOffline`) devolvió
+  0 comprobantes para una clave real (1 oct 2026), así que no se depende de él. Pendiente:
+  notas de crédito, resumen para el formulario 104 y ATS, y traer los XML del correo solos.
 - **Préstamos bancarios**: separar capital (no es gasto) de intereses (gasto) en cada cuota.
 
 ## Fase 3

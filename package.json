@@ -29,7 +29,8 @@
     "test:nutricion-diario": "tsx scripts/test-nutricion-diario.ts",
     "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts",
     "test:finanzas": "tsx scripts/test-finanzas.ts",
-    "test:banco": "tsx scripts/test-banco.ts"
+    "test:banco": "tsx scripts/test-banco.ts",
+    "test:sri": "tsx scripts/test-sri.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
@@ -43,6 +44,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "fast-xml-parser": "^5.11.2",
     "lucide-react": "^1.8.0",
     "next": "16.2.3",
     "next-themes": "^0.4.6",
