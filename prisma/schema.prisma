@@ -909,7 +909,8 @@ model BankAccount {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  transactions BankTransaction[]
+  transactions   BankTransaction[]
+  ledgerAccounts LedgerAccount[]
 }
 
 enum BankTxnStatus {
@@ -1647,4 +1648,72 @@ model PushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([memberId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Plan de cuentas y saldos iniciales (Finanzas, oct 2026; aprobado por Santiago).
+// Base del balance: saldo inicial (EEFF firmados al 31-dic-2025) + lo que la
+// app registra en 2026. El libro diario completo llega en la Fase 3.
+// ─────────────────────────────────────────────────────────────
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+// What app records move this account in the balance roll-forward.
+enum LedgerRole {
+  CASH_ON_HAND
+  BANK // linked to a BankAccount: balance from the latest imported statement
+  INVENTORY
+  PREPAID
+  FIXED_ASSET
+  ACCUMULATED_DEPRECIATION
+  TAX_CREDIT
+  PAYABLES // + expenses still unpaid in the app
+  INTEREST_PAYABLE
+  PAYROLL_LIABILITIES
+  SHAREHOLDER_LOANS // + CapitalMovement SHAREHOLDER_LOAN − LOAN_REPAYMENT
+  RELATED_LOANS // préstamo a mutuo
+  CAPITAL
+  RETAINED_EARNINGS
+  OTHER
+}
+
+model LedgerAccount {
+  id            String            @id @default(cuid())
+  sede          Sede
+  code          String // "1.1.02"
+  name          String
+  type          LedgerAccountType
+  role          LedgerRole        @default(OTHER)
+  bankAccountId String?
+  bankAccount   BankAccount?      @relation(fields: [bankAccountId], references: [id])
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  openingBalances OpeningBalance[]
+
+  @@unique([sede, code])
+}
+
+model OpeningBalance {
+  id          String        @id @default(cuid())
+  accountId   String
+  account     LedgerAccount @relation(fields: [accountId], references: [id])
+  asOf        DateTime      @db.Date // 2025-12-31 → saldos iniciales de 2026
+  // Natural side: + is the account's normal balance (debit for assets, credit
+  // for liabilities/equity). Contra accounts (depreciation, losses) are negative.
+  amountCents Int
+  person      String? // shareholder-loan breakdown by person (null = sin desglosar)
+  source      String? // "EEFF 2025 firmados"
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([accountId, asOf])
 }

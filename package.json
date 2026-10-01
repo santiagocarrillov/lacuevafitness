@@ -30,7 +30,9 @@
     "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts",
     "test:finanzas": "tsx scripts/test-finanzas.ts",
     "test:banco": "tsx scripts/test-banco.ts",
-    "test:sri": "tsx scripts/test-sri.ts"
+    "test:sri": "tsx scripts/test-sri.ts",
+    "test:balance": "tsx scripts/test-balance.ts",
+    "db:seed:saldos-xtreme": "tsx scripts/seed-saldos-iniciales-xtreme.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
