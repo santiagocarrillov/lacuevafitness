@@ -18,6 +18,8 @@ export type LegalEntity = {
   kind: "PERSONA_NATURAL" | "SAS";
   /** RUC — filled in once confirmed (regime analysis pending, oct 2026). */
   ruc: string | null;
+  /** Buyer IDs that SRI invoices to this entity carry (RUC and/or cédula). */
+  taxIds: string[];
   /** People who can contribute capital or lend money to this entity. */
   owners: string[];
 };
@@ -28,7 +30,9 @@ export const ENTITIES: Record<Sede, LegalEntity> = {
     name: "La Cueva Fitness",
     legalName: "Santiago Carrillo (persona natural)",
     kind: "PERSONA_NATURAL",
-    ruc: null,
+    ruc: "1707994461001",
+    // Suppliers invoice Santiago with his cédula or his RUC (cédula + 001).
+    taxIds: ["1707994461", "1707994461001"],
     owners: ["Santiago Carrillo", "Isabel Cárdenas"],
   },
   XTREME: {
@@ -36,7 +40,8 @@ export const ENTITIES: Record<Sede, LegalEntity> = {
     name: "La Cueva Xtreme",
     legalName: "La Cueva Xtreme S.A.S.",
     kind: "SAS",
-    ruc: null,
+    ruc: null, // pending from Santiago (oct 2026)
+    taxIds: [],
     owners: ["Santiago Carrillo", "Isabel Cárdenas", "Socio Xtreme (45 %)"],
   },
 };
@@ -137,4 +142,10 @@ export function shiftMonth(ym: string, delta: number) {
   const [y, m] = ym.split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Entity an SRI document belongs to, by the buyer ID printed on it. */
+export function entityForBuyer(buyerId: string): Sede | null {
+  const id = buyerId.trim();
+  return ENTITY_ORDER.find((s) => ENTITIES[s].taxIds.includes(id)) ?? null;
 }

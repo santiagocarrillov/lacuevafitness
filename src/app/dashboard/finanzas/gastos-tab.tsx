@@ -10,6 +10,7 @@ import {
   monthLabel,
 } from "@/lib/finance/entities";
 import { ExpenseActions, ExpenseDialog } from "./forms";
+import { CategorySelect, SriImportDialog } from "./sri-forms";
 
 function day(d: Date | null) {
   return d ? d.toISOString().slice(0, 10) : "—";
@@ -47,9 +48,16 @@ function ExpenseTable({ rows, canEdit }: { rows: Row[]; canEdit: boolean }) {
                     <span className="block text-xs no-underline">Anulado: {e.voidReason}</span>
                   )}
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">{EXPENSE_CATEGORY_LABELS[e.category]}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {canEdit && !voided ? (
+                    <CategorySelect id={e.id} value={e.category} flagged={e.notes === "Categoría por revisar"} />
+                  ) : (
+                    EXPENSE_CATEGORY_LABELS[e.category]
+                  )}
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {DOC_TYPE_LABELS[e.documentType]}
+                  {e.sriAccessKey && <span className="ml-1 rounded bg-sky-50 px-1 text-[10px] text-sky-800">SRI</span>}
                   {e.documentNumber && <span className="block text-xs text-muted-foreground">{e.documentNumber}</span>}
                   {isDeductible(e) && <span className="block text-[11px] text-emerald-700">deducible</span>}
                 </td>
@@ -102,9 +110,14 @@ export async function GastosTab({ ym, canEdit }: { ym: string; canEdit: boolean 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           <span className="capitalize">{monthLabel(ym)}</span>: {active.length} gastos · {fmtMoney(total, { decimals: true })}.
-          Los gastos del banco y del SRI llegarán solos (próximas entregas); aquí va lo pagado en efectivo.
+          Llegan del banco (Banco) y de las facturas del SRI; a mano solo lo pagado en efectivo.
         </p>
-        {canEdit && <ExpenseDialog defaultDate={defaultDate} />}
+        {canEdit && (
+          <div className="flex gap-2">
+            <SriImportDialog />
+            <ExpenseDialog defaultDate={defaultDate} />
+          </div>
+        )}
       </div>
 
       {payables.length > 0 && (
