@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/cron/tasks-auto — the day's automatic tasks (evaluations, renewals,
- * socios who stopped coming) into each sede's front-desk pool. Scheduled in
+ * $9-trial closes, socios who stopped coming) into each sede's front-desk pool. Scheduled in
  * vercel.json for 5:00 Ecuador (10:00 UTC). Idempotent: every task carries an
  * autoKey, so a retry creates nothing new.
  * Same auth as the other crons: Vercel injects `Authorization: Bearer $CRON_SECRET`.

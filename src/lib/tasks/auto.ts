@@ -23,7 +23,7 @@ const EVAL_DONE_STAGES: LeadStage[] = ["TRIAL_ATTENDED", "CONVERTED", "LOST", "D
 
 export type AutoTaskPlan = {
   autoKey: string;
-  reason: "evaluación" | "renovación" | "inasistencia";
+  reason: "evaluación" | "renovación" | "cierre de trial" | "inasistencia";
   title: string;
   detail: string;
   type: StaffTaskType;
@@ -90,7 +90,65 @@ async function planEvaluations(today: Date): Promise<AutoTaskPlan[]> {
     });
 }
 
-async function planRenewals(today: Date, todayStr: string): Promise<AutoTaskPlan[]> {
+/**
+ * The $9 two-week trial ending is a sale, not a renewal (see LeadStage
+ * CONVERTED in the schema): the conversation is closing them on the monthly
+ * plan, down the price ladder. Kept as data so the detail and any future UI
+ * quote the same numbers.
+ */
+export const MONTHLY_PRICE_LADDER = { list: 60, close: 50, debitPrepay: 40 } as const;
+
+type EndingMembership = {
+  id: string;
+  endsAt: Date;
+  customPriceCents: number | null;
+  plan: { name: string; priceCents: number };
+  member: { id: string; firstName: string; lastName: string; sede: Sede };
+};
+
+const endDayLabel = (endsAt: Date, todayStr: string) =>
+  dueLabel(endsAt.toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" }), null, todayStr).toLowerCase();
+
+export function renewalPlan(ms: EndingMembership, todayStr: string): AutoTaskPlan {
+  const price = (ms.customPriceCents ?? ms.plan.priceCents) / 100;
+  return {
+    autoKey: `renewal:${ms.id}`,
+    reason: "renovación",
+    title: `Cobrar renovación a ${name(ms.member)} — vence ${endDayLabel(ms.endsAt, todayStr)}`,
+    detail: `${ms.plan.name} · $${price.toFixed(2)}. Recuérdale la renovación; si ya pagó, regístralo en su ficha.`,
+    type: "COLLECTION",
+    priority: 0,
+    sede: ms.member.sede,
+    memberId: ms.member.id,
+    dueMinutes: null,
+  };
+}
+
+export function trialClosePlan(ms: EndingMembership, classes: number, todayStr: string): AutoTaskPlan {
+  const { list, close, debitPrepay } = MONTHLY_PRICE_LADDER;
+  return {
+    autoKey: `trialclose:${ms.id}`,
+    reason: "cierre de trial",
+    title: `Cierre de trial: ${name(ms.member)} — termina ${endDayLabel(ms.endsAt, todayStr)} (${classes} ${classes === 1 ? "clase" : "clases"})`,
+    detail:
+      `Termina su prueba de dos semanas (${ms.plan.name}). No es una renovación: es el cierre a la mensualidad. ` +
+      "Siéntate con la persona, muéstrale su evaluación y lo que avanzó en estas semanas, y ofrécele la mensualidad: " +
+      `lista $${list}, cierre $${close}, y hasta $${debitPrepay} con débito automático + prepago (trimestral, semestral o anual). ` +
+      "Si ya pagó, regístralo en su ficha.",
+    type: "TASK",
+    priority: 1,
+    sede: ms.member.sede,
+    memberId: ms.member.id,
+    dueMinutes: null,
+  };
+}
+
+/**
+ * Memberships ending in the next RENEWAL_WINDOW_DAYS: a collection task for
+ * paid plans, a sales-close task for the $9 trial. ONE_TIME (day passes,
+ * single services) gets neither.
+ */
+async function planEndings(today: Date, todayStr: string): Promise<AutoTaskPlan[]> {
   const until = ecuadorDateAt(new Date(today.getTime() + (RENEWAL_WINDOW_DAYS + 1) * DAY), 0, 0);
   const memberships = await prisma.membership.findMany({
     where: {
@@ -101,9 +159,10 @@ async function planRenewals(today: Date, todayStr: string): Promise<AutoTaskPlan
     },
     select: {
       id: true,
+      startsAt: true,
       endsAt: true,
       customPriceCents: true,
-      plan: { select: { name: true, priceCents: true } },
+      plan: { select: { name: true, priceCents: true, billingCycle: true } },
       member: {
         select: {
           id: true,
@@ -111,7 +170,8 @@ async function planRenewals(today: Date, todayStr: string): Promise<AutoTaskPlan
           lastName: true,
           sede: true,
           user: { select: { role: true } },
-          // Already renewed: a later membership is waiting (paid or not).
+          // Already renewed (or, for a trial, already closed): a later
+          // membership is waiting (paid or not).
           memberships: {
             where: { state: { in: ["ACTIVE", "PENDING_PAYMENT"] } },
             select: { id: true, endsAt: true },
@@ -121,26 +181,30 @@ async function planRenewals(today: Date, todayStr: string): Promise<AutoTaskPlan
     },
   });
 
-  return memberships
+  const ending = memberships
     .filter((ms) => !isStaffMember(ms.member))
-    .filter((ms) => !ms.member.memberships.some((o) => o.id !== ms.id && o.endsAt > ms.endsAt))
-    .map((ms) => {
-      const endDay = ms.endsAt.toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
-      const price = (ms.customPriceCents ?? ms.plan.priceCents) / 100;
-      return {
-        autoKey: `renewal:${ms.id}`,
-        reason: "renovación" as const,
-        title: `Cobrar renovación a ${name(ms.member)} — vence ${dueLabel(endDay, null, todayStr).toLowerCase()}`,
-        detail:
-          `${ms.plan.name} · $${price.toFixed(2)}. Recuérdale la renovación; ` +
-          "si ya pagó, regístralo en su ficha.",
-        type: "COLLECTION" as const,
-        priority: 0,
-        sede: ms.member.sede,
-        memberId: ms.member.id,
-        dueMinutes: null,
-      };
-    });
+    .filter((ms) => !ms.member.memberships.some((o) => o.id !== ms.id && o.endsAt > ms.endsAt));
+
+  // Classes attended during each trial, for the title: how the two weeks went
+  // is the first thing whoever closes needs to know.
+  const trials = ending.filter((ms) => ms.plan.billingCycle === "TRIAL");
+  const visits = trials.length
+    ? await prisma.attendance.findMany({
+        where: {
+          memberId: { in: trials.map((ms) => ms.member.id) },
+          recordedAt: { gte: new Date(Math.min(...trials.map((ms) => ms.startsAt.getTime()))) },
+        },
+        select: { memberId: true, recordedAt: true },
+      })
+    : [];
+
+  return ending.map((ms) => {
+    if (ms.plan.billingCycle !== "TRIAL") return renewalPlan(ms, todayStr);
+    const classes = visits.filter(
+      (v) => v.memberId === ms.member.id && v.recordedAt >= ms.startsAt && v.recordedAt < ms.endsAt,
+    ).length;
+    return trialClosePlan(ms, classes, todayStr);
+  });
 }
 
 async function planInactive(now: Date): Promise<AutoTaskPlan[]> {
@@ -214,12 +278,13 @@ export async function generateAutoTasks(opts: { dryRun?: boolean } = {}): Promis
   const today = todayDateUtc();
   const todayStr = ymd(today);
 
-  const renewals = await planRenewals(today, todayStr);
-  // The renewal call already reaches whoever is both about to expire and absent.
-  const renewing = new Set(renewals.map((r) => r.memberId));
+  const endings = await planEndings(today, todayStr);
+  // The renewal / close conversation already reaches whoever is both about to
+  // expire and absent.
+  const renewing = new Set(endings.map((r) => r.memberId));
   const plans = [
     ...(await planEvaluations(today)),
-    ...renewals,
+    ...endings,
     ...(await planInactive(now)).filter((p) => !renewing.has(p.memberId)),
   ];
 
