@@ -25,6 +25,7 @@ import {
   type EntityStatement,
   type TrendRow,
 } from "@/lib/finance/queries";
+import { computeBalanceSheet, type BalanceSheet } from "@/lib/finance/ledger";
 
 const PATH = "/dashboard/finanzas";
 
@@ -310,6 +311,26 @@ export async function updateExpenseCategory(id: string, category: ExpenseCategor
   await prisma.expense.update({
     where: { id, voidedAt: null },
     data: { category, ...(autoNote ? { notes: null } : {}) },
+  });
+  revalidatePath(PATH);
+}
+
+// ── Balance (opening balances + the year's movements) ───────────────────────
+
+export async function getBalanceSheet(sede: Sede, ym: string): Promise<BalanceSheet> {
+  await requireFinanceView();
+  if (!SEDES.includes(sede)) throw new Error("Entidad inválida.");
+  return computeBalanceSheet(sede, ym);
+}
+
+/** Correct an opening balance (e.g. after Isabel reviews the closing). */
+export async function updateOpeningBalance(id: string, amount: string) {
+  const user = await requireFinanceEdit();
+  const n = Number(amount.replace(",", "."));
+  if (!Number.isFinite(n)) throw new Error("Monto inválido.");
+  await prisma.openingBalance.update({
+    where: { id },
+    data: { amountCents: Math.round(n * 100), source: `Corregido en la app por ${user.fullName}` },
   });
   revalidatePath(PATH);
 }
