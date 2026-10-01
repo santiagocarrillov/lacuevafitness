@@ -62,13 +62,19 @@ class Rollback extends Error {}
 async function partB() {
   console.log("\n── B. Importar (transacción revertida)");
   const before = await prisma.expense.count();
-  const real = parseSriXml(fx("sri-factura-autorizada.xml"));
-  const energy = parseSriXml(fx("sri-factura-sin-envoltura.xml"));
+  // Fixtures carry a fictitious buyer; address them to Xtreme's RUC here.
+  const XTREME_RUC = "1793142958001";
+  const real = { ...parseSriXml(fx("sri-factura-autorizada.xml")), buyerId: XTREME_RUC };
+  const energy = { ...parseSriXml(fx("sri-factura-sin-envoltura.xml")), buyerId: XTREME_RUC };
+  const stranger = parseSriXml(fx("sri-factura-autorizada.xml")); // buyer 1700000000
   const uid = "test-user";
 
   try {
     await prisma.$transaction(async (tx) => {
-      // 1. New supplier, unknown buyer → chosen entity (Xtreme has no tax IDs yet).
+      // 0. Both entities have tax IDs now: a stranger's invoice enters neither.
+      check("factura a otro comprador no entra a Xtreme", (await importSriDocument(tx, stranger, { sede: "XTREME", userId: uid })).status === "rejected");
+
+      // 1. New supplier, invoice to Xtreme's RUC.
       const r1 = await importSriDocument(tx, real, { sede: "XTREME", userId: uid });
       const e1 = await tx.expense.findUnique({ where: { sriAccessKey: real.accessKey } });
       check("factura nueva → gasto con IVA", r1.status === "created" && e1?.amountCents === 574 && e1.ivaCents === 75 && e1.subtotalCents === 499);
@@ -79,11 +85,13 @@ async function partB() {
       check("misma factura otra vez → duplicada", (await importSriDocument(tx, real, { sede: "XTREME", userId: uid })).status === "duplicate");
 
       // 3. Fitness has tax IDs: an invoice to someone else is rejected.
-      const other: SriDocument = { ...real, accessKey: key("09072026", "01", "1792261848001", "1249958") };
+      const other: SriDocument = { ...stranger, accessKey: key("09072026", "01", "1792261848001", "1249958") };
       const r3 = await importSriDocument(tx, other, { sede: "FITNESS_CENTER", userId: uid });
       check("factura a otro comprador no entra a la Fitness", r3.status === "rejected", r3.detail);
 
       // 4. Buyer ID decides the entity: Santiago's cédula → Fitness even if Xtreme was chosen.
+      const toX: SriDocument = { ...real, accessKey: key("12072026", "01", "1792261848001", "1249961") };
+      check("RUC de Xtreme → Xtreme aunque se elija la Fitness", (await importSriDocument(tx, toX, { sede: "FITNESS_CENTER", userId: uid })).sede === "XTREME");
       const mine: SriDocument = { ...real, accessKey: key("10072026", "01", "1792261848001", "1249959"), buyerId: "1707994461" };
       const r4 = await importSriDocument(tx, mine, { sede: "XTREME", userId: uid });
       check("cédula de Santiago → Fitness", r4.status === "created" && r4.sede === "FITNESS_CENTER");

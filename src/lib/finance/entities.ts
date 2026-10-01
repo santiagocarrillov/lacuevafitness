@@ -38,11 +38,14 @@ export const ENTITIES: Record<Sede, LegalEntity> = {
   XTREME: {
     sede: "XTREME",
     name: "La Cueva Xtreme",
-    legalName: "La Cueva Xtreme S.A.S.",
+    // Certificado RUC (SRI, 28 ago 2026): régimen general, obligada a llevar
+    // contabilidad, no es agente de retención.
+    legalName: "La Cueva-Xtreme S.A.S.",
     kind: "SAS",
-    ruc: null, // pending from Santiago (oct 2026)
-    taxIds: [],
-    owners: ["Santiago Carrillo", "Isabel Cárdenas", "Socio Xtreme (45 %)"],
+    ruc: "1793142958001",
+    taxIds: ["1793142958001"],
+    // Shareholders (EEFF 2025, nota 13): Santiago 55 %, María Belén Salazar Lozada 45 %.
+    owners: ["Santiago Carrillo", "Isabel Cárdenas", "María Belén Salazar"],
   },
 };
 
