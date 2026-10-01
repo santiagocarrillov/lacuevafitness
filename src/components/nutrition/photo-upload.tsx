@@ -7,7 +7,7 @@ import { uploadRecipePhoto } from "@/lib/actions/uploads";
  * Downscales an image in the browser (max 1600 px, JPEG) so uploads stay well
  * under the server-action body limit and phones' 5 MB photos don't matter.
  */
-async function compressImage(file: File, maxSide = 1600): Promise<File> {
+export async function compressImage(file: File, maxSide = 1600): Promise<File> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");

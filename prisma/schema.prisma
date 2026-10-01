@@ -219,35 +219,40 @@ enum PaymentStatus {
 }
 
 model Payment {
-  id                    String        @id @default(cuid())
+  id                    String           @id @default(cuid())
   memberId              String? // null for Isabel's bank pool entries (isPoolEntry = true)
-  member                Member?       @relation(fields: [memberId], references: [id])
+  member                Member?          @relation(fields: [memberId], references: [id])
   membershipId          String?
-  membership            Membership?   @relation(fields: [membershipId], references: [id])
+  membership            Membership?      @relation(fields: [membershipId], references: [id])
   amountCents           Int
-  currency              String        @default("USD")
+  currency              String           @default("USD")
   method                PaymentMethod
-  status                PaymentStatus @default(PENDING)
+  status                PaymentStatus    @default(PENDING)
   paidAt                DateTime?
   // ── Detalle bancario ─────────────────────────────────────────────────
   depositorName         String? // Nombre del depositante / tarjetahabiente
   bankReference         String? // # referencia / transacción
   bankEntity            String? // Entidad bancaria (Pichincha, Stripe…)
-  isPoolEntry           Boolean       @default(false) // true → entrada de banco sin asignar (Isabel)
+  isPoolEntry           Boolean          @default(false) // true → entrada de banco sin asignar (Isabel)
   // ── Stripe / QBO (postergado) ────────────────────────────────────────
-  stripePaymentIntentId String?       @unique
-  stripeChargeId        String?       @unique
-  qboTransactionId      String?       @unique
+  stripePaymentIntentId String?          @unique
+  stripeChargeId        String?          @unique
+  qboTransactionId      String?          @unique
   reconciledAt          DateTime?
+  // Línea del estado de cuenta que respalda este pago (Finanzas). Varios pagos
+  // pueden colgar de una sola transferencia (alguien paga por dos personas).
+  bankTransactionId     String?
+  bankTransaction       BankTransaction? @relation(fields: [bankTransactionId], references: [id])
   sede                  Sede
   recordedByUserId      String?
   notes                 String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   @@index([sede, paidAt])
   @@index([status])
   @@index([isPoolEntry, status])
+  @@index([bankTransactionId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -445,39 +450,39 @@ enum StaffTaskEntryKind {
 // WhatsApp thread is derived from that person, never stored twice. Closing a
 // task tied to a person asks for an outcome that also lands in their history.
 model StaffTask {
-  id           String          @id @default(cuid())
+  id           String           @id @default(cuid())
   sede         Sede? // pool when unassigned; null = both sedes
   title        String
-  detail       String?         @db.Text // notas
-  type         StaffTaskType   @default(TASK)
-  status       StaffTaskStatus @default(TODO)
+  detail       String?          @db.Text // notas
+  type         StaffTaskType    @default(TASK)
+  status       StaffTaskStatus  @default(TODO)
   assigneeId   String?
-  assignee     User?           @relation("StaffTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignee     User?            @relation("StaffTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   createdById  String? // null = loaded by SQL before the UI existed
-  createdBy    User?           @relation("StaffTaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy    User?            @relation("StaffTaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   leadId       String?
-  lead         Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  lead         Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
   memberId     String?
-  member       Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  member       Member?          @relation(fields: [memberId], references: [id], onDelete: SetNull)
   // Subtasks are full tasks (own assignee, status, date), one level deep.
   parentId     String?
-  parent       StaffTask?      @relation("StaffTaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks     StaffTask[]     @relation("StaffTaskSubtasks")
-  dueDate      DateTime?       @db.Date // Ecuador-local day; null = sin fecha
+  parent       StaffTask?       @relation("StaffTaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks     StaffTask[]      @relation("StaffTaskSubtasks")
+  dueDate      DateTime?        @db.Date // Ecuador-local day; null = sin fecha
   dueMinutes   Int? // optional time of day, minutes since 00:00 Ecuador
-  priority     Int             @default(0) // >0 alta, <0 baja; higher sorts first
+  priority     Int              @default(0) // >0 alta, <0 baja; higher sorts first
   // Closing a repeating task creates the next one (same fields, next date).
   repeat       StaffTaskRepeat?
   // Tasks the app creates on its own carry a key naming the reason
   // ("eval:<leadId>:<day>", "renewal:<membershipId>") so a rerun never
   // duplicates one. null = created by a person.
-  autoKey      String?         @unique
+  autoKey      String?          @unique
   doneAt       DateTime? // set iff status = DONE
   doneByUserId String?
-  doneBy       User?           @relation("StaffTaskDoneBy", fields: [doneByUserId], references: [id])
-  outcome      String?         @db.Text
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  doneBy       User?            @relation("StaffTaskDoneBy", fields: [doneByUserId], references: [id])
+  outcome      String?          @db.Text
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   links    StaffTaskLink[]
   entries  StaffTaskEntry[]
@@ -760,23 +765,210 @@ enum ExpenseCategory {
   SOFTWARE // Software (Stripe fees, HubSpot, etc)
   TAXES // Impuestos
   PROFESSIONAL // Servicios profesionales
+  BANK_FEES // Comisiones bancarias y de tarjeta (Pagoplux)
+  INTEREST // Intereses de préstamos (el capital de la cuota NO es gasto)
+  OTHER
+}
+
+// ─────────────────────────────────────────────────────────────
+// Finanzas (Fase 1, oct 2026) — reemplaza QuickBooks. Diseño: docs/finanzas-fase1.md
+// Entidad legal = sede: FITNESS_CENTER = Santiago (persona natural),
+// XTREME = La Cueva Xtreme S.A.S. Datos legales en src/lib/finance/entities.ts.
+// Un gasto puede nacer del banco (débito) o del SRI (factura recibida) y el
+// otro lado se le cuelga después: nunca son dos registros.
+// ─────────────────────────────────────────────────────────────
+
+enum ExpenseDocType {
+  FACTURA
+  NOTA_VENTA
+  LIQUIDACION_COMPRA
+  RECIBO
+  SIN_DOCUMENTO
+}
+
+enum ExpenseStatus {
+  PAID
+  PENDING // Cuenta por pagar
+}
+
+enum ExpensePayMethod {
+  CASH
+  BANK_TRANSFER
+  BANK_DEBIT // Débito automático del banco
+  DEBIT_CARD
+  CREDIT_CARD
   OTHER
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  sede        Sede? // null = gasto compartido
-  category    ExpenseCategory
-  description String
-  amountCents Int
-  date        DateTime        @db.Date
-  recurring   Boolean         @default(false) // Gasto fijo mensual
-  notes       String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                String            @id @default(cuid())
+  sede              Sede // entidad legal: una factura se emite a un solo RUC
+  category          ExpenseCategory
+  description       String
+  amountCents       Int // total del documento (subtotal + IVA)
+  subtotalCents     Int?
+  ivaCents          Int?
+  date              DateTime          @db.Date // fecha del gasto / emisión del documento
+  recurring         Boolean           @default(false) // Gasto fijo mensual
+  notes             String?
+  supplierName      String?
+  supplierRuc       String?
+  documentType      ExpenseDocType    @default(SIN_DOCUMENTO)
+  documentNumber    String? // 001-001-000000123
+  sriAccessKey      String?           @unique // clave de acceso de 49 dígitos (Fase 2)
+  status            ExpenseStatus     @default(PAID)
+  paidAt            DateTime?         @db.Date
+  dueDate           DateTime?         @db.Date
+  paymentMethod     ExpensePayMethod?
+  receiptPath       String? // ruta en el bucket privado finance-docs
+  bankTransactionId String?
+  bankTransaction   BankTransaction?  @relation(fields: [bankTransactionId], references: [id])
+  createdById       String?
+  voidedAt          DateTime? // anulado (nunca DELETE)
+  voidReason        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([sede, date])
   @@index([category])
+  @@index([status])
+  @@index([bankTransactionId])
+}
+
+enum CapitalKind {
+  CONTRIBUTION // Aporte para futura capitalización
+  SHAREHOLDER_LOAN // Préstamo del accionista/dueño a la entidad
+  LOAN_REPAYMENT // La entidad le devuelve al accionista
+  WITHDRAWAL // Retiro del dueño (persona natural)
+}
+
+// Dinero que ponen o sacan los dueños: NO es ingreso ni gasto.
+model CapitalMovement {
+  id                String           @id @default(cuid())
+  sede              Sede
+  person            String // "Santiago Carrillo", "Isabel Cárdenas", socio de Xtreme…
+  kind              CapitalKind
+  amountCents       Int // siempre positivo; el signo lo da `kind`
+  date              DateTime         @db.Date
+  notes             String?
+  bankTransactionId String?
+  bankTransaction   BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  createdById       String?
+  voidedAt          DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([sede, date])
+  @@index([person])
+}
+
+enum OtherIncomeCategory {
+  PRODUCT_SALE // Gatorade, suplementos
+  REIMBURSEMENT // Reembolsos (p. ej. insumos de limpieza)
+  OTHER
+}
+
+// Ingresos que no son membresías (las membresías viven en Payment).
+model OtherIncome {
+  id                String              @id @default(cuid())
+  sede              Sede
+  category          OtherIncomeCategory
+  description       String
+  amountCents       Int
+  date              DateTime            @db.Date
+  bankTransactionId String?
+  bankTransaction   BankTransaction?    @relation(fields: [bankTransactionId], references: [id])
+  createdById       String?
+  voidedAt          DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([sede, date])
+}
+
+enum BankAccountKind {
+  BUSINESS
+  PERSONAL_MIXED // Cuenta personal donde también cobra el gimnasio
+}
+
+enum BankStatementFormat {
+  GUAYAQUIL // Movimientos_*.xlsx (TipoMov N/C · N/D)
+  PERSONAL // Movimientos_cuenta_*.xlsx
+  PRODUBANCO // ProdXXXX*.xlsx (+/-)
+}
+
+model BankAccount {
+  id              String              @id @default(cuid())
+  sede            Sede
+  name            String
+  bank            String
+  last4           String?
+  kind            BankAccountKind     @default(BUSINESS)
+  statementFormat BankStatementFormat
+  active          Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  transactions BankTransaction[]
+}
+
+enum BankTxnStatus {
+  PENDING // por clasificar
+  CLASSIFIED
+  IGNORED
+}
+
+enum BankTxnKind {
+  MEMBER_PAYMENT
+  OTHER_INCOME
+  EXPENSE
+  CAPITAL
+  CARD_SETTLEMENT // Liquidación Pagoplux (neta de comisión)
+  INTERNAL_TRANSFER
+  PERSONAL // Movimiento personal en cuenta mixta: fuera de la contabilidad
+  LOAN_PAYMENT
+}
+
+// Una línea del estado de cuenta (Fase 1b: importación y conciliación).
+model BankTransaction {
+  id           String        @id @default(cuid())
+  accountId    String
+  account      BankAccount   @relation(fields: [accountId], references: [id])
+  postedAt     DateTime
+  amountCents  Int // con signo: + crédito, − débito
+  description  String
+  counterparty String?
+  reference    String?
+  balanceCents Int?
+  fingerprint  String        @unique // reimportar el mismo archivo no duplica
+  status       BankTxnStatus @default(PENDING)
+  kind         BankTxnKind?
+  importBatch  String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  payments         Payment[]
+  expenses         Expense[]
+  capitalMovements CapitalMovement[]
+  otherIncomes     OtherIncome[]
+
+  @@index([accountId, postedAt])
+  @@index([status])
+}
+
+// Regla aprendida: texto del movimiento → clasificación sugerida.
+model BankRule {
+  id        String           @id @default(cuid())
+  pattern   String // subcadena, sin distinguir mayúsculas
+  direction Int              @default(0) // 1 créditos, -1 débitos, 0 ambos
+  kind      BankTxnKind
+  category  ExpenseCategory?
+  sede      Sede?
+  label     String?
+  active    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────

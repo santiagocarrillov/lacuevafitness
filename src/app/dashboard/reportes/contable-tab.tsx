@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
-import { getMonthlyFinancials, getExpensesByRange } from "@/lib/actions/reports";
+import { getMonthlyFinancials } from "@/lib/actions/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { IngresosGastosChart } from "./ingresos-gastos-chart";
-import { ExpensesPanel } from "./expenses-panel";
 
 function fmt$(n: number) {
   return `$${n.toLocaleString("es-EC", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -24,7 +23,6 @@ function firstDayOfMonth(year: number, month: number): string {
 export async function ContableTab({
   sede,
   from,
-  to,
   buildUrl,
 }: {
   sede?: Sede;
@@ -32,10 +30,7 @@ export async function ContableTab({
   to: string;
   buildUrl: (updates: Record<string, string>) => string;
 }) {
-  const [rows, expenses] = await Promise.all([
-    getMonthlyFinancials(sede, 24),
-    getExpensesByRange(sede, from, to),
-  ]);
+  const rows = await getMonthlyFinancials(sede, 24);
 
   // Derive year/month from "from" date for highlighting
   const fromDate = new Date(from + "T00:00:00");
@@ -159,8 +154,19 @@ export async function ContableTab({
         </CardContent>
       </Card>
 
-      {/* Gastos del período (CRUD) */}
-      <ExpensesPanel expenses={expenses} sede={sede} />
+      {/* Expenses moved to Finanzas (oct 2026): bank + SRI + petty cash, per legal entity. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Gastos</CardTitle>
+          <CardDescription>
+            Los gastos, aportes y el estado de resultados por entidad se llevan en{" "}
+            <Link href="/dashboard/finanzas" className="text-primary hover:underline">
+              Finanzas
+            </Link>
+            .
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </div>
   );
 }

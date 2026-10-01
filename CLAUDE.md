@@ -117,7 +117,8 @@ Los admins ven los mismos campos al registrar un pago.
 | Pagos | Sección "Decisión Pagos" arriba + `prisma/schema.prisma` (modelos Payment, Membership, MembershipPlan) |
 | SRXFit | `prisma/schema.prisma` (Evaluation, TestResult, BodyComposition, TrainingLevelAssignment) + el `build_plan.py` standalone como referencia metodológica |
 | Asistencia (template) | `src/app/dashboard/asistencia/*` — patrón a replicar |
-| Reportes | `prisma/schema.prisma` (DailyIndicators, MonthlyTarget, Expense) + recharts |
+| Reportes | `prisma/schema.prisma` (DailyIndicators, MonthlyTarget) + recharts |
+| Finanzas / contabilidad (reemplaza QuickBooks) | `docs/finanzas-fase1.md` + `src/lib/finance/` + `src/lib/actions/finance.ts` |
 | Auth / permisos | `src/lib/auth.ts` |
 
 ---
