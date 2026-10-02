@@ -40,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
     { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
     { href: "/dashboard/finanzas", label: "Finanzas", show: can.viewFinancials(user) },
+    { href: "/dashboard/contabilidad", label: "Contabilidad", show: can.viewFinancials(user) },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },
   ].filter((n) => n.show).map(({ href, label, badge }) => ({ href, label, badge }));
 
