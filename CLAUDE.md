@@ -119,6 +119,7 @@ Los admins ven los mismos campos al registrar un pago.
 | Asistencia (template) | `src/app/dashboard/asistencia/*` — patrón a replicar |
 | Reportes | `prisma/schema.prisma` (DailyIndicators, MonthlyTarget) + recharts |
 | Finanzas (gestión: banco, SRI, gastos) | `docs/finanzas-fase1.md` + `src/lib/finance/` + `src/lib/actions/finance.ts` |
+| Facturación electrónica (emisión directa al SRI) | `docs/facturacion-sri.md` + `src/lib/invoicing/` + `src/lib/actions/invoicing.ts` |
 | Contabilidad (libro diario, reemplaza QuickBooks) | `docs/contabilidad-libro-diario.md` + `src/lib/accounting/` — los reportes leen SOLO del libro diario |
 | Auth / permisos | `src/lib/auth.ts` |
 

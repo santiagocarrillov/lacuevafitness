@@ -14,15 +14,18 @@ export async function GET(
   const memberships = await prisma.membership.findMany({
     where: { memberId: id, state: { in: ["ACTIVE", "PENDING_PAYMENT"] } },
     orderBy: { endsAt: "desc" },
-    include: { plan: { select: { name: true } } },
+    include: { plan: { select: { name: true, priceCents: true, billingCycle: true } } },
     take: 10,
   });
 
   return NextResponse.json(
     memberships.map((m) => ({
       id: m.id,
-      plan: { name: m.plan.name },
+      plan: { name: m.plan.name, priceCents: m.plan.priceCents, billingCycle: m.plan.billingCycle },
       endsAt: m.endsAt.toISOString(),
+      startsAt: m.startsAt.toISOString(),
+      state: m.state,
+      customPriceCents: m.customPriceCents,
     }))
   );
 }
