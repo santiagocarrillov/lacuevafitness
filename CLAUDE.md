@@ -106,6 +106,12 @@ Los admins ven los mismos campos al registrar un pago.
 - **Auth helpers** → `requireAuth()`, `can.*(user)`, `getSedeScope(user)` desde `@/lib/auth`.
 - **Páginas con datos en vivo** → `export const dynamic = "force-dynamic"`.
 - **Idioma**: UI en español, código y comentarios en inglés.
+- **Interfaz (Santiago, 2 oct 2026)**: (1) toda cifra o fila lleva a su detalle (estados → mayor → documento;
+  ver `contabilidad/links.ts` y `/dashboard/finanzas/origen`); (2) hay botón **Atrás** global
+  (`dashboard/back-button.tsx`); (3) los formularios de captura son **pantallas** con su ruta (`/nuevo`,
+  `/[id]`, contenedor `(finanzas)/form-page.tsx`), no ventanas emergentes — solo confirmaciones cortas en
+  diálogo; (4) Finanzas, Facturación, Gastos y Contabilidad viven en el grupo de rutas
+  `src/app/dashboard/(finanzas)/` bajo **un solo menú** con barra de secciones (`finance-nav.tsx`).
 
 ---
 

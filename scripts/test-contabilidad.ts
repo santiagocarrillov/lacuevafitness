@@ -32,6 +32,8 @@ const D = (s: string) => new Date(`${s}T00:00:00.000Z`);
 class Rollback extends Error {}
 
 async function main() {
+  // The live books may already hold automatic entries (Contabilidad syncs on open).
+  const entriesBefore = await prisma.journalEntry.count({ where: { sede: "XTREME" } });
   console.log("\n── A. Validación");
   await throws("no cuadra → error", () => validateLines([{ accountId: "a", debitCents: 100 }, { accountId: "b", creditCents: 90 }]), /no cuadra/);
   await throws("una sola línea → error", () => validateLines([{ accountId: "a", debitCents: 100 }]), /al menos dos/);
@@ -72,11 +74,12 @@ async function main() {
       const fitCaja = await acct("FITNESS_CENTER", "1.1.01");
       const before = await statements(tx, "XTREME", D("2026-10-31"));
 
+      const lastNumber = (await tx.journalEntry.aggregate({ where: { sede: "XTREME" }, _max: { number: true } }))._max.number ?? 0;
       const e = await createEntry(tx, {
         sede: "XTREME", date: D("2026-10-01"), description: "Préstamo de Santiago (prueba)", source: "MANUAL",
         lines: [{ accountId: caja, debitCents: 10000 }, { accountId: loansAcct, creditCents: 10000, party: "Santiago Carrillo" }],
       });
-      check("numeración correlativa (N.º 2)", e.number === 2, String(e.number));
+      check("numeración correlativa (siguiente número)", e.number === lastNumber + 1, `${e.number} tras ${lastNumber}`);
       const after = await statements(tx, "XTREME", D("2026-10-31"));
       check("activo +100 y sigue cuadrando", after.totals.assets === before.totals.assets + 10000 && after.totals.check === 0);
       const lb = await partyBalances(tx, "XTREME", "SHAREHOLDER_LOANS", D("2026-10-31"));
@@ -108,7 +111,7 @@ async function main() {
   } catch (err) {
     if (!(err instanceof Rollback) && !/current transaction is aborted|Rollback|fin/.test(String(err))) throw err;
   }
-  check("nada quedó en la base (rollback)", (await prisma.journalEntry.count({ where: { sede: "XTREME" } })) === 1);
+  check("nada quedó en la base (rollback)", (await prisma.journalEntry.count({ where: { sede: "XTREME" } })) === entriesBefore);
 
   console.log(fallos ? `\n${fallos} fallo(s)` : "\nTodo OK");
   await prisma.$disconnect();

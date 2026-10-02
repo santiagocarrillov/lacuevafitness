@@ -82,6 +82,7 @@ export type LedgerLine = {
   date: Date;
   description: string;
   source: string;
+  sourceId: string | null;
   memo: string | null;
   party: string | null;
   debitCents: number;
@@ -106,7 +107,7 @@ export async function generalLedger(db: Db, sede: Sede, accountId: string, from:
     running += natural(account.type, l.debitCents, l.creditCents);
     return {
       entryId: l.entryId, number: l.entry.number, date: l.entry.date, description: l.entry.description,
-      source: l.entry.source, memo: l.memo, party: l.party,
+      source: l.entry.source, sourceId: l.entry.sourceId, memo: l.memo, party: l.party,
       debitCents: l.debitCents, creditCents: l.creditCents, balanceCents: running,
     };
   });
