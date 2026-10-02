@@ -47,7 +47,7 @@ de situación, resultados, mayor, balance de comprobación) leen solo del libro 
 | # | Contenido |
 |---|---|
 | **1a** ✅ | Schema; plan de cuentas de ambas entidades (cuentas de los EEFF 2025 + IVA, ingresos diferidos, ingresos y gastos); asiento de apertura desde los saldos firmados; asientos manuales (validación débito = crédito, anulación); reportes desde el libro diario: libro diario, mayor por cuenta, balance de comprobación, estado de situación y de resultados. Plan de cuentas y apertura cargados en prod (`npm run db:seed:contabilidad -- --write`); pruebas `npm run test:contabilidad`. |
-| **1b** | Contabilización automática de lo que ya existe: cobros (IVA incluido, diferido según el plan), otros ingresos, gastos (con IVA y por pagar), préstamos y aportes, banco; reconocimiento mensual de diferidos; cierre de mes. |
+| **1b** ✅ | Contabilización automática (`src/lib/accounting/posting.ts`), reglas abajo; cierre de mes con bloqueo; pruebas `npm run test:contabilizacion` (datos reales 2026 en transacción revertida). |
 | 2 | Facturación en pantalla completa + **emisión directa al SRI** (empezar por ambiente de pruebas). |
 | 3 | Gastos al estilo QuickBooks con lectura del comprobante por IA; línea por cuenta (gasto o activo). |
 | 4 | Nómina privada (rol, IESS, provisiones) y liquidaciones de compra electrónicas. |
@@ -59,3 +59,24 @@ de situación, resultados, mayor, balance de comprobación) leen solo del libro 
 - Habilitar el **ambiente de pruebas** de facturación electrónica en SRI en Línea para cada RUC.
 - Definir el **establecimiento y punto de emisión** para la app (distinto del que usa Ecuafact) y
   el último secuencial emitido, para no chocar numeración durante la transición.
+
+## Reglas de contabilización automática (1b)
+
+Los documentos son la fuente. Al abrir Contabilidad (y al cerrar un mes) se sincroniza el libro: lo
+que no cambió se queda, lo que cambió se anula y se vuelve a contabilizar, y lo de documentos anulados
+se anula. **Nunca se toca un mes cerrado:** esos cambios se reportan para ajustarlos en el mes abierto.
+
+| Documento | Asiento |
+|---|---|
+| **Cobro** (Payment SUCCEEDED/PENDING; depósito sin asignar PENDING) | Dr banco (si está conciliado), Caja (efectivo) o **1.1.05 Cuenta puente** · Cr 2.1.06 IVA (15 % incluido) · Cr 4.1.01 Mensualidades / 4.1.02 Evaluaciones y pases (trial y pase diario) |
+| **Prepago de varios meses** | El primer mes va a ingresos y el resto a 2.1.07 Ingresos diferidos; el 1.º de cada mes siguiente se reconoce una cuota. **Las membresías con compromiso pagadas en cuotas (p. ej. $40 de un anual de $480) NO se difieren:** solo se difiere si el pago cubre 2+ meses del contrato. |
+| **Otro ingreso** | Dr banco/Caja · venta de productos con IVA → 4.1.03; reembolsos → 4.2.02 y otros → 4.2.01, sin IVA |
+| **Gasto** | Devengo en la fecha del documento: Dr gasto (por categoría) + Dr 1.3.01 IVA crédito · Cr 2.1.01 Proveedores. Al pagarse: Dr 2.1.01 · Cr banco (conciliado), Caja (efectivo), 2.1.09 tarjeta de crédito o 1.1.05 Cuenta puente |
+| **Dueños** | Préstamo de accionista: Dr banco/puente · Cr 2.2.01 (tercero = persona). Devolución: al revés. Aporte o retiro: contra 3.1.02 |
+
+- La **cuenta puente 1.1.05** recoge todo lo que aún no se cruza con una línea del banco. Al conciliar,
+  el documento queda enlazado y su asiento pasa solo a la cuenta bancaria real.
+- Los pagos de 2025 están en la apertura (los EEFF firmados no tienen ingresos diferidos): solo se
+  contabiliza desde el día siguiente a la apertura.
+- Pendiente: el capital de las cuotas de préstamos bancarios y las transferencias entre cuentas propias
+  (por ahora se clasifican en el banco sin asiento).

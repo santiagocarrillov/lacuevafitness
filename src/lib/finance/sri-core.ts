@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import type { ExpenseCategory, ExpensePayMethod, Prisma, Sede } from "@/generated/prisma/client";
 import { ENTITIES, entityForBuyer } from "@/lib/finance/entities";
 import { decodeAccessKey, type DecodedKey, type SriDocument } from "@/lib/finance/sri-xml";
+import { lockedThrough } from "@/lib/accounting/posting";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -75,6 +76,10 @@ export async function importSriDocument(
     return { ...base, status: "rejected", detail: `Emitida a ${doc.buyerName || doc.buyerId} (${doc.buyerId}), no a ${chosen.name}` };
   }
   const sede = byBuyer ?? opts.sede;
+  const lock = await lockedThrough(db, sede);
+  if (lock && doc.issueDate.getTime() <= lock.getTime()) {
+    return { ...base, status: "rejected", detail: `El período está cerrado hasta el ${lock.toISOString().slice(0, 10)}`, sede };
+  }
   const docType = doc.codDoc === "03" ? "LIQUIDACION_COMPRA" : "FACTURA";
   const { category, learned } = await guessCategory(db, doc);
   const docFields = {

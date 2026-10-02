@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import type { Sede } from "@/generated/prisma/client";
 import { createEntry, voidEntry } from "@/lib/accounting/journal";
+import { assertOpen, lockedThrough, postingWindow, syncJournal, type SyncResult } from "@/lib/accounting/posting";
 import { generalLedger, partyBalances, statements, trialBalance } from "@/lib/accounting/reports";
 
 const PATH = "/dashboard/contabilidad";
@@ -90,6 +91,7 @@ export async function createManualEntry(input: {
   lines: ManualLine[];
 }): Promise<{ number: number }> {
   const user = await requireEdit();
+  await assertOpen(prisma, checkSede(input.sede), day(input.date));
   const entry = await prisma.$transaction((tx) =>
     createEntry(tx, {
       sede: checkSede(input.sede),
@@ -116,6 +118,62 @@ export async function voidManualEntry(id: string, reason: string) {
   const e = await prisma.journalEntry.findUnique({ where: { id } });
   if (!e) throw new Error("Asiento no encontrado.");
   if (e.source !== "MANUAL") throw new Error("Este asiento lo generó un documento: se corrige desde ese documento.");
+  await assertOpen(prisma, e.sede, e.date);
   await voidEntry(prisma, id, reason);
+  revalidatePath(PATH);
+}
+
+// ── Automatic posting & period close ────────────────────────────────────────
+
+/** Posts/updates the entries derived from documents (idempotent). */
+export async function syncAccounting(sede: Sede): Promise<SyncResult> {
+  const user = await requireView();
+  const s = checkSede(sede);
+  return prisma.$transaction(
+    async (tx) => {
+      const { from, to } = await postingWindow(tx, s);
+      return syncJournal(tx, s, from, to, user.id);
+    },
+    { timeout: 120_000 },
+  );
+}
+
+export async function getLockedThrough(sede: Sede): Promise<string | null> {
+  await requireView();
+  const d = await lockedThrough(prisma, checkSede(sede));
+  return d ? d.toISOString().slice(0, 10) : null;
+}
+
+/** Close every day up to the end of `ym`. Everything must be posted first. */
+export async function closePeriod(sede: string, ym: string) {
+  const user = await requireEdit();
+  const s = checkSede(sede);
+  if (!/^\d{4}-\d{2}$/.test(ym)) throw new Error("Mes inválido.");
+  const [y, m] = ym.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0));
+  const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  if (last.getTime() >= today.getTime()) throw new Error("Solo se cierran meses que ya terminaron.");
+  await prisma.$transaction(
+    async (tx) => {
+      const current = await lockedThrough(tx, s);
+      if (current && current.getTime() >= last.getTime()) throw new Error("Ese mes ya está cerrado.");
+      const { from, to } = await postingWindow(tx, s);
+      const r = await syncJournal(tx, s, from, to, user.id);
+      if (r.errors.length) throw new Error(`Hay documentos que no se pudieron contabilizar: ${r.errors[0]}`);
+      await tx.periodClose.create({ data: { sede: s, lockedThrough: last, closedById: user.id } });
+    },
+    { timeout: 120_000 },
+  );
+  revalidatePath(PATH);
+}
+
+/** Reopen the latest close (OWNER only). */
+export async function reopenPeriod(sede: string) {
+  const user = await requireAuth();
+  if (user.role !== "OWNER") throw new Error("Solo el dueño puede reabrir un mes cerrado.");
+  const s = checkSede(sede);
+  const c = await prisma.periodClose.findFirst({ where: { sede: s, reopenedAt: null }, orderBy: { lockedThrough: "desc" } });
+  if (!c) throw new Error("No hay meses cerrados.");
+  await prisma.periodClose.update({ where: { id: c.id }, data: { reopenedAt: new Date(), reopenedById: user.id } });
   revalidatePath(PATH);
 }

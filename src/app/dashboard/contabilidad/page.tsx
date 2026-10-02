@@ -4,7 +4,8 @@ import { requireAuth, can } from "@/lib/auth";
 import { ecuadorDateString } from "@/lib/timezone";
 import type { Sede } from "@/generated/prisma/enums";
 import { ENTITIES, ENTITY_ORDER, monthLabel, monthRangeUtc, shiftMonth } from "@/lib/finance/entities";
-import { getAccounts } from "@/lib/actions/accounting";
+import { getAccounts, getLockedThrough, syncAccounting } from "@/lib/actions/accounting";
+import { PeriodControls } from "./period-controls";
 import { DiarioTab } from "./diario-tab";
 import { MayorTab } from "./mayor-tab";
 import { ComprobacionTab } from "./comprobacion-tab";
@@ -46,7 +47,14 @@ export default async function ContabilidadPage({
     `/dashboard/contabilidad?${new URLSearchParams({ tab, mes: ym, entidad: sede, ...(params.cuenta ? { cuenta: params.cuenta } : {}), ...u }).toString()}`;
 
   const needsAccounts = tab === "nuevo" || tab === "mayor" || tab === "plan";
-  const accounts = needsAccounts ? await getAccounts(sede) : [];
+  // Documents post themselves: bring the journal up to date before any report.
+  const [accounts, sync, locked] = await Promise.all([
+    needsAccounts ? getAccounts(sede) : Promise.resolve([]),
+    tab === "plan" || tab === "nuevo" ? Promise.resolve(null) : syncAccounting(sede),
+    getLockedThrough(sede),
+  ]);
+  const monthEnded = to < ecuadorDateString();
+  const canClose = canEdit && monthEnded && (!locked || locked < to);
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-6xl">
@@ -83,6 +91,30 @@ export default async function ContabilidadPage({
           </nav>
         </div>
       </header>
+
+      <PeriodControls
+        sede={sede}
+        ym={ym}
+        monthName={monthLabel(ym)}
+        lockedThrough={locked}
+        canClose={canClose}
+        isOwner={user.role === "OWNER"}
+      />
+
+      {sync && (sync.created > 0 || sync.voided > 0 || sync.locked.length > 0 || sync.errors.length > 0) && (
+        <div className={`rounded-md border p-3 text-xs space-y-1 ${sync.errors.length || sync.locked.length ? "border-amber-300 bg-amber-50 text-amber-900" : "border-sky-200 bg-sky-50 text-sky-900"}`}>
+          {(sync.created > 0 || sync.voided > 0) && (
+            <p>Contabilizado ahora: {sync.created} asientos nuevos{sync.voided ? `, ${sync.voided} reemplazados o anulados porque su documento cambió` : ""}.</p>
+          )}
+          {sync.locked.length > 0 && (
+            <p>
+              {sync.locked.length} cambio(s) en meses cerrados no se aplicaron (p. ej. «{sync.locked[0]}»). Si corresponden,
+              reabre el mes o registra un ajuste en el mes abierto.
+            </p>
+          )}
+          {sync.errors.length > 0 && <p>No se pudieron contabilizar {sync.errors.length}: {sync.errors[0]}</p>}
+        </div>
+      )}
 
       <div className="border-b flex gap-1 overflow-x-auto">
         {TABS.filter((t) => t.key !== "nuevo" || canEdit).map((t) => (

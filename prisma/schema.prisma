@@ -1793,3 +1793,17 @@ model JournalLine {
   @@index([accountId])
   @@index([party])
 }
+
+// Cierre de mes: lo contabilizado hasta lockedThrough (inclusive) ya no cambia.
+// Historial: el cierre vigente es el de fecha más reciente no reabierto.
+model PeriodClose {
+  id            String    @id @default(cuid())
+  sede          Sede
+  lockedThrough DateTime  @db.Date // último día cerrado
+  closedById    String?
+  reopenedAt    DateTime?
+  reopenedById  String?
+  createdAt     DateTime  @default(now())
+
+  @@index([sede, lockedThrough])
+}

@@ -32,6 +32,7 @@
     "test:banco": "tsx scripts/test-banco.ts",
     "test:sri": "tsx scripts/test-sri.ts",
     "test:contabilidad": "tsx scripts/test-contabilidad.ts",
+    "test:contabilizacion": "tsx scripts/test-contabilizacion.ts",
     "db:seed:contabilidad": "tsx scripts/seed-contabilidad.ts",
     "db:seed:saldos-xtreme": "tsx scripts/seed-saldos-iniciales-xtreme.ts"
   },
