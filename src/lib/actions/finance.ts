@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { uploadFinanceDoc, signFinanceDoc } from "@/lib/storage/upload";
+import { assertOpen } from "@/lib/accounting/posting";
 import type {
   CapitalKind,
   ExpenseCategory,
@@ -139,6 +140,7 @@ export async function createExpense(fd: FormData): Promise<{ id: string }> {
   const ivaCents = optCents(fd, "iva", "IVA");
   if (ivaCents !== null && ivaCents > amountCents) throw new Error("El IVA no puede superar el total.");
   const date = parseDay(str(fd, "date"), "Fecha");
+  await assertOpen(prisma, sede, date);
 
   const documentType = (str(fd, "documentType") || "SIN_DOCUMENTO") as ExpenseDocType;
   if (!DOC_TYPES.includes(documentType)) throw new Error("Tipo de documento inválido.");
@@ -189,6 +191,8 @@ export async function createExpense(fd: FormData): Promise<{ id: string }> {
 export async function markExpensePaid(id: string, paidAt: string, method: ExpensePayMethod) {
   await requireFinanceEdit();
   if (!PAY_METHODS.includes(method)) throw new Error("Forma de pago inválida.");
+  const e = await prisma.expense.findUniqueOrThrow({ where: { id }, select: { sede: true } });
+  await assertOpen(prisma, e.sede, parseDay(paidAt, "Fecha de pago"));
   await prisma.expense.update({
     where: { id, voidedAt: null },
     data: { status: "PAID", paidAt: parseDay(paidAt, "Fecha de pago"), paymentMethod: method },
@@ -199,6 +203,9 @@ export async function markExpensePaid(id: string, paidAt: string, method: Expens
 export async function voidExpense(id: string, reason: string) {
   await requireFinanceEdit();
   if (!reason.trim()) throw new Error("Indica el motivo de la anulación.");
+  const ex = await prisma.expense.findUniqueOrThrow({ where: { id }, select: { sede: true, date: true, paidAt: true } });
+  await assertOpen(prisma, ex.sede, ex.date);
+  if (ex.paidAt) await assertOpen(prisma, ex.sede, ex.paidAt);
   await prisma.expense.update({
     where: { id, voidedAt: null },
     data: { voidedAt: new Date(), voidReason: reason.trim() },
@@ -239,6 +246,7 @@ export async function createCapitalMovement(fd: FormData): Promise<void> {
   }
   const person = str(fd, "person");
   if (!person) throw new Error("¿Quién puso o retiró el dinero?");
+  await assertOpen(prisma, sede, parseDay(str(fd, "date"), "Fecha"));
   await prisma.capitalMovement.create({
     data: {
       sede,
@@ -255,6 +263,8 @@ export async function createCapitalMovement(fd: FormData): Promise<void> {
 
 export async function voidCapitalMovement(id: string) {
   await requireFinanceEdit();
+  const c = await prisma.capitalMovement.findUniqueOrThrow({ where: { id }, select: { sede: true, date: true } });
+  await assertOpen(prisma, c.sede, c.date);
   await prisma.capitalMovement.update({ where: { id, voidedAt: null }, data: { voidedAt: new Date() } });
   revalidatePath(PATH);
 }
@@ -278,6 +288,7 @@ export async function createOtherIncome(fd: FormData): Promise<void> {
   if (!OTHER_CATEGORIES.includes(category)) throw new Error("Elige la categoría.");
   const description = str(fd, "description");
   if (!description) throw new Error("Escribe una descripción.");
+  await assertOpen(prisma, parseSede(str(fd, "sede")), parseDay(str(fd, "date"), "Fecha"));
   await prisma.otherIncome.create({
     data: {
       sede: parseSede(str(fd, "sede")),
@@ -293,6 +304,8 @@ export async function createOtherIncome(fd: FormData): Promise<void> {
 
 export async function voidOtherIncome(id: string) {
   await requireFinanceEdit();
+  const o = await prisma.otherIncome.findUniqueOrThrow({ where: { id }, select: { sede: true, date: true } });
+  await assertOpen(prisma, o.sede, o.date);
   await prisma.otherIncome.update({ where: { id, voidedAt: null }, data: { voidedAt: new Date() } });
   revalidatePath(PATH);
 }
@@ -304,7 +317,8 @@ export async function voidOtherIncome(id: string) {
 export async function updateExpenseCategory(id: string, category: ExpenseCategory) {
   await requireFinanceEdit();
   if (!CATEGORIES.includes(category)) throw new Error("Categoría inválida.");
-  const e = await prisma.expense.findUnique({ where: { id }, select: { notes: true } });
+  const e = await prisma.expense.findUnique({ where: { id }, select: { notes: true, sede: true, date: true } });
+  if (e) await assertOpen(prisma, e.sede, e.date);
   // Clear only the automatic review notes, never someone's own notes.
   const autoNote = e?.notes === "Categoría por revisar" || e?.notes === "Categoría sugerida por el proveedor";
   await prisma.expense.update({

@@ -37,8 +37,8 @@ export async function EstadosTab({ sede, asOf, ym }: { sede: Sede; asOf: string;
         {s.totals.check === 0
           ? "Cuadra: activo = pasivo + patrimonio (sale del libro diario, por construcción)."
           : `⚠️ Descuadre de ${money(s.totals.check)}: revisa el balance de comprobación.`}{" "}
-        Hasta ahora el libro diario tiene la apertura y los asientos manuales; los cobros, gastos y banco se contabilizan
-        solos en la próxima entrega.
+        Cobros, gastos, aportes y banco se contabilizan solos; los gastos de enero a agosto que faltan se cargan con los
+        archivos de la contabilidad anterior.
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

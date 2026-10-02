@@ -32,7 +32,10 @@ const COMMON_TOP: ChartRow[] = [
   { code: "1.1.02", name: "Bancos", type: "ASSET", group: true },
   { code: "1.1.03", name: "Inventario de bebidas y suplementos", type: "ASSET", role: "INVENTORY" },
   { code: "1.1.04", name: "Arriendo pagado por anticipado", type: "ASSET", role: "PREPAID" },
-  { code: "1.1.05", name: "Cobros por depositar (transferencias y tarjeta por conciliar)", type: "ASSET" },
+  // Bridge for everything not yet matched to a bank line (transfers and card
+  // collections reported by reception, owner deposits, payments made by
+  // transfer). Bank reconciliation moves each item to the real bank account.
+  { code: "1.1.05", name: "Cuenta puente: movimientos por conciliar con bancos", type: "ASSET" },
   { code: "1.1.06", name: "Cuentas por cobrar", type: "ASSET" },
   { code: "1.2", name: "Propiedades, planta y equipo", type: "ASSET", group: true },
   { code: "1.2.01", name: "Instalaciones y adecuaciones", type: "ASSET", role: "FIXED_ASSET" },
@@ -52,6 +55,7 @@ const COMMON_TOP: ChartRow[] = [
   { code: "2.1.06", name: "IVA por pagar (ventas)", type: "LIABILITY" },
   { code: "2.1.07", name: "Ingresos diferidos (membresías prepagadas)", type: "LIABILITY" },
   { code: "2.1.08", name: "Sueldos y beneficios por pagar", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
+  { code: "2.1.09", name: "Tarjetas de crédito por pagar", type: "LIABILITY" },
 
   { code: "4", name: "Ingresos", type: "INCOME", group: true },
   { code: "4.1", name: "Ingresos de actividades ordinarias", type: "INCOME", group: true },

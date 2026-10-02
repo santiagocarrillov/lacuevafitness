@@ -20,6 +20,7 @@ import {
   type ScoredCandidate,
   type Suggestion,
 } from "@/lib/finance/bank-suggest";
+import { assertOpen } from "@/lib/accounting/posting";
 
 /** Ecuador calendar day of an instant, as the UTC-midnight Date used by @db.Date. */
 function ecDay(d: Date) {
@@ -144,6 +145,7 @@ export async function classifyInTx(
   if (!line) throw new Error("Movimiento no encontrado.");
   if (line.status !== "PENDING") throw new Error("Este movimiento ya fue clasificado.");
   const { sede } = line.account;
+  await assertOpen(tx, sede, ecDay(line.postedAt));
   const credit = line.amountCents > 0;
   const abs = Math.abs(line.amountCents);
   const day = ecDay(line.postedAt);
@@ -312,6 +314,8 @@ export async function classifyInTx(
 export async function undoInTx(tx: Prisma.TransactionClient, txnId: string) {
     const line = await tx.bankTransaction.findUnique({ where: { id: txnId } });
     if (!line || line.status === "PENDING") throw new Error("No hay nada que deshacer.");
+    const acct = await tx.bankAccount.findUniqueOrThrow({ where: { id: line.accountId }, select: { sede: true } });
+    await assertOpen(tx, acct.sede, ecDay(line.postedAt));
     const a = (line.appliedJson ?? {}) as unknown as Applied;
 
     for (const p of a.payments ?? []) {
