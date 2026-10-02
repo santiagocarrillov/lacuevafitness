@@ -10,11 +10,12 @@ import type { JournalSource, Prisma, Sede } from "@/generated/prisma/client";
 import { ecuadorDateString } from "@/lib/timezone";
 import { sameLines, validateLines, type LineInput } from "@/lib/accounting/journal";
 import { formatDocNumber } from "@/lib/invoicing/core";
+import { accumulatedThrough, chargeForMonth, monthEnd, monthIdx, ymOf } from "@/lib/accounting/depreciation";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
 export const IVA_RATE = 15; // %, prices include IVA (Santiago, 1 oct 2026)
-export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE"];
+export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE", "DEPRECIATION"];
 
 /** Splits a VAT-inclusive total. $50 → net 43.48 + IVA 6.52. */
 export function splitIva(totalCents: number, rate = IVA_RATE) {
@@ -291,6 +292,43 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
         ? [{ accountId: cash, debitCents: c.amountCents, party: c.person }, { accountId: equityOrLoan, creditCents: c.amountCents, party: c.person }]
         : [{ accountId: equityOrLoan, debitCents: c.amountCents, party: c.person }, { accountId: cash, creditCents: c.amountCents, party: c.person }],
     });
+  }
+  // Fixed assets: one depreciation entry per month-end, and the disposal
+  // (Dr accumulated depreciation + loss · Cr asset at cost).
+  const assets = await db.fixedAsset.findMany({ where: { sede }, include: { account: { select: { id: true } } } });
+  if (assets.length) {
+    for (let idx = monthIdx(from); idx <= monthIdx(to); idx++) {
+      const end = monthEnd(idx);
+      if (!inRange(end)) continue;
+      const charges = assets.map((a) => ({ a, c: chargeForMonth(a, idx) })).filter((x) => x.c > 0);
+      if (!charges.length) continue;
+      const total = charges.reduce((s, x) => s + x.c, 0);
+      out.push({
+        source: "DEPRECIATION",
+        sourceId: `dep:${ymOf(idx)}`,
+        date: end,
+        description: `Depreciación de activos fijos · ${ymOf(idx)}`,
+        lines: [
+          ...charges.map((x) => ({ accountId: A.code("5.3.10"), debitCents: x.c, memo: x.a.name })),
+          { accountId: A.code("1.2.09"), creditCents: total },
+        ],
+      });
+    }
+    for (const a of assets) {
+      if (!a.disposedOn || !inRange(a.disposedOn)) continue;
+      const acc = Math.min(a.costCents, accumulatedThrough(a, monthIdx(a.disposedOn) - 1));
+      out.push({
+        source: "DEPRECIATION",
+        sourceId: `${a.id}:baja`,
+        date: a.disposedOn,
+        description: `Baja de activo · ${a.name}${a.disposalNote ? ` · ${a.disposalNote}` : ""}`,
+        lines: [
+          { accountId: A.code("1.2.09"), debitCents: acc, memo: a.name },
+          { accountId: A.code("5.3.99"), debitCents: a.costCents - acc, memo: `Pérdida por baja · ${a.name}` },
+          { accountId: a.account.id, creditCents: a.costCents, memo: a.name },
+        ],
+      });
+    }
   }
   return out;
 }

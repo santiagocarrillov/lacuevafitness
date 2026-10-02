@@ -12,6 +12,7 @@ import { ComprobacionTab } from "./comprobacion-tab";
 import { EstadosTab } from "./estados-tab";
 import { PlanTab } from "./plan-tab";
 import { EntryForm } from "./entry-form";
+import { ActivosTab } from "./activos-tab";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ const TABS = [
   { key: "nuevo", label: "Nuevo asiento" },
   { key: "mayor", label: "Mayor" },
   { key: "comprobacion", label: "Balance de comprobación" },
+  { key: "activos", label: "Activos fijos" },
   { key: "plan", label: "Plan de cuentas" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
@@ -131,6 +133,7 @@ export default async function ContabilidadPage({
       </div>
 
       {tab === "estados" && <EstadosTab sede={sede} asOf={to} ym={ym} />}
+      {tab === "activos" && <ActivosTab sede={sede} canEdit={canEdit} />}
       {tab === "diario" && <DiarioTab sede={sede} from={from} to={to} canEdit={canEdit} />}
       {tab === "nuevo" && canEdit && (
         <EntryForm

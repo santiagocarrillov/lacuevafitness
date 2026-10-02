@@ -870,8 +870,38 @@ model ExpenseLine {
   ivaRate       Int           @default(15)
   ivaCents      Int           @default(0)
 
+  fixedAsset FixedAsset?
+
   @@index([expenseId])
   @@index([accountId])
+}
+
+// Registro de activos fijos (2 oct 2026). Línea recta, 10 % anual por defecto
+// (reglamento LRTI art. 28, como en los EEFF 2025). El asiento mensual
+// (fuente DEPRECIATION) se deriva de aquí; la baja reconoce la pérdida.
+model FixedAsset {
+  id                      String        @id @default(cuid())
+  sede                    Sede
+  name                    String
+  accountId               String // 1.2.01 instalaciones · 1.2.02 equipo de oficina · 1.2.03 equipos
+  account                 LedgerAccount @relation(fields: [accountId], references: [id])
+  costCents               Int
+  acquiredOn              DateTime      @db.Date
+  usefulLifeMonths        Int           @default(120)
+  residualCents           Int           @default(0)
+  // Depreciación ya acumulada al registrarlo (activos anteriores a 2026,
+  // incluida en el asiento de apertura).
+  openingAccumulatedCents Int           @default(0)
+  startsOn                DateTime      @db.Date // primer mes que se deprecia
+  expenseLineId           String?       @unique // compra registrada en Gastos
+  expenseLine             ExpenseLine?  @relation(fields: [expenseLineId], references: [id])
+  disposedOn              DateTime?     @db.Date
+  disposalNote            String?
+  createdById             String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  @@index([sede])
 }
 
 enum CapitalKind {
@@ -1746,6 +1776,7 @@ model LedgerAccount {
   openingBalances OpeningBalance[]
   journalLines    JournalLine[]
   expenseLines    ExpenseLine[]
+  fixedAssets     FixedAsset[]
 
   @@unique([sede, code])
 }
