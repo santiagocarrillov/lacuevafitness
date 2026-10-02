@@ -22,6 +22,12 @@ export type LegalEntity = {
   taxIds: string[];
   /** People who can contribute capital or lend money to this entity. */
   owners: string[];
+  /** Issuer data printed on electronic invoices (Módulo 2). */
+  tradeName: string;
+  /** Dirección matriz as registered in the RUC — null until confirmed. */
+  matrixAddress: string | null;
+  /** "Obligado a llevar contabilidad" (printed in the XML). */
+  accountingRequired: boolean;
 };
 
 export const ENTITIES: Record<Sede, LegalEntity> = {
@@ -34,6 +40,11 @@ export const ENTITIES: Record<Sede, LegalEntity> = {
     // Suppliers invoice Santiago with his cédula or his RUC (cédula + 001).
     taxIds: ["1707994461", "1707994461001"],
     owners: ["Santiago Carrillo", "Isabel Cárdenas"],
+    tradeName: "La Cueva Fitness Center",
+    matrixAddress: null,
+    // Régimen general (Santiago, 1 oct 2026); persona natural, se asume no
+    // obligada a llevar contabilidad — confirmar con Isabel antes de emitir.
+    accountingRequired: false,
   },
   XTREME: {
     sede: "XTREME",
@@ -46,6 +57,9 @@ export const ENTITIES: Record<Sede, LegalEntity> = {
     taxIds: ["1793142958001"],
     // Shareholders (EEFF 2025, nota 13): Santiago 55 %, María Belén Salazar Lozada 45 %.
     owners: ["Santiago Carrillo", "Isabel Cárdenas", "María Belén Salazar"],
+    tradeName: "La Cueva Xtreme",
+    matrixAddress: null,
+    accountingRequired: true,
   },
 };
 

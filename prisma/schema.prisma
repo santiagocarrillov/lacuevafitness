@@ -108,10 +108,15 @@ model Member {
   conversation              Conversation?
   stripeCustomerId          String?       @unique
   notes                     String?
+  // Identificación para facturar (Módulo 2). Sin ella solo se puede facturar
+  // a consumidor final (≤ $50 con IVA).
+  taxIdType                 TaxIdType?
+  taxId                     String?
   createdAt                 DateTime      @default(now())
   updatedAt                 DateTime      @updatedAt
 
   memberships           Membership[]
+  invoices              Invoice[]
   payments              Payment[]
   attendance            Attendance[]
   evaluations           Evaluation[]
@@ -192,7 +197,8 @@ model Membership {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
-  payments Payment[]
+  payments     Payment[]
+  invoiceLines InvoiceLine[]
 
   @@index([memberId, state])
   @@index([endsAt])
@@ -243,6 +249,10 @@ model Payment {
   // pueden colgar de una sola transferencia (alguien paga por dos personas).
   bankTransactionId     String?
   bankTransaction       BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  // Factura que respalda este cobro (Módulo 2). Mientras la factura no esté
+  // anulada, el ingreso lo contabiliza la factura y no el pago.
+  invoiceId             String?
+  invoice               Invoice?         @relation(fields: [invoiceId], references: [id])
   sede                  Sede
   recordedByUserId      String?
   notes                 String?
@@ -253,6 +263,7 @@ model Payment {
   @@index([status])
   @@index([isPoolEntry, status])
   @@index([bankTransactionId])
+  @@index([invoiceId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1806,4 +1817,137 @@ model PeriodClose {
   createdAt     DateTime  @default(now())
 
   @@index([sede, lockedThrough])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Facturación electrónica (Módulo 2, aprobado por Santiago el 1 oct 2026).
+// Se factura al cobrar, por el total cobrado; precios con IVA incluido.
+// Emisión directa al SRI (esquema offline). Diseño: docs/facturacion-sri.md
+// ─────────────────────────────────────────────────────────────
+
+enum TaxIdType {
+  CEDULA
+  RUC
+  PASAPORTE
+}
+
+enum SaleItemKind {
+  SERVICE
+  GOOD
+}
+
+// Lo que se vende que NO es membresía (evaluaciones, bebidas, pases…).
+model SaleItem {
+  id                String       @id @default(cuid())
+  sede              Sede? // null = ambas entidades
+  name              String
+  priceCents        Int // con IVA incluido
+  ivaRate           Int          @default(15) // %; 0 = tarifa 0
+  kind              SaleItemKind @default(SERVICE)
+  incomeAccountCode String // "4.1.02" evaluaciones, "4.1.03" bebidas…
+  active            Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  invoiceLines InvoiceLine[]
+}
+
+enum SriEnvironment {
+  PRUEBAS
+  PRODUCCION
+}
+
+// Establecimiento + punto de emisión propio de la app (distinto del de Ecuafact).
+model EmissionPoint {
+  id             String         @id @default(cuid())
+  sede           Sede
+  establishment  String // "001"
+  point          String // "002"
+  address        String // dirEstablecimiento
+  lastSequential Int            @default(0)
+  environment    SriEnvironment @default(PRUEBAS)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  invoices Invoice[]
+
+  @@unique([sede, establishment, point, environment])
+}
+
+enum InvoiceStatus {
+  DRAFT // generada y numerada, aún no enviada al SRI
+  SENT // RECIBIDA por el SRI, esperando autorización
+  AUTHORIZED
+  REJECTED // DEVUELTA o NO AUTORIZADA: corregir y reenviar
+  VOIDED // anulada (nunca se borra)
+}
+
+model Invoice {
+  id                  String         @id @default(cuid())
+  sede                Sede
+  emissionPointId     String
+  emissionPoint       EmissionPoint  @relation(fields: [emissionPointId], references: [id])
+  sequential          Int
+  accessKey           String         @unique
+  environment         SriEnvironment
+  issueDate           DateTime       @db.Date
+  // Copia del comprador al emitir (la factura no cambia si luego se edita el socio).
+  memberId            String?
+  member              Member?        @relation(fields: [memberId], references: [id])
+  buyerIdType         String // código SRI: 04 RUC · 05 cédula · 06 pasaporte · 07 consumidor final
+  buyerId             String
+  buyerName           String
+  buyerEmail          String?
+  buyerAddress        String?
+  buyerPhone          String?
+  subtotalCents       Int // sin IVA
+  ivaCents            Int
+  totalCents          Int
+  sriPayForm          String // tabla 24: 01 efectivo · 16 débito · 19 crédito · 20 transferencia
+  status              InvoiceStatus  @default(DRAFT)
+  sriMessages         Json?
+  sentAt              DateTime?
+  authorizedAt        DateTime?
+  authorizationNumber String?
+  xmlPath             String? // XML autorizado en el bucket finance-docs
+  emailedAt           DateTime?
+  notes               String?
+  createdById         String?
+  voidedAt            DateTime?
+  voidReason          String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([emissionPointId, sequential])
+  @@index([sede, issueDate])
+  @@index([memberId])
+  @@index([status])
+}
+
+model InvoiceLine {
+  id                String      @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice     @relation(fields: [invoiceId], references: [id])
+  position          Int
+  code              String // codigoPrincipal
+  description       String
+  quantity          Int
+  unitPriceCents    Int // con IVA, antes de descuento
+  discountCents     Int         @default(0) // con IVA
+  ivaRate           Int // %
+  subtotalCents     Int // base imponible (sin IVA, con descuento)
+  ivaCents          Int
+  totalCents        Int
+  incomeAccountCode String
+  membershipId      String?
+  membership        Membership? @relation(fields: [membershipId], references: [id])
+  saleItemId        String?
+  saleItem          SaleItem?   @relation(fields: [saleItemId], references: [id])
+
+  @@index([invoiceId])
+  @@index([membershipId])
 }

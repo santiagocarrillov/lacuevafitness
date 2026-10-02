@@ -9,11 +9,12 @@ import { prisma } from "@/lib/prisma";
 import type { JournalSource, Prisma, Sede } from "@/generated/prisma/client";
 import { ecuadorDateString } from "@/lib/timezone";
 import { sameLines, validateLines, type LineInput } from "@/lib/accounting/journal";
+import { formatDocNumber } from "@/lib/invoicing/core";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
 export const IVA_RATE = 15; // %, prices include IVA (Santiago, 1 oct 2026)
-export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE"];
+export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE"];
 
 /** Splits a VAT-inclusive total. $50 → net 43.48 + IVA 6.52. */
 export function splitIva(totalCents: number, rate = IVA_RATE) {
@@ -100,8 +101,15 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
 
   // Payments (collections). Pool entries already consumed by a member payment
   // (SUCCEEDED) would double count; unassigned ones (PENDING) are real money.
+  // A payment backed by a live invoice is posted by the invoice instead.
   const payments = await db.payment.findMany({
-    where: { sede, paidAt: wide, status: { in: ["SUCCEEDED", "PENDING"] }, NOT: { isPoolEntry: true, status: "SUCCEEDED" } },
+    where: {
+      sede,
+      paidAt: wide,
+      status: { in: ["SUCCEEDED", "PENDING"] },
+      NOT: { isPoolEntry: true, status: "SUCCEEDED" },
+      OR: [{ invoiceId: null }, { invoice: { status: "VOIDED" } }],
+    },
     include: { member: { select: { firstName: true, lastName: true } }, membership: { include: { plan: true } } },
   });
   for (const p of payments) {
@@ -145,6 +153,59 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
         ],
       });
     }
+  }
+
+  // Invoices (Módulo 2): issued at collection, so one entry holds the cash
+  // (from the payments behind it), the IVA and each line's revenue, with the
+  // same deferral rule as payments.
+  const invoices = await db.invoice.findMany({
+    where: { sede, status: { not: "VOIDED" }, issueDate: { gte: from, lte: to } },
+    include: {
+      emissionPoint: true,
+      payments: { where: { status: { in: ["SUCCEEDED", "PENDING"] } } },
+      lines: { include: { membership: { include: { plan: true } } }, orderBy: { position: "asc" } },
+    },
+  });
+  for (const inv of invoices) {
+    const party = inv.buyerName;
+    const lines: LineInput[] = [];
+    let paid = 0;
+    for (const p of inv.payments) {
+      const acct = (await bankLedger(p.bankTransactionId)) ?? (p.method === "CASH" ? A.code("1.1.01") : A.code("1.1.05"));
+      lines.push({ accountId: acct, debitCents: p.amountCents, party });
+      paid += p.amountCents;
+    }
+    if (paid !== inv.totalCents) lines.push({ accountId: A.code("1.1.05"), debitCents: inv.totalCents - paid, party, memo: "Diferencia entre factura y cobro" });
+    lines.push({ accountId: A.code("2.1.06"), creditCents: inv.ivaCents, party });
+    for (const l of inv.lines) {
+      const income = A.code(l.incomeAccountCode);
+      const plan = l.membership?.plan;
+      const cycle = plan?.billingCycle;
+      const months =
+        !plan || cycle === "ONE_TIME" || cycle === "TRIAL"
+          ? 1
+          : prepaidMonths(l.totalCents, cycle, l.membership?.customPriceCents ?? plan.priceCents);
+      const share = Math.floor(l.subtotalCents / months);
+      const firstShare = l.subtotalCents - share * (months - 1);
+      lines.push({ accountId: income, creditCents: firstShare, party, memo: l.description });
+      if (months > 1) lines.push({ accountId: A.code("2.1.07"), creditCents: l.subtotalCents - firstShare, party, memo: l.description });
+      for (let k = 1; k < months; k++) {
+        const d = firstOfMonth(inv.issueDate, k);
+        if (!inRange(d)) continue;
+        out.push({
+          source: "DEFERRED_REVENUE",
+          sourceId: `${l.id}:${k}`,
+          date: d,
+          description: `Ingreso diferido reconocido · ${party} · ${l.description} · mes ${k + 1} de ${months}`,
+          lines: [
+            { accountId: A.code("2.1.07"), debitCents: share, party },
+            { accountId: income, creditCents: share, party },
+          ],
+        });
+      }
+    }
+    const num = formatDocNumber(inv.emissionPoint.establishment, inv.emissionPoint.point, inv.sequential);
+    out.push({ source: "INVOICE", sourceId: inv.id, date: inv.issueDate, description: `Factura ${num} · ${party}`, lines });
   }
 
   // Other income: products carry IVA; reimbursements and others do not.

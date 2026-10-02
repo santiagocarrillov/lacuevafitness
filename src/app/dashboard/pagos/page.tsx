@@ -122,6 +122,11 @@ export default async function PagosPage({
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
+          {isAccountingOrOwner && (
+            <Link href="/dashboard/facturas/nueva" className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted">
+              Cobrar y facturar
+            </Link>
+          )}
           <RegisterPaymentDialog
             members={members}
             defaultSede={defaultSede}
@@ -252,6 +257,16 @@ export default async function PagosPage({
                         )}
                         <td className="px-3 py-2 text-right">
                           <div className="flex items-center justify-end gap-3">
+                            {isAccountingOrOwner &&
+                              (p.invoice && p.invoice.status !== "VOIDED" ? (
+                                <Link href={`/dashboard/facturas/${p.invoice.id}`} className="text-xs text-primary hover:underline">
+                                  factura
+                                </Link>
+                              ) : (
+                                <Link href={`/dashboard/facturas/nueva?pago=${p.id}`} className="text-xs text-primary hover:underline">
+                                  facturar
+                                </Link>
+                              ))}
                             <EditPaymentDialog
                               payment={{
                                 id: p.id,

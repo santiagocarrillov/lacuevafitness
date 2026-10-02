@@ -55,6 +55,7 @@ export async function getMemberPayments({
       include: {
         member: { select: { id: true, firstName: true, lastName: true } },
         membership: { include: { plan: { select: { name: true } } } },
+        invoice: { select: { id: true, status: true } },
       },
     }),
     prisma.payment.count({ where }),
@@ -295,6 +296,7 @@ export async function deletePendingPayment(id: string) {
 
   const scopedSede = getSedeScope(user);
   if (scopedSede && p.sede !== scopedSede) throw new Error("No autorizado");
+  await assertNotInvoiced(id, "eliminar el cobro");
 
   await prisma.payment.delete({ where: { id } });
   revalidatePath("/dashboard/pagos");
@@ -451,6 +453,15 @@ export async function assignPaymentToMembership(paymentId: string, membershipId:
   return updated;
 }
 
+/** A collection backed by a live invoice can't change amount or disappear:
+ *  void the invoice first (Facturación). */
+async function assertNotInvoiced(paymentId: string, what: string) {
+  const p = await prisma.payment.findUnique({ where: { id: paymentId }, select: { invoice: { select: { status: true } } } });
+  if (p?.invoice && p.invoice.status !== "VOIDED") {
+    throw new Error(`Este cobro tiene factura: anúlala en Facturación antes de ${what}.`);
+  }
+}
+
 // ─── Update / delete any payment (admin can fix mistakes) ─────────────────────
 
 export async function updatePayment(
@@ -472,6 +483,7 @@ export async function updatePayment(
   const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
   const scopedSede = getSedeScope(user);
   if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
+  if (data.amountCents !== undefined && data.amountCents !== existing.amountCents) await assertNotInvoiced(id, "cambiar el monto");
 
   const updated = await prisma.payment.update({
     where: { id },
@@ -501,6 +513,7 @@ export async function deletePayment(id: string) {
   const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
   const scopedSede = getSedeScope(user);
   if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
+  await assertNotInvoiced(id, "eliminar el cobro");
 
   await prisma.payment.delete({ where: { id } });
 
