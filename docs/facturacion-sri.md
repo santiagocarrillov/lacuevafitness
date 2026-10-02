@@ -93,8 +93,7 @@ y la pestaña Otros ingresos pasan a abrir esta pantalla.
 2. **Ambiente de pruebas** habilitado en SRI en Línea para 1707994461001 y 1793142958001.
 3. Establecimiento y punto de emisión que usa Ecuafact hoy y su último secuencial, para darle a la
    app un punto propio sin chocar numeración.
-4. Régimen de Santiago persona natural (general o RIMPE) y si está obligado a llevar contabilidad:
-   ambos van impresos en el XML.
+4. ~~Régimen y obligación de llevar contabilidad~~ — confirmado: régimen general, no obligado.
 
 ## Estado (2a, 2 oct 2026)
 
@@ -109,5 +108,5 @@ y la pestaña Otros ingresos pasan a abrir esta pantalla.
   base × 15 % es < 0,6 centavos en todos los montos (tolerancia del SRI: 1 centavo). Confirmar en pruebas.
 
 **Falta para 2b:** la .p12 de cada entidad, ambiente de pruebas, la dirección matriz de cada RUC
-(`ENTITIES.matrixAddress`, hoy se usa la del establecimiento) y confirmar si la persona natural está
-obligada a llevar contabilidad (hoy NO).
+(`ENTITIES.matrixAddress`, hoy se usa la del establecimiento). Confirmado (2 oct): Santiago persona
+natural, régimen general, **no** obligado a llevar contabilidad.
