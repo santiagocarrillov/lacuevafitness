@@ -42,8 +42,7 @@ export const ENTITIES: Record<Sede, LegalEntity> = {
     owners: ["Santiago Carrillo", "Isabel Cárdenas"],
     tradeName: "La Cueva Fitness Center",
     matrixAddress: null,
-    // Régimen general (Santiago, 1 oct 2026); persona natural, se asume no
-    // obligada a llevar contabilidad — confirmar con Isabel antes de emitir.
+    // Régimen general, NO obligado a llevar contabilidad (Santiago, 2 oct 2026).
     accountingRequired: false,
   },
   XTREME: {
