@@ -39,12 +39,18 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard/leads", label: "Leads", show: can.manageLeads(user) },
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
     { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
-    { href: "/dashboard/facturas", label: "Facturación", show: can.editFinancials(user) },
-    { href: "/dashboard/gastos", label: "Gastos", show: can.viewPayments(user) },
-    { href: "/dashboard/finanzas", label: "Finanzas", show: can.viewFinancials(user) },
-    { href: "/dashboard/contabilidad", label: "Contabilidad", show: can.viewFinancials(user) },
+    // One menu for money (Santiago, 2 oct 2026): Facturación, Gastos, Banco,
+    // Impuestos and Contabilidad are sections inside Finanzas. Admins only
+    // record expenses, so they get Gastos directly.
+    {
+      href: "/dashboard/finanzas",
+      label: "Finanzas",
+      show: can.viewFinancials(user),
+      match: ["/dashboard/facturas", "/dashboard/gastos", "/dashboard/contabilidad"],
+    },
+    { href: "/dashboard/gastos", label: "Gastos", show: can.viewPayments(user) && !can.viewFinancials(user) },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },
-  ].filter((n) => n.show).map(({ href, label, badge }) => ({ href, label, badge }));
+  ].filter((n) => n.show).map(({ href, label, badge, match }) => ({ href, label, badge, match }));
 
   const userMeta = `${roleLabels[user.role] ?? user.role}${
     user.sede ? ` · ${sedeLabels[user.sede]}` : ""

@@ -24,6 +24,9 @@ const usd = (c: number) => (c / 100).toFixed(2);
 class Rollback extends Error {}
 
 async function main() {
+  // The live books may already hold automatic entries (Contabilidad syncs on open).
+  const AUTO = ["PAYMENT", "INVOICE", "EXPENSE", "CAPITAL", "OTHER_INCOME", "DEFERRED_REVENUE", "DEPRECIATION"] as const;
+  const autoBefore = await prisma.journalEntry.count({ where: { source: { in: [...AUTO] } } });
   console.log("\n── A. Reglas");
   const s = splitIva(5000);
   check("$50 con IVA = 43,48 + 6,52", s.net === 4348 && s.iva === 652);
@@ -65,7 +68,7 @@ async function main() {
         check(`${sede}: IVA de septiembre = IVA de lo cobrado`, ivaCredits === expectIva + expectProd, `${usd(ivaCredits)} vs ${usd(expectIva + expectProd)}`);
 
         const r2 = await syncJournal(tx, sede, from, to);
-        check(`${sede}: segunda pasada no cambia nada`, r2.created === 0 && r2.voided === 0 && r2.unchanged === r1.created, `${r2.created}/${r2.voided}/${r2.unchanged}`);
+        check(`${sede}: segunda pasada no cambia nada`, r2.created === 0 && r2.voided === 0 && r2.unchanged >= r1.created, `${r2.created}/${r2.voided}/${r2.unchanged}`);
       }
 
       // A deferred prepayment and a voided document.
@@ -96,8 +99,8 @@ async function main() {
   } catch (e) {
     if (!(e instanceof Rollback)) throw e;
   }
-  const leftovers = await prisma.journalEntry.count({ where: { source: { in: ["PAYMENT", "EXPENSE", "CAPITAL", "OTHER_INCOME", "DEFERRED_REVENUE"] } } });
-  check("nada quedó en la base (rollback)", leftovers === 0, String(leftovers));
+  const after = await prisma.journalEntry.count({ where: { source: { in: [...AUTO] } } });
+  check("nada quedó en la base (rollback)", after === autoBefore, `${autoBefore} → ${after}`);
 
   console.log(fallos ? `\n${fallos} fallo(s)` : "\nTodo OK");
   await prisma.$disconnect();

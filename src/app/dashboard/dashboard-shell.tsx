@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions/auth";
 import { ChangePasswordButton } from "./change-password-button";
 import { StaffPushToggle } from "./staff-push-toggle";
+import { BackButton, useTrackNavigation } from "./back-button";
 
-type NavItem = { href: string; label: string; badge?: number };
+type NavItem = { href: string; label: string; badge?: number; match?: string[] };
 
 type Props = {
   children: ReactNode;
@@ -20,6 +21,15 @@ type Props = {
 export function DashboardShell({ children, nav, userName, userMeta, showAthleteView }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  useTrackNavigation();
+
+  // Highlight the section the user is in (longest matching prefix wins).
+  const prefixes = (i: NavItem) => [i.href, ...(i.match ?? [])];
+  const score = (i: NavItem) =>
+    Math.max(-1, ...prefixes(i).filter((p) => (p === "/dashboard" ? pathname === p : pathname === p || pathname.startsWith(`${p}/`))).map((p) => p.length));
+  const best = Math.max(...nav.map(score));
+  const activeHref = best >= 0 ? nav.find((i) => score(i) === best)?.href : undefined;
+  const current = nav.find((i) => i.href === activeHref);
 
   // Auto-close drawer when navigating
   useEffect(() => {
@@ -41,8 +51,13 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <p className="font-heading text-base font-semibold uppercase tracking-wide">La Cueva</p>
-        <div className="w-8" />
+        {pathname === "/dashboard" ? (
+          <p className="font-heading text-base font-semibold uppercase tracking-wide">La Cueva</p>
+        ) : (
+          <p className="truncate text-sm font-medium">{current?.label ?? "La Cueva"}</p>
+        )}
+        <BackButton className="-mr-1" />
+        {pathname === "/dashboard" && <div className="w-8" />}
       </header>
 
       {/* Backdrop (mobile only, when drawer open) */}
@@ -84,7 +99,10 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent transition"
+              aria-current={item.href === activeHref ? "page" : undefined}
+              className={`flex items-center justify-between px-3 py-2 rounded-md transition ${
+                item.href === activeHref ? "bg-accent font-medium text-foreground" : "hover:bg-accent"
+              }`}
             >
               {item.label}
               {item.badge ? (
@@ -124,7 +142,14 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto pt-12 md:pt-0">{children}</main>
+      <main className="flex-1 overflow-auto pt-12 md:pt-0">
+        {/* Desktop top bar: Back, like the popular apps. */}
+        <div className="sticky top-0 z-30 hidden h-11 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur md:flex md:px-6">
+          <BackButton />
+          <span className="text-sm text-muted-foreground">{pathname === "/dashboard" ? "" : current?.label}</span>
+        </div>
+        {children}
+      </main>
     </div>
   );
 }

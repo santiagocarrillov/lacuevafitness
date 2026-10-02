@@ -29,7 +29,7 @@ export async function listFixedAssets(sede: Sede) {
   const user = await requireAuth();
   if (!can.viewFinancials(user)) throw new Error("No autorizado");
   const [assets, pending] = await Promise.all([
-    prisma.fixedAsset.findMany({ where: { sede }, include: { account: { select: { code: true, name: true } } }, orderBy: [{ acquiredOn: "asc" }, { name: "asc" }] }),
+    prisma.fixedAsset.findMany({ where: { sede }, include: { account: { select: { code: true, name: true } }, expenseLine: { select: { expenseId: true } } }, orderBy: [{ acquiredOn: "asc" }, { name: "asc" }] }),
     // Purchases filed to an asset account that are not in the register yet.
     prisma.expenseLine.findMany({
       where: { fixedAsset: null, account: { sede, code: { in: FIXED_ASSET_CODES } }, expense: { voidedAt: null } },

@@ -22,7 +22,7 @@ import {
   lineAccounts,
   type ExpenseLineInput,
 } from "@/lib/expenses/core";
-import type { ExpenseDocType, ExpensePayMethod, Prisma, Sede, User } from "@/generated/prisma/client";
+import type { ExpenseCategory, ExpenseDocType, ExpensePayMethod, Prisma, Sede, User } from "@/generated/prisma/client";
 
 const PATH = "/dashboard/gastos";
 const SEDES: Sede[] = ["FITNESS_CENTER", "XTREME"];
@@ -267,16 +267,31 @@ export async function saveExpense(input: ExpenseDraft): Promise<{ id: string }> 
 
 // ── List, review, void ──────────────────────────────────────────────────────
 
-export async function listExpensesScoped(ym: string, opts: { pendingReview?: boolean } = {}) {
+export type ExpenseFilters = {
+  pendingReview?: boolean;
+  payables?: boolean; // unpaid, any month
+  sede?: Sede;
+  category?: ExpenseCategory;
+  docType?: ExpenseDocType;
+};
+
+export async function listExpensesScoped(ym: string, opts: ExpenseFilters = {}) {
   const acc = await requireExpenses();
   const { start, end } = monthRangeUtc(ym);
   const rows = await prisma.expense.findMany({
     where: {
       ...visibleWhere(acc),
-      ...(opts.pendingReview ? { reviewedAt: null, voidedAt: null } : { date: { gte: start, lt: end } }),
+      ...(opts.pendingReview
+        ? { reviewedAt: null, voidedAt: null }
+        : opts.payables
+          ? { status: "PENDING", voidedAt: null }
+          : { date: { gte: start, lt: end } }),
+      ...(opts.sede && acc.full ? { sede: opts.sede } : {}),
+      ...(opts.category ? { category: opts.category } : {}),
+      ...(opts.docType ? { documentType: opts.docType } : {}),
     },
     include: { lines: { orderBy: { position: "asc" }, include: { account: { select: { code: true, name: true } } } } },
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    orderBy: opts.payables ? [{ dueDate: "asc" }, { date: "asc" }] : [{ date: "desc" }, { createdAt: "desc" }],
     take: 500,
   });
   const users = await prisma.user.findMany({
