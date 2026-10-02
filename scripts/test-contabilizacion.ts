@@ -99,7 +99,7 @@ async function main() {
   } catch (e) {
     if (!(e instanceof Rollback)) throw e;
   }
-  const after = await prisma.journalEntry.count({ where: { source: { in: AUTO } } });
+  const after = await prisma.journalEntry.count({ where: { source: { in: [...AUTO] } } });
   check("nada quedó en la base (rollback)", after === autoBefore, `${autoBefore} → ${after}`);
 
   console.log(fallos ? `\n${fallos} fallo(s)` : "\nTodo OK");
