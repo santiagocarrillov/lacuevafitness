@@ -6,6 +6,9 @@ import { PAY_FORM_LABELS, fmtUsd, formatDocNumber } from "@/lib/invoicing/core";
 import { getInvoice } from "@/lib/invoicing/queries";
 import { StatusBadge } from "../status-badge";
 import { VoidInvoiceButton } from "./void-button";
+import { SriActions } from "./sri-actions";
+import { certStatus } from "@/lib/invoicing/emit";
+import type { SriMessage } from "@/lib/invoicing/sri-ws";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,8 @@ export default async function FacturaPage({ params }: { params: Promise<{ id: st
   const inv = await getInvoice(id);
   if (!inv) notFound();
   const e = ENTITIES[inv.sede];
+  const cert = inv.status === "DRAFT" || inv.status === "REJECTED" ? await certStatus(inv.sede) : null;
+  const messages = (inv.sriMessages as SriMessage[] | null) ?? [];
   const number = formatDocNumber(inv.emissionPoint.establishment, inv.emissionPoint.point, inv.sequential);
   const byRate = new Map<number, { base: number; iva: number }>();
   for (const l of inv.lines) {
@@ -44,18 +49,40 @@ export default async function FacturaPage({ params }: { params: Promise<{ id: st
             Factura {number} <StatusBadge status={inv.status} environment={inv.environment} />
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <SriActions id={inv.id} status={inv.status} certReady={cert?.ready ?? true} buyerEmail={inv.buyerEmail} />
+          <a href={`/dashboard/facturas/${inv.id}/pdf`} target="_blank" className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
+            PDF
+          </a>
           <a href={`/dashboard/facturas/${inv.id}/xml`} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
-            Descargar XML
+            XML
           </a>
           {(inv.status === "DRAFT" || inv.status === "REJECTED") && <VoidInvoiceButton id={inv.id} />}
         </div>
       </div>
 
-      {inv.status === "DRAFT" && (
+      {inv.status === "DRAFT" && cert && !cert.ready && (
         <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          Borrador: el XML está listo, falta firmarlo con la firma electrónica de {e.name} y enviarlo al SRI (siguiente fase).
+          Borrador: falta configurar la firma electrónica de {e.name} en{" "}
+          <Link href="/dashboard/facturas?tab=config" className="underline">Configuración</Link>
+          {cert.error ? ` (${cert.error})` : ""}.
         </p>
+      )}
+      {inv.emailedAt && (
+        <p className="text-xs text-muted-foreground">Enviada por correo el {inv.emailedAt.toLocaleString("es-EC", { timeZone: "America/Guayaquil" })}.</p>
+      )}
+      {messages.length > 0 && inv.status !== "AUTHORIZED" && (
+        <div className={`rounded-md border px-3 py-2 text-sm ${inv.status === "REJECTED" ? "border-destructive/40 bg-destructive/5" : ""}`}>
+          <p className="font-medium">Mensajes del SRI</p>
+          <ul className="mt-1 space-y-1">
+            {messages.map((m, i) => (
+              <li key={i}>
+                <span className="font-mono text-xs">{m.id}</span> {m.message}
+                {m.info && <span className="text-muted-foreground"> — {m.info}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {inv.status === "VOIDED" && (
         <p className="rounded-md border px-3 py-2 text-sm text-muted-foreground">

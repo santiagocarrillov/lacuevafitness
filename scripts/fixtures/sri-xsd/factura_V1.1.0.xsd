@@ -941,6 +941,7 @@
 						</xsd:sequence>
 					</xsd:complexType>
 				</xsd:element>
+				<xsd:element ref="ds:Signature" minOccurs="0"/>
 			</xsd:sequence>
 			<xsd:attribute name="id">
 				<xsd:simpleType>

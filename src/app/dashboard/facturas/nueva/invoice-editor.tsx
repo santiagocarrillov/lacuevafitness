@@ -297,7 +297,7 @@ export function InvoiceEditor({
     });
     start(async () => {
       try {
-        const { id } = await createInvoice({
+        const { id, emission } = await createInvoice({
           sede,
           emissionPointId: point.id,
           issueDate,
@@ -312,7 +312,10 @@ export function InvoiceEditor({
           payment: existingPayment ? undefined : { method, depositorName: depositor, bankReference: reference, bankEntity: method === "CASH" ? "" : bank },
           notes,
         });
-        toast.success("Factura generada");
+        if (!emission) toast.success("Factura generada (borrador: falta la firma electrónica)");
+        else if (emission.status === "AUTHORIZED") toast.success("Factura autorizada por el SRI");
+        else if (emission.status === "ERROR") toast.error(`Factura guardada, pero no se pudo enviar al SRI: ${"error" in emission ? emission.error : ""}`);
+        else toast.message(emission.status === "REJECTED" ? "Factura guardada, el SRI la rechazó: revisa los mensajes" : "Factura enviada: el SRI aún la está autorizando");
         router.push(`/dashboard/facturas/${id}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "No se pudo facturar.");
@@ -324,7 +327,7 @@ export function InvoiceEditor({
     <div className="space-y-4">
       {point?.environment !== "PRODUCCION" && (
         <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          Ambiente de <strong>pruebas</strong>: la factura queda en borrador y no tiene validez tributaria. El cobro sí se registra.
+          Ambiente de <strong>pruebas</strong>: la factura no tiene validez tributaria. El cobro sí se registra.
         </p>
       )}
 

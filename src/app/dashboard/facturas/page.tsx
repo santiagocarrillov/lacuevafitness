@@ -8,6 +8,8 @@ import { fmtUsd, formatDocNumber } from "@/lib/invoicing/core";
 import { buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "./status-badge";
 import { EmissionPointsCard, SaleItemsCard } from "./config";
+import { CertificatesCard } from "./certificates";
+import { certStatus } from "@/lib/invoicing/emit";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +77,7 @@ export default async function FacturasPage({ searchParams }: { searchParams: Pro
 
       {tab === "config" ? (
         <div className="space-y-6">
+          <CertificatesCard statuses={await Promise.all((["FITNESS_CENTER", "XTREME"] as const).map((s) => certStatus(s)))} isOwner={user.role === "OWNER"} />
           <EmissionPointsCard
             points={points.map((p) => ({ id: p.id, sede: p.sede, establishment: p.establishment, point: p.point, address: p.address, lastSequential: p.lastSequential, environment: p.environment, active: p.active }))}
           />
