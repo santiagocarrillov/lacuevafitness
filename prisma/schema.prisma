@@ -1684,19 +1684,28 @@ enum LedgerRole {
 }
 
 model LedgerAccount {
-  id            String            @id @default(cuid())
-  sede          Sede
-  code          String // "1.1.02"
-  name          String
-  type          LedgerAccountType
-  role          LedgerRole        @default(OTHER)
-  bankAccountId String?
-  bankAccount   BankAccount?      @relation(fields: [bankAccountId], references: [id])
-  active        Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  sede            Sede
+  code            String // "1.1.02"
+  name            String
+  type            LedgerAccountType
+  role            LedgerRole        @default(OTHER)
+  bankAccountId   String?
+  bankAccount     BankAccount?      @relation(fields: [bankAccountId], references: [id])
+  // Hierarchy: groups ("1.1 Activo corriente") hold detail accounts; only
+  // postable (detail) accounts receive journal lines.
+  parentId        String?
+  parent          LedgerAccount?    @relation("LedgerAccountTree", fields: [parentId], references: [id])
+  children        LedgerAccount[]   @relation("LedgerAccountTree")
+  postable        Boolean           @default(true)
+  // Expense category this account receives when expenses are posted (1b).
+  expenseCategory ExpenseCategory?
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   openingBalances OpeningBalance[]
+  journalLines    JournalLine[]
 
   @@unique([sede, code])
 }
@@ -1716,4 +1725,71 @@ model OpeningBalance {
   updatedAt   DateTime      @updatedAt
 
   @@index([accountId, asOf])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Libro diario de partida doble (aprobado por Santiago, 1 oct 2026).
+// Diseño: docs/contabilidad-libro-diario.md. Los documentos generan su
+// asiento; el asiento manual es para Isabel. Nunca DELETE: se anula.
+// ─────────────────────────────────────────────────────────────
+
+enum JournalSource {
+  OPENING
+  MANUAL
+  PAYMENT
+  INVOICE
+  OTHER_INCOME
+  EXPENSE
+  CAPITAL
+  BANK
+  DEFERRED_REVENUE
+  DEPRECIATION
+  ACCRUAL
+  PAYROLL
+  CLOSING
+}
+
+enum JournalStatus {
+  POSTED
+  VOIDED
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  sede        Sede
+  number      Int // correlativo por entidad
+  date        DateTime      @db.Date
+  description String
+  source      JournalSource
+  sourceId    String? // documento que lo generó
+  status      JournalStatus @default(POSTED)
+  createdById String?
+  voidedAt    DateTime?
+  voidReason  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  lines JournalLine[]
+
+  @@unique([sede, number])
+  @@index([sede, date])
+  @@index([source, sourceId])
+}
+
+model JournalLine {
+  id          String        @id @default(cuid())
+  entryId     String
+  entry       JournalEntry  @relation(fields: [entryId], references: [id])
+  accountId   String
+  account     LedgerAccount @relation(fields: [accountId], references: [id])
+  debitCents  Int           @default(0)
+  creditCents Int           @default(0)
+  memo        String?
+  // Tercero: socio, proveedor, accionista o empleado (p. ej. saldo de
+  // préstamos de accionistas por persona).
+  party       String?
+
+  @@index([entryId])
+  @@index([accountId])
+  @@index([party])
 }

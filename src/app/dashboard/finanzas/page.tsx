@@ -8,7 +8,6 @@ import { GastosTab } from "./gastos-tab";
 import { AportesTab } from "./aportes-tab";
 import { OtrosIngresosTab } from "./otros-ingresos-tab";
 import { BancoTab } from "./banco-tab";
-import { BalanceTab } from "./balance-tab";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +17,13 @@ const TABS = [
   { key: "gastos", label: "Gastos" },
   { key: "aportes", label: "Aportes y préstamos" },
   { key: "otros", label: "Otros ingresos" },
-  { key: "balance", label: "Balance" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
 export default async function FinanzasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; mes?: string; cuenta?: string; entidad?: string }>;
+  searchParams: Promise<{ tab?: string; mes?: string; cuenta?: string }>;
 }) {
   const user = await requireAuth();
   if (!can.viewFinancials(user)) redirect("/dashboard?forbidden=1");
@@ -81,6 +79,12 @@ export default async function FinanzasPage({
             {t.label}
           </Link>
         ))}
+        <Link
+          href={`/dashboard/contabilidad?mes=${ym}`}
+          className="ml-auto px-4 py-2 text-sm font-medium -mb-px border-b-2 border-transparent text-primary whitespace-nowrap hover:underline"
+        >
+          Balance y contabilidad →
+        </Link>
       </div>
 
       {tab === "resumen" && <ResumenTab ym={ym} />}
@@ -88,9 +92,6 @@ export default async function FinanzasPage({
       {tab === "gastos" && <GastosTab ym={ym} canEdit={can.editFinancials(user)} />}
       {tab === "aportes" && <AportesTab ym={ym} canEdit={can.editFinancials(user)} />}
       {tab === "otros" && <OtrosIngresosTab ym={ym} canEdit={can.editFinancials(user)} />}
-      {tab === "balance" && (
-        <BalanceTab ym={ym} sede={params.entidad === "FITNESS_CENTER" ? "FITNESS_CENTER" : "XTREME"} canEdit={can.editFinancials(user)} />
-      )}
     </div>
   );
 }

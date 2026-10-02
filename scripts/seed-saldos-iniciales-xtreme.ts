@@ -16,7 +16,7 @@ const SOURCE = "EEFF 2025 firmados (Supercías)";
 // [code, name, type, role, amount in USD on the natural side, note]
 const ROWS: [string, string, LedgerAccountType, LedgerRole, number, string][] = [
   ["1.1.01", "Caja", "ASSET", "CASH_ON_HAND", 142.97, "Nota 4"],
-  ["1.1.02", "Banco del Pacífico", "ASSET", "BANK", 11.52, "Nota 4"],
+  ["1.1.02.01", "Banco del Pacífico", "ASSET", "BANK", 11.52, "Nota 4"],
   ["1.1.03", "Inventario de bebidas y suplementos", "ASSET", "INVENTORY", 555.21, "Nota 5"],
   ["1.1.04", "Arriendo pagado por anticipado", "ASSET", "PREPAID", 920.0, "Nota 6"],
   ["1.2.01", "Instalaciones y adecuaciones", "ASSET", "FIXED_ASSET", 21208.77, "Nota 7"],
