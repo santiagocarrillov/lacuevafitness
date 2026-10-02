@@ -778,6 +778,7 @@ enum ExpenseCategory {
   PROFESSIONAL // Servicios profesionales
   BANK_FEES // Comisiones bancarias y de tarjeta (Pagoplux)
   INTEREST // Intereses de préstamos (el capital de la cuota NO es gasto)
+  COACH_FEES // Honorarios de coaches (privado, como los sueldos)
   OTHER
 }
 
@@ -837,13 +838,40 @@ model Expense {
   createdById       String?
   voidedAt          DateTime? // anulado (nunca DELETE)
   voidReason        String?
+  // Módulo 3: sueldos y honorarios de coaches (cuentas 5.2.x) son privados:
+  // los admins de sede no los ven ni los registran.
+  isPrivate         Boolean           @default(false)
+  // Lo que registra un admin queda por revisar hasta que Isabel lo revisa.
+  reviewedAt        DateTime?
+  reviewedById      String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+
+  lines ExpenseLine[]
 
   @@index([sede, date])
   @@index([category])
   @@index([status])
   @@index([bankTransactionId])
+  @@index([sede, isPrivate])
+}
+
+// Líneas de un gasto (estilo QuickBooks): cada una a su cuenta de gasto o de
+// activo. Un gasto sin líneas se contabiliza por su categoría, como antes.
+model ExpenseLine {
+  id            String        @id @default(cuid())
+  expenseId     String
+  expense       Expense       @relation(fields: [expenseId], references: [id])
+  position      Int
+  description   String
+  accountId     String
+  account       LedgerAccount @relation(fields: [accountId], references: [id])
+  subtotalCents Int // sin IVA
+  ivaRate       Int           @default(15)
+  ivaCents      Int           @default(0)
+
+  @@index([expenseId])
+  @@index([accountId])
 }
 
 enum CapitalKind {
@@ -1717,6 +1745,7 @@ model LedgerAccount {
 
   openingBalances OpeningBalance[]
   journalLines    JournalLine[]
+  expenseLines    ExpenseLine[]
 
   @@unique([sede, code])
 }

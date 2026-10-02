@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ecuadorDateString } from "@/lib/timezone";
 import { listExpenses, listPayables } from "@/lib/actions/finance";
 import {
@@ -114,6 +115,9 @@ export async function GastosTab({ ym, canEdit }: { ym: string; canEdit: boolean 
         </p>
         {canEdit && (
           <div className="flex gap-2">
+            <Link href={`/dashboard/gastos?mes=${ym}`} className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted">
+              Gastos con comprobante e IA →
+            </Link>
             <SriImportDialog />
             <ExpenseDialog defaultDate={defaultDate} />
           </div>

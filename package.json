@@ -33,6 +33,7 @@
     "test:sri": "tsx scripts/test-sri.ts",
     "test:contabilidad": "tsx scripts/test-contabilidad.ts",
     "test:contabilizacion": "tsx scripts/test-contabilizacion.ts",
+    "test:gastos": "tsx scripts/test-gastos.ts",
     "test:facturacion": "tsx scripts/test-facturacion.ts && tsx scripts/test-firma-sri.ts && tsx scripts/test-ride.ts && tsx scripts/test-sri-ws.ts",
     "db:seed:contabilidad": "tsx scripts/seed-contabilidad.ts",
     "db:seed:saldos-xtreme": "tsx scripts/seed-saldos-iniciales-xtreme.ts"
