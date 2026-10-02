@@ -120,6 +120,7 @@ Los admins ven los mismos campos al registrar un pago.
 | Reportes | `prisma/schema.prisma` (DailyIndicators, MonthlyTarget) + recharts |
 | Finanzas (gestión: banco, SRI, gastos) | `docs/finanzas-fase1.md` + `src/lib/finance/` + `src/lib/actions/finance.ts` |
 | Gastos con líneas + lectura del comprobante por IA (admins sin ver nómina) | `docs/gastos-modulo3.md` + `src/lib/expenses/` + `src/lib/actions/expenses.ts` |
+| Impuestos: borrador del 104 (IVA) y ATS de Xtreme | `docs/impuestos.md` + `src/lib/taxes/` |
 | Facturación electrónica (emisión directa al SRI) | `docs/facturacion-sri.md` + `src/lib/invoicing/` + `src/lib/actions/invoicing.ts` |
 | Contabilidad (libro diario, reemplaza QuickBooks) | `docs/contabilidad-libro-diario.md` + `src/lib/accounting/` — los reportes leen SOLO del libro diario |
 | Auth / permisos | `src/lib/auth.ts` |
