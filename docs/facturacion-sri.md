@@ -110,3 +110,20 @@ y la pestaña Otros ingresos pasan a abrir esta pantalla.
 **Falta para 2b:** la .p12 de cada entidad, ambiente de pruebas, la dirección matriz de cada RUC
 (`ENTITIES.matrixAddress`, hoy se usa la del establecimiento). Confirmado (2 oct): Santiago persona
 natural, régimen general, **no** obligado a llevar contabilidad.
+
+## Estado (2b, 2 oct 2026) — emisión lista, falta solo la firma real
+
+- **Firma XAdES-BES** (`src/lib/invoicing/xades.ts`, node-forge): RSA-SHA1, C14N inclusiva, 3 referencias.
+  Verificada de forma independiente con xml-crypto usando un certificado de prueba; el XML firmado valida
+  contra el XSD (se restauró `ds:Signature` en la copia del XSD: la de Odoo lo había quitado).
+- **Web services** (`sri-ws.ts`): Recepción + Autorización; 43/70 = ya recibida → se consulta autorización.
+- **RIDE** (`ride.ts`, pdf-lib): A4 con código de barras Code 128 de la clave, verificado con ZXing.
+- **Flujo** (`emit.ts`): firmar → Recepción → hasta 3 consultas de autorización → XML autorizado al bucket
+  privado (`sri/<clave>.xml`) → correo con PDF + XML (Resend). En pruebas el correo solo se manda a mano.
+  Si la firma está lista, la factura se emite sola al crearla; si falla, queda guardada para reintentar.
+- **Configurar la firma:** Facturación → Configuración → Firma electrónica → subir el .p12 (solo OWNER;
+  bucket privado `certs/<SEDE>.p12`). La clave va en Vercel: `SRI_CERT_PASSWORD_FITNESS_CENTER` y
+  `SRI_CERT_PASSWORD_XTREME` (Production y Preview) y luego redeploy. La tarjeta muestra titular y
+  vencimiento cuando abre bien.
+- Tests: `npm run test:facturacion` (cálculo, XSD, contabilidad, firma, RIDE, web services simulados +
+  una consulta real de solo lectura a pruebas).

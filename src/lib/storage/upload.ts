@@ -49,7 +49,7 @@ export async function uploadPublicImage(file: File, folder: string): Promise<str
 // Financial documents must never be public: private bucket, served through
 // short-lived signed URLs generated server-side for OWNER/ACCOUNTING only.
 export const FINANCE_BUCKET = "finance-docs";
-const FINANCE_ALLOWED = ["image/jpeg", "image/png", "image/webp", "application/pdf", "application/xml"] as const;
+const FINANCE_ALLOWED = ["image/jpeg", "image/png", "image/webp", "application/pdf", "application/xml", "application/x-pkcs12"] as const;
 // Server actions accept 1 MB bodies: images are compressed in the browser first.
 const FINANCE_MAX_BYTES = 1024 * 1024;
 
@@ -118,4 +118,26 @@ export async function signFinanceDoc(path: string): Promise<string | null> {
   const supabase = createSupabaseAdminClient();
   const { data } = await supabase.storage.from(FINANCE_BUCKET).createSignedUrl(path, 600);
   return data?.signedUrl ?? null;
+}
+
+/** Electronic-signature certificate (.p12) of an entity. Its password never
+ *  touches storage: it lives in a Vercel env var (SRI_CERT_PASSWORD_<SEDE>). */
+export async function storeCertificate(sede: string, p12: Buffer): Promise<string> {
+  if (!p12.length || p12.length > FINANCE_MAX_BYTES) throw new Error("El archivo de la firma no es válido.");
+  await ensureFinanceBucket();
+  const path = `certs/${sede}.p12`;
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.storage
+    .from(FINANCE_BUCKET)
+    .upload(path, p12, { contentType: "application/x-pkcs12", upsert: true });
+  if (error) throw new Error("No se pudo guardar la firma electrónica.");
+  return path;
+}
+
+/** Reads a private finance file; null when it does not exist. */
+export async function readFinanceDoc(path: string): Promise<Buffer | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.storage.from(FINANCE_BUCKET).download(path);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
 }

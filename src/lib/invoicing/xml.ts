@@ -59,8 +59,9 @@ export type InvoiceXmlInput = {
   lines: (LineInput & { code: string; description: string })[];
 };
 
-const esc = (v: string) =>
-  v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+// Text escaped exactly as Canonical XML renders it (& < > only), so the string
+// we build IS the canonical form the signature digests (see xades.ts).
+const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 /** SRI text fields: no line breaks, collapsed spaces, max length. */
 const txt = (v: string, max = 300) => esc(v.replace(/\s+/g, " ").trim().slice(0, max));
 const usd = (cents: number) => (cents / 100).toFixed(2);

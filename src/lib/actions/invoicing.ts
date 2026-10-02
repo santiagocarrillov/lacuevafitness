@@ -23,6 +23,9 @@ import {
 } from "@/lib/invoicing/core";
 import { buildAccessKey } from "@/lib/invoicing/xml";
 import { ENTITIES } from "@/lib/finance/entities";
+import { certStatus, emailInvoice, emitInvoice, forgetEntityCert, refreshAuthorization, type CertStatus, type EmitResult } from "@/lib/invoicing/emit";
+import { loadP12 } from "@/lib/invoicing/xades";
+import { storeCertificate } from "@/lib/storage/upload";
 
 const PATH = "/dashboard/facturas";
 const SEDES: Sede[] = ["FITNESS_CENTER", "XTREME"];
@@ -81,7 +84,7 @@ export type InvoiceDraft = {
   notes?: string;
 };
 
-export async function createInvoice(input: InvoiceDraft): Promise<{ id: string }> {
+export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; emission?: EmitResult | { status: "ERROR"; error: string } }> {
   const user = await requireInvoicing();
   if (!SEDES.includes(input.sede)) throw new Error("Entidad inválida.");
   const issueDate = day(input.issueDate);
@@ -234,10 +237,67 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string }
     return inv;
   });
 
+  // Emit right away when the entity's signature is set up. The invoice and the
+  // collection are already saved: an SRI failure only leaves it to retry.
+  let emission: EmitResult | { status: "ERROR"; error: string } | undefined;
+  if ((await certStatus(input.sede)).ready) {
+    emission = await emitInvoice(invoice.id).catch((e) => ({ status: "ERROR" as const, error: e instanceof Error ? e.message : String(e) }));
+  }
+
   revalidatePath(PATH);
   revalidatePath("/dashboard/pagos");
   if (input.memberId) revalidatePath(`/dashboard/socios/${input.memberId}`);
-  return { id: invoice.id };
+  return { id: invoice.id, emission };
+}
+
+// ── Emission ────────────────────────────────────────────────────────────────
+
+/** Sends a draft/rejected invoice to the SRI (or re-checks a sent one). */
+export async function emitInvoiceNow(id: string): Promise<EmitResult> {
+  await requireInvoicing();
+  const r = await emitInvoice(id);
+  revalidatePath(`${PATH}/${id}`);
+  revalidatePath(PATH);
+  return r;
+}
+
+export async function refreshInvoice(id: string): Promise<EmitResult> {
+  await requireInvoicing();
+  const r = await refreshAuthorization(id);
+  revalidatePath(`${PATH}/${id}`);
+  return r;
+}
+
+export async function sendInvoiceEmail(id: string, to?: string): Promise<{ to: string }> {
+  await requireInvoicing();
+  if (to && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to.trim())) throw new Error("Correo inválido.");
+  const r = await emailInvoice(id, to || undefined);
+  revalidatePath(`${PATH}/${id}`);
+  return r;
+}
+
+export async function getCertificateStatuses(): Promise<CertStatus[]> {
+  await requireInvoicing();
+  return Promise.all(SEDES.map((s) => certStatus(s)));
+}
+
+/** Uploads an entity's .p12. Its password is set by Santiago as a Vercel env
+ *  var; when it is already there the file is checked before it is saved. */
+export async function uploadCertificate(fd: FormData): Promise<CertStatus> {
+  const user = await requireInvoicing();
+  if (user.role !== "OWNER") throw new Error("Solo Santiago puede cambiar la firma electrónica.");
+  const sede = fd.get("sede") as Sede;
+  if (!SEDES.includes(sede)) throw new Error("Entidad inválida.");
+  const file = fd.get("file");
+  if (!(file instanceof File) || !file.size) throw new Error("Elige el archivo .p12.");
+  if (!/\.(p12|pfx)$/i.test(file.name)) throw new Error("La firma debe ser un archivo .p12 o .pfx.");
+  const buf = Buffer.from(await file.arrayBuffer());
+  const password = process.env[`SRI_CERT_PASSWORD_${sede}`];
+  if (password) loadP12(buf, password); // throws a readable error if it does not open
+  await storeCertificate(sede, buf);
+  forgetEntityCert(sede);
+  revalidatePath(PATH);
+  return certStatus(sede);
 }
 
 /**
