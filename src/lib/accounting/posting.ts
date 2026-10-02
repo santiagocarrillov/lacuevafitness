@@ -230,6 +230,7 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
   // Expenses: accrual (expense + IVA credit vs. payables) and, once paid, the payment.
   const expenses = await db.expense.findMany({
     where: { sede, voidedAt: null, OR: [{ date: { gte: from, lte: to } }, { paidAt: { gte: from, lte: to } }] },
+    include: { lines: { orderBy: { position: "asc" } } },
   });
   for (const e of expenses) {
     const party = e.supplierName ?? null;
@@ -241,11 +242,18 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
         sourceId: e.id,
         date: e.date,
         description: `Gasto · ${e.description}${e.documentNumber ? ` · ${e.documentNumber}` : ""}`,
-        lines: [
-          { accountId: expenseAcct, debitCents: e.amountCents - iva, party },
-          { accountId: A.code("1.3.01"), debitCents: iva, party },
-          { accountId: A.code("2.1.01"), creditCents: e.amountCents, party },
-        ],
+        // With lines (Módulo 3) each goes to its own expense or asset account.
+        lines: e.lines.length
+          ? [
+              ...e.lines.map((l) => ({ accountId: l.accountId, debitCents: l.subtotalCents, party, memo: l.description })),
+              { accountId: A.code("1.3.01"), debitCents: e.lines.reduce((a, l) => a + l.ivaCents, 0), party },
+              { accountId: A.code("2.1.01"), creditCents: e.amountCents, party },
+            ]
+          : [
+              { accountId: expenseAcct, debitCents: e.amountCents - iva, party },
+              { accountId: A.code("1.3.01"), debitCents: iva, party },
+              { accountId: A.code("2.1.01"), creditCents: e.amountCents, party },
+            ],
       });
     }
     if (e.status === "PAID") {

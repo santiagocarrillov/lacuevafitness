@@ -3,6 +3,7 @@
 // came from the bank (no invoice yet) is attached to it instead of creating a
 // second record; the bank inbox does the same in the other direction.
 
+import { PRIVATE_CATEGORIES } from "@/lib/expenses/core";
 import { prisma } from "@/lib/prisma";
 import type { ExpenseCategory, ExpensePayMethod, Prisma, Sede } from "@/generated/prisma/client";
 import { ENTITIES, entityForBuyer } from "@/lib/finance/entities";
@@ -133,6 +134,7 @@ export async function importSriDocument(
       ...docFields,
       sede,
       category,
+      isPrivate: PRIVATE_CATEGORIES.includes(category),
       description: doc.description,
       amountCents: doc.totalCents,
       date: doc.issueDate,

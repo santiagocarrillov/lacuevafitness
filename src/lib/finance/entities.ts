@@ -76,6 +76,7 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   PROFESSIONAL: "Servicios profesionales",
   BANK_FEES: "Comisiones bancarias y de tarjeta",
   INTEREST: "Intereses",
+  COACH_FEES: "Honorarios de coaches",
   OTHER: "Otros gastos",
 };
 

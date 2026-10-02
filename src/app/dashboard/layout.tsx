@@ -40,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     { href: "/dashboard/segmentos", label: "Segmentos", show: can.viewSegments(user) },
     { href: "/dashboard/reportes", label: "Reportes", show: can.viewReports(user) },
     { href: "/dashboard/facturas", label: "Facturación", show: can.editFinancials(user) },
+    { href: "/dashboard/gastos", label: "Gastos", show: can.viewPayments(user) },
     { href: "/dashboard/finanzas", label: "Finanzas", show: can.viewFinancials(user) },
     { href: "/dashboard/contabilidad", label: "Contabilidad", show: can.viewFinancials(user) },
     { href: "/dashboard/usuarios", label: "Usuarios", show: can.manageUsers(user) },

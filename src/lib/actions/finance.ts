@@ -18,6 +18,7 @@ import type {
   Sede,
 } from "@/generated/prisma/client";
 import { monthRangeUtc } from "@/lib/finance/entities";
+import { PRIVATE_CATEGORIES } from "@/lib/expenses/core";
 import {
   computeCapitalBalances,
   computeFinanceTrend,
@@ -125,7 +126,7 @@ const DOC_TYPES: ExpenseDocType[] = ["FACTURA", "NOTA_VENTA", "LIQUIDACION_COMPR
 const PAY_METHODS: ExpensePayMethod[] = ["CASH", "BANK_TRANSFER", "BANK_DEBIT", "DEBIT_CARD", "CREDIT_CARD", "OTHER"];
 const CATEGORIES: ExpenseCategory[] = [
   "PAYROLL", "RENT", "UTILITIES", "EQUIPMENT", "MARKETING", "SUPPLIES",
-  "SOFTWARE", "TAXES", "PROFESSIONAL", "BANK_FEES", "INTEREST", "OTHER",
+  "SOFTWARE", "TAXES", "PROFESSIONAL", "BANK_FEES", "INTEREST", "COACH_FEES", "OTHER",
 ];
 
 export async function createExpense(fd: FormData): Promise<{ id: string }> {
@@ -182,6 +183,9 @@ export async function createExpense(fd: FormData): Promise<{ id: string }> {
       paymentMethod: paid ? paymentMethod : null,
       receiptPath,
       createdById: user.id,
+      isPrivate: PRIVATE_CATEGORIES.includes(category),
+      reviewedAt: new Date(),
+      reviewedById: user.id,
     },
   });
   revalidatePath(PATH);
@@ -323,7 +327,7 @@ export async function updateExpenseCategory(id: string, category: ExpenseCategor
   const autoNote = e?.notes === "Categoría por revisar" || e?.notes === "Categoría sugerida por el proveedor";
   await prisma.expense.update({
     where: { id, voidedAt: null },
-    data: { category, ...(autoNote ? { notes: null } : {}) },
+    data: { category, isPrivate: PRIVATE_CATEGORIES.includes(category), ...(autoNote ? { notes: null } : {}) },
   });
   revalidatePath(PATH);
 }

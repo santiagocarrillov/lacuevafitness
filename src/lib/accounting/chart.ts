@@ -71,6 +71,7 @@ const COMMON_TOP: ChartRow[] = [
   { code: "5.1.01", name: "Costo de bebidas y suplementos", type: "EXPENSE" },
   { code: "5.2", name: "Gastos de personal", type: "EXPENSE", group: true },
   { code: "5.2.01", name: "Sueldos, beneficios y aportes", type: "EXPENSE", expenseCategory: "PAYROLL" },
+  { code: "5.2.02", name: "Honorarios de coaches", type: "EXPENSE", expenseCategory: "COACH_FEES" },
   { code: "5.3", name: "Gastos de administración y ventas", type: "EXPENSE", group: true },
   { code: "5.3.01", name: "Arriendo", type: "EXPENSE", expenseCategory: "RENT" },
   { code: "5.3.02", name: "Servicios básicos", type: "EXPENSE", expenseCategory: "UTILITIES" },
