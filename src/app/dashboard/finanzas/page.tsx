@@ -8,6 +8,7 @@ import { GastosTab } from "./gastos-tab";
 import { AportesTab } from "./aportes-tab";
 import { OtrosIngresosTab } from "./otros-ingresos-tab";
 import { BancoTab } from "./banco-tab";
+import { ImpuestosTab } from "./impuestos-tab";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ const TABS = [
   { key: "gastos", label: "Gastos" },
   { key: "aportes", label: "Aportes y préstamos" },
   { key: "otros", label: "Otros ingresos" },
+  { key: "impuestos", label: "Impuestos" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -92,6 +94,7 @@ export default async function FinanzasPage({
       {tab === "gastos" && <GastosTab ym={ym} canEdit={can.editFinancials(user)} />}
       {tab === "aportes" && <AportesTab ym={ym} canEdit={can.editFinancials(user)} />}
       {tab === "otros" && <OtrosIngresosTab ym={ym} canEdit={can.editFinancials(user)} />}
+      {tab === "impuestos" && <ImpuestosTab ym={ym} />}
     </div>
   );
 }
