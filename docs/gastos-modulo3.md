@@ -34,4 +34,16 @@ Aprobado por Santiago el 2 oct 2026. Contexto contable: `docs/contabilidad-libro
   de Vercel (la misma del bot). Probarla con 3–4 comprobantes reales (factura, nota de venta, recibo a mano).
 - El Estado de resultados de Finanzas (vista de gestión) agrupa por categoría de cabecera; Contabilidad sí
   usa la cuenta de cada línea (un equipo comprado va al activo).
-- Depreciación mensual de activos fijos: asiento automático (fuente DEPRECIATION) — siguiente paso.
+
+## Activos fijos y depreciación (2 oct 2026, aprobado por Santiago)
+
+- Registro `FixedAsset` (Contabilidad → Activos fijos). Línea recta, **10 % anual (120 meses)** por defecto,
+  como en los EEFF 2025 (art. 28 del reglamento LRTI); la vida útil y el residual se cambian por activo.
+- Activos de Xtreme al 31-dic-2025 (Nota 7): 3 grupos con la depreciación acumulada de $6.459,16 repartida
+  por costo (`npm run db:seed:activos-xtreme -- --write`, ya corrido): ≈ $206,07/mes desde enero 2026.
+- Compras en Gastos a 1.2.01/1.2.02/1.2.03 aparecen como “por registrar”; con un clic entran al registro
+  y empiezan a depreciarse el mes siguiente.
+- Asiento automático (fuente DEPRECIATION) el último día de cada mes: Dr 5.3.10 por activo · Cr 1.2.09.
+  Baja (robo, daño, venta): Dr 1.2.09 lo acumulado + Dr 5.3.99 la pérdida · Cr la cuenta del activo al costo;
+  deprecia hasta el mes anterior a la baja.
+- Tests: `npm run test:depreciacion`.

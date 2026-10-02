@@ -242,12 +242,17 @@ export async function saveExpense(input: ExpenseDraft): Promise<{ id: string }> 
         throw new Error("Solo puedes corregir tus gastos que todavía no se han revisado.");
       }
       await assertOpen(tx, cur.sede, cur.date);
-      // Lines are parts of the document being edited: replaced as a whole.
-      await tx.expenseLine.deleteMany({ where: { expenseId: cur.id } });
-      await tx.expense.update({
-        where: { id: cur.id },
-        data: { ...data, receiptPath: input.receiptPath ?? cur.receiptPath, lines: { create: lineRows } },
-      });
+      // Lines are updated in place by position, so a line already in the
+      // fixed-asset register keeps its link; extra old lines are removed.
+      const old = await tx.expenseLine.findMany({ where: { expenseId: cur.id }, include: { fixedAsset: { select: { id: true } } }, orderBy: { position: "asc" } });
+      const removed = old.slice(lineRows.length);
+      if (removed.some((l) => l.fixedAsset)) throw new Error("Una de las líneas que quitaste ya está registrada como activo fijo.");
+      await tx.expenseLine.deleteMany({ where: { id: { in: removed.map((l) => l.id) } } });
+      for (const [i, row] of lineRows.entries()) {
+        if (old[i]) await tx.expenseLine.update({ where: { id: old[i].id }, data: row });
+        else await tx.expenseLine.create({ data: { ...row, expenseId: cur.id } });
+      }
+      await tx.expense.update({ where: { id: cur.id }, data: { ...data, receiptPath: input.receiptPath ?? cur.receiptPath } });
       return cur.id;
     }
     const e = await tx.expense.create({
