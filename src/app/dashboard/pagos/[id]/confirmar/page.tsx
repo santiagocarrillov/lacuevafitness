@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getPoolEntries } from "@/lib/actions/payments";
 import { FormPage } from "@/app/dashboard/form-page";
 import { ConfirmPaymentForm } from "../../confirm-payment-form";
-import { safeBack } from "../../back";
+import { safeBack } from "@/lib/safe-back";
 
 export const dynamic = "force-dynamic";
 

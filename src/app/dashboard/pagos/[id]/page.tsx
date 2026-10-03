@@ -4,7 +4,7 @@ import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { FormPage } from "@/app/dashboard/form-page";
 import { EditPaymentForm } from "../edit-payment-form";
-import { safeBack } from "../back";
+import { safeBack } from "@/lib/safe-back";
 
 export const dynamic = "force-dynamic";
 
