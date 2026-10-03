@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,34 +14,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { churnMember, reactivateMember, assignMembership } from "@/lib/actions/members";
-
-type Plan = {
-  id: string;
-  name: string;
-  priceCents: number;
-  durationDays: number;
-  sede: string | null;
-};
+import { churnMember, reactivateMember } from "@/lib/actions/members";
 
 export function MemberActions({
   memberId,
   status,
-  plans,
-  sede,
+  canAssignPlan,
 }: {
   memberId: string;
   status: string;
-  plans: Plan[];
-  sede: string;
+  /** Front desk + accounting sell plans (same rule as Renovar). */
+  canAssignPlan: boolean;
 }) {
-  // Show plans for this member's sede + sede-agnostic ones (trial $9, daily pass…).
-  const visiblePlans = plans.filter((p) => p.sede == null || p.sede === sede);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [churnReason, setChurnReason] = useState("");
   const [churnOpen, setChurnOpen] = useState(false);
-  const [planOpen, setPlanOpen] = useState(false);
 
   function handleChurn() {
     startTransition(async () => {
@@ -59,46 +48,19 @@ export function MemberActions({
     });
   }
 
-  function handleAssignPlan(planId: string) {
-    startTransition(async () => {
-      await assignMembership({ memberId, planId });
-      toast.success("Membresía asignada.");
-      setPlanOpen(false);
-      router.refresh();
-    });
-  }
-
   return (
     <div className="flex gap-2">
-      {/* Assign plan */}
-      <Dialog open={planOpen} onOpenChange={setPlanOpen}>
-        <DialogTrigger className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-7 px-2.5">
+      {/* Assign plan — its own screen */}
+      {canAssignPlan && (
+        <Link
+          href={`/dashboard/socios/${memberId}/membresia/nueva`}
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-7 px-2.5"
+        >
           Asignar plan
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar membresía</DialogTitle>
-            <DialogDescription>Selecciona un plan para este socio.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-            {visiblePlans.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleAssignPlan(p.id)}
-                disabled={isPending}
-                className="w-full flex items-center justify-between p-3 rounded-md border hover:bg-accent transition text-sm text-left"
-              >
-                <span className="font-medium">{p.name}</span>
-                <span className="text-muted-foreground">
-                  ${(p.priceCents / 100).toFixed(2)} · {p.durationDays}d
-                </span>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+        </Link>
+      )}
 
-      {/* Churn / Reactivate */}
+      {/* Churn / Reactivate — short confirmation, stays a dialog */}
       {status === "CHURNED" ? (
         <Button variant="outline" size="sm" onClick={handleReactivate} disabled={isPending}>
           Reactivar

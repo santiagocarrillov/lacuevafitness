@@ -6,9 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
 import { updateMember } from "@/lib/actions/members";
 import type { Sede } from "@/generated/prisma/client";
 
@@ -27,21 +24,20 @@ type MemberData = {
   notes: string | null;
 };
 
-export function MemberInfoEditor({
+/** Full-page editor for the socio's personal data (used to be a popup on the ficha). */
+export function MemberInfoForm({
   memberId,
   member,
   contactOnly = false,
-  hasApp = false,
+  backHref,
 }: {
   memberId: string;
   member: MemberData;
   /** Staff outside the front desk (nutritionist, coaches) only fix email/phone. */
   contactOnly?: boolean;
-  /** The socio already logs into the app — changing the email changes their login. */
-  hasApp?: boolean;
+  backHref: string;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
     firstName: member.firstName ?? "",
@@ -82,10 +78,9 @@ export function MemberInfoEditor({
           return;
         }
         toast.success("Información actualizada.");
-        setOpen(false);
-        router.refresh();
+        router.push(backHref);
       } catch (err) {
-        // e.g. email already used by another socio — keep the dialog open so the
+        // e.g. email already used by another socio — stay on the form so the
         // admin can fix the field instead of crashing the page (bug #5).
         toast.error(err instanceof Error ? err.message : "No se pudo actualizar la información.");
       }
@@ -93,42 +88,30 @@ export function MemberInfoEditor({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="text-xs text-primary hover:underline">
-        {contactOnly ? "Editar contacto" : "Editar"}
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{contactOnly ? "Editar contacto" : "Editar información personal"}</DialogTitle>
-          <DialogDescription>
-            {contactOnly ? "Correo y teléfono del socio. El resto lo cambia recepción." : "Actualiza los datos del socio."}
-            {hasApp && " Ya usa la app: si cambias el correo, también cambia el correo con el que entra."}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSave} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            {!contactOnly && (
-              <>
-                <div className="space-y-1">
-                  <Label className="text-xs">Nombre *</Label>
-                  <Input required value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Apellido *</Label>
-                  <Input required value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
-                </div>
-              </>
-            )}
+    <form onSubmit={handleSave} className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {!contactOnly && (
+          <>
             <div className="space-y-1">
-              <Label className="text-xs">Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} />
+              <Label className="text-xs">Nombre *</Label>
+              <Input required value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Teléfono</Label>
-              <Input value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+              <Label className="text-xs">Apellido *</Label>
+              <Input required value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
             </div>
-            {!contactOnly && (
-            <>
+          </>
+        )}
+        <div className="space-y-1">
+          <Label className="text-xs">Email</Label>
+          <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Teléfono</Label>
+          <Input value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+        </div>
+        {!contactOnly && (
+          <>
             <div className="space-y-1">
               <Label className="text-xs">Fecha de nacimiento</Label>
               <Input type="date" value={form.dateOfBirth} onChange={(e) => update("dateOfBirth", e.target.value)} />
@@ -137,7 +120,7 @@ export function MemberInfoEditor({
               <Label className="text-xs">Ocupación</Label>
               <Input value={form.occupation} onChange={(e) => update("occupation", e.target.value)} placeholder="ej: Ingeniero, Médico..." />
             </div>
-            <div className="space-y-1 col-span-2">
+            <div className="space-y-1 sm:col-span-2">
               <Label className="text-xs">Dirección</Label>
               <Input value={form.address} onChange={(e) => update("address", e.target.value)} />
             </div>
@@ -172,21 +155,21 @@ export function MemberInfoEditor({
                 {form.sede !== "XTREME" && <option value="XTREME">Xtreme</option>}
               </select>
             </div>
-            <div className="space-y-1 col-span-2">
+            <div className="space-y-1 sm:col-span-2">
               <Label className="text-xs">Notas</Label>
               <Input value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Restricciones médicas, preferencias..." />
             </div>
-            </>
-            )}
-          </div>
-          <div className="flex gap-2 justify-end pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Guardando…" : "Guardar"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </>
+        )}
+      </div>
+      <div className="flex gap-2 justify-end pt-2">
+        <Button type="button" variant="outline" onClick={() => router.push(backHref)} disabled={isPending}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Guardando…" : "Guardar"}
+        </Button>
+      </div>
+    </form>
   );
 }

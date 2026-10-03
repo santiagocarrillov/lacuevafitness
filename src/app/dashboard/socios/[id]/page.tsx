@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { MemberActions } from "./member-actions";
 import { InviteMemberButton } from "./invite-member-button";
-import { MemberPushButton } from "./member-push-button";
 import { NotesTimeline } from "./notes-timeline";
 import { HealthSection } from "./health-section";
 import { ClinicalRecordsSection } from "./clinical-records-section";
@@ -24,11 +23,9 @@ import { SelfEntriesSection } from "./self-entries-section";
 import { getMemberSelfEntries } from "@/lib/actions/self-log";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
-import { RenewMembershipDialog } from "./renew-membership-dialog";
 import { MembershipPaymentPanel } from "./membership-payment-panel";
 import { ChurnRiskBadge } from "./churn-risk-badge";
 import { FrequencyBadge } from "@/components/frequency-badge";
-import { MemberInfoEditor } from "./member-info-editor";
 import { MemberTasksCard } from "./member-tasks-card";
 import { getAssignableUsers, getPersonTasks } from "@/lib/actions/staff-tasks";
 import { ecuadorDateString } from "@/lib/timezone";
@@ -188,10 +185,15 @@ export default async function MemberDetailPage({
             }
           />
           )}
-          {(user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN") && (
-            <MemberPushButton memberId={member.id} memberName={member.firstName} />
+          {can.manageMembers(user) && (
+            <Link
+              href={`/dashboard/socios/${member.id}/notificar`}
+              className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-9 px-3 hover:bg-accent transition"
+            >
+              Notificar
+            </Link>
           )}
-          <MemberActions memberId={member.id} status={member.status} plans={plans} sede={member.sede} />
+          <MemberActions memberId={member.id} status={member.status} canAssignPlan={canEditMembership} />
         </div>
       </header>
 
@@ -247,25 +249,12 @@ export default async function MemberDetailPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Información personal</CardTitle>
-            <MemberInfoEditor
-              memberId={member.id}
-              member={{
-                firstName: member.firstName,
-                lastName: member.lastName,
-                email: member.email,
-                phone: member.phone,
-                dateOfBirth: member.dateOfBirth?.toISOString() ?? null,
-                address: member.address,
-                occupation: member.occupation,
-                emergencyName: member.emergencyName,
-                emergencyPhone: member.emergencyPhone,
-                sede: member.sede,
-                secondarySede: member.secondarySede,
-                notes: member.notes,
-              }}
-              contactOnly={!can.manageMembers(user)}
-              hasApp={member.userId != null}
-            />
+            <Link
+              href={`/dashboard/socios/${member.id}/editar${can.manageMembers(user) ? "" : "?solo=contacto"}`}
+              className="text-xs text-primary hover:underline"
+            >
+              {can.manageMembers(user) ? "Editar" : "Editar contacto"}
+            </Link>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Row label="Email" value={member.email} />
@@ -358,20 +347,12 @@ export default async function MemberDetailPage({
                 />
                 {canEditMembership && (
                   <div className="flex justify-end">
-                    <RenewMembershipDialog
-                      memberId={member.id}
-                      membership={{
-                        id: activeMembership.id,
-                        planId: activeMembership.planId,
-                        planName: activeMembership.plan.name,
-                        priceCents: activeMembership.plan.priceCents,
-                        customPriceCents: activeMembership.customPriceCents,
-                        endsAt: activeMembership.endsAt,
-                      }}
-                      plans={plans
-                        .filter((p) => p.sede == null || p.sede === member.sede)
-                        .map((p) => ({ id: p.id, name: p.name, priceCents: p.priceCents, durationDays: p.durationDays }))}
-                    />
+                    <Link
+                      href={`/dashboard/socios/${member.id}/renovar`}
+                      className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-8 px-3 hover:bg-accent transition"
+                    >
+                      ↻ Renovar
+                    </Link>
                   </div>
                 )}
                 <MembershipPaymentPanel
@@ -412,25 +393,23 @@ export default async function MemberDetailPage({
                 </p>
                 {canEditMembership && (
                   <div className="flex justify-end">
-                    <RenewMembershipDialog
-                      memberId={member.id}
-                      membership={{
-                        id: lastMembership.id,
-                        planId: lastMembership.planId,
-                        planName: lastMembership.plan.name,
-                        priceCents: lastMembership.plan.priceCents,
-                        customPriceCents: lastMembership.customPriceCents,
-                        endsAt: lastMembership.endsAt,
-                      }}
-                      plans={plans
-                        .filter((p) => p.sede == null || p.sede === member.sede)
-                        .map((p) => ({ id: p.id, name: p.name, priceCents: p.priceCents, durationDays: p.durationDays }))}
-                    />
+                    <Link
+                      href={`/dashboard/socios/${member.id}/renovar`}
+                      className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-8 px-3 hover:bg-accent transition"
+                    >
+                      ↻ Renovar
+                    </Link>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-muted-foreground">Asigna un plan desde las acciones de arriba.</p>
+              canEditMembership ? (
+                <Link href={`/dashboard/socios/${member.id}/membresia/nueva`} className="text-primary hover:underline">
+                  Asigna un plan →
+                </Link>
+              ) : (
+                <p className="text-muted-foreground">Sin membresía activa.</p>
+              )
             )}
           </CardContent>
         </Card>
