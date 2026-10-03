@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
-import { FormPage } from "../../form-page";
+import { FormPage } from "@/app/dashboard/form-page";
 import { SriImportPanel } from "../../finanzas/sri-forms";
 
 export const dynamic = "force-dynamic";

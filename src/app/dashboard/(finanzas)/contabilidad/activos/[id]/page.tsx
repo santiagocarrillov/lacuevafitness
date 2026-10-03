@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { fmtUsd } from "@/lib/invoicing/core";
 import { accumulatedThrough, chargeForMonth, monthIdx } from "@/lib/accounting/depreciation";
 import { ecuadorDateString } from "@/lib/timezone";
-import { FormPage } from "../../../form-page";
+import { FormPage } from "@/app/dashboard/form-page";
 import { AssetForms } from "../../activos-actions";
 
 export const dynamic = "force-dynamic";

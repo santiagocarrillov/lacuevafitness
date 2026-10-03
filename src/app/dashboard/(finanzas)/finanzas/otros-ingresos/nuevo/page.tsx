@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
 import { ecuadorDateString } from "@/lib/timezone";
-import { FormPage } from "../../../form-page";
+import { FormPage } from "@/app/dashboard/form-page";
 import { OtherIncomeForm } from "../../forms";
 
 export const dynamic = "force-dynamic";
