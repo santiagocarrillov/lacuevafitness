@@ -135,14 +135,22 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
-**Última sesión:** Diseño del módulo de Pagos según "Decisión Pagos" arriba.
+**Última sesión (2–3 oct 2026):** PRs #112–#121 en producción: facturación electrónica con emisión
+directa al SRI (`docs/facturacion-sri.md`), gastos con líneas y lectura del comprobante por IA, activos
+fijos y depreciación (`docs/gastos-modulo3.md`), borrador del 104 y ATS (`docs/impuestos.md`), un solo
+menú de Finanzas + botón Atrás + todo enlazado + pantallas en vez de ventanas en toda la app, y permisos
+en todas las server actions.
 
 **Próximo paso concreto:**
-- Construir el formulario de Isabel para registrar pagos (estilo hoja de cálculo).
-- Construir el panel de admin para asignar pagos pre-cargados a membresías.
-- Schema actual (`Payment`, `PaymentMethod`, `PaymentStatus`) ya cubre el caso — verificar antes de migrar.
+- Cuando Santiago suba la firma .p12 (Facturación → Configuración) y ponga `SRI_CERT_PASSWORD_<SEDE>` en
+  Vercel: crear un punto de emisión de pruebas y hacer el primer envío real al SRI de pruebas.
+- Nómina (módulo 4): esperar los datos de Isabel (relación de dependencia vs. factura, quién la ve,
+  periodicidad, décimos).
+- Seguridad pendiente menor: `updateMember` y `sendPushBroadcast` sin límite de sede para admins;
+  `deleteMemberNote` borra en vez de anular; mensaje de `portalSignUp` revela si un correo es socio.
 
-**Después de pagos:** SRXFit (registrar baterías de tests + visualización de programaciones para coaches).
+**Regla para server actions:** toda función exportada de un archivo `"use server"` verifica sesión y
+permiso al inicio (son endpoints públicos). Nunca confiar en ocultar el botón.
 
 ---
 
