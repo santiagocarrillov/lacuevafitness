@@ -1,10 +1,9 @@
+import Link from "next/link";
 import { getChallenges, getMetricLeaderboard } from "@/lib/actions/challenges";
 import { isMetricRule, type MetricLeaderboard } from "@/lib/challenges/metrics";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TEST_LABELS } from "@/lib/portal/test-labels";
-import { NewChallengeButton } from "./new-challenge-button";
-import { EditChallengeDialog } from "./edit-challenge-dialog";
 import { RecalcButton } from "./recalc-button";
 
 export const dynamic = "force-dynamic";
@@ -72,7 +71,12 @@ export default async function RetosPage() {
             Gamificación — asistencia y progreso SRXFIT con recompensas para socios.
           </p>
         </div>
-        <NewChallengeButton />
+        <Link
+          href="/dashboard/retos/nuevo"
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-7 px-2.5"
+        >
+          + Nuevo reto
+        </Link>
       </header>
 
       {challenges.length === 0 ? (
@@ -105,7 +109,12 @@ export default async function RetosPage() {
                       )}
                       {c.reward && <Badge variant="outline">Premio: {c.reward}</Badge>}
                       {!metric && <RecalcButton challengeId={c.id} />}
-                      <EditChallengeDialog challenge={c} />
+                      <Link
+                        href={`/dashboard/retos/${c.id}/editar`}
+                        className="text-xs text-muted-foreground hover:text-foreground transition"
+                      >
+                        editar
+                      </Link>
                     </div>
                   </div>
                 </CardHeader>

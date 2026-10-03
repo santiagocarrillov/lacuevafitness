@@ -7,13 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   createAppointment,
   searchMembersForNutrition,
   setAppointmentStatus,
@@ -120,22 +113,26 @@ function MemberSearch({
   );
 }
 
-export function AppointmentDialog({
-  open,
-  onOpenChange,
+/**
+ * Full-page form to book or edit a nutrition appointment (replaces the agenda popup).
+ * Notes stay staff-only; the socio is notified by the server actions.
+ */
+export function AppointmentForm({
   staff,
   defaultStaffId,
   defaultDate,
+  defaultTime,
   prefillMember,
   appointment,
+  backHref,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   staff: StaffOption[];
   defaultStaffId: string;
   defaultDate: string;
+  defaultTime: string;
   prefillMember: PrefillMember | null;
   appointment: AgendaAppointment | null;
+  backHref: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -155,7 +152,7 @@ export function AppointmentDialog({
         }
       : {
           date: defaultDate,
-          time: "09:00",
+          time: defaultTime,
           durationMin: "30",
           kind: "FOLLOW_UP" as AppointmentKind,
           staffUserId: defaultStaffId,
@@ -189,8 +186,7 @@ export function AppointmentDialog({
         if (appointment) await updateAppointment(appointment.id, input);
         else await createAppointment(input);
         toast.success(editing ? "Cita actualizada." : "Cita agendada. El socio recibe un aviso en su app.");
-        onOpenChange(false);
-        router.refresh();
+        router.push(backHref);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "No se pudo guardar.");
       }
@@ -203,8 +199,7 @@ export function AppointmentDialog({
       try {
         await setAppointmentStatus(appointment.id, status);
         toast.success(APPOINTMENT_STATUS_LABEL[status]);
-        onOpenChange(false);
-        router.refresh();
+        router.push(backHref);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "No se pudo actualizar.");
       }
@@ -212,141 +207,133 @@ export function AppointmentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{editing ? appointment.memberName : "Nueva cita"}</DialogTitle>
-          <DialogDescription>
-            {editing
-              ? `${APPOINTMENT_STATUS_LABEL[appointment.status]} · las notas solo las ve el staff.`
-              : "El socio la ve en su app y recibe un recordatorio el día anterior."}
-          </DialogDescription>
-        </DialogHeader>
+    <form onSubmit={submit} className="space-y-3">
+      {!editing && (
+        <div className="space-y-1">
+          <Label>Socio</Label>
+          <MemberSearch value={member} onChange={setMember} />
+        </div>
+      )}
 
-        <form onSubmit={submit} className="space-y-3">
-          {!editing && (
-            <div className="space-y-1">
-              <Label>Socio</Label>
-              <MemberSearch value={member} onChange={setMember} />
-            </div>
-          )}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label htmlFor="appt-date">Fecha</Label>
+          <Input id="appt-date" type="date" required value={form.date} onChange={(e) => set("date", e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="appt-time">Hora</Label>
+          <Input
+            id="appt-time"
+            type="time"
+            required
+            step={300}
+            value={form.time}
+            onChange={(e) => set("time", e.target.value)}
+          />
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="appt-date">Fecha</Label>
-              <Input id="appt-date" type="date" required value={form.date} onChange={(e) => set("date", e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="appt-time">Hora</Label>
-              <Input
-                id="appt-time"
-                type="time"
-                required
-                step={300}
-                value={form.time}
-                onChange={(e) => set("time", e.target.value)}
-              />
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label htmlFor="appt-kind">Tipo</Label>
+          <select
+            id="appt-kind"
+            className={selectCls}
+            value={form.kind}
+            onChange={(e) => set("kind", e.target.value as AppointmentKind)}
+          >
+            {(Object.keys(APPOINTMENT_KIND_LABEL) as AppointmentKind[]).map((k) => (
+              <option key={k} value={k}>
+                {APPOINTMENT_KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="appt-dur">Duración</Label>
+          <select
+            id="appt-dur"
+            className={selectCls}
+            value={form.durationMin}
+            onChange={(e) => set("durationMin", e.target.value)}
+          >
+            {[15, 20, 30, 45, 60, 90].map((m) => (
+              <option key={m} value={m}>
+                {m} min
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="appt-kind">Tipo</Label>
-              <select
-                id="appt-kind"
-                className={selectCls}
-                value={form.kind}
-                onChange={(e) => set("kind", e.target.value as AppointmentKind)}
-              >
-                {(Object.keys(APPOINTMENT_KIND_LABEL) as AppointmentKind[]).map((k) => (
-                  <option key={k} value={k}>
-                    {APPOINTMENT_KIND_LABEL[k]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="appt-dur">Duración</Label>
-              <select
-                id="appt-dur"
-                className={selectCls}
-                value={form.durationMin}
-                onChange={(e) => set("durationMin", e.target.value)}
-              >
-                {[15, 20, 30, 45, 60, 90].map((m) => (
-                  <option key={m} value={m}>
-                    {m} min
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label htmlFor="appt-staff">Con</Label>
+          <select
+            id="appt-staff"
+            className={selectCls}
+            value={form.staffUserId}
+            onChange={(e) => set("staffUserId", e.target.value)}
+          >
+            {staff.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.fullName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="appt-sede">Sede</Label>
+          <select
+            id="appt-sede"
+            className={selectCls}
+            value={form.sede}
+            onChange={(e) => set("sede", e.target.value)}
+          >
+            {!editing && <option value="">La del socio</option>}
+            <option value="FITNESS_CENTER">Fitness Center</option>
+            <option value="XTREME">Xtreme</option>
+          </select>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="appt-staff">Con</Label>
-              <select
-                id="appt-staff"
-                className={selectCls}
-                value={form.staffUserId}
-                onChange={(e) => set("staffUserId", e.target.value)}
-              >
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="appt-sede">Sede</Label>
-              <select
-                id="appt-sede"
-                className={selectCls}
-                value={form.sede}
-                onChange={(e) => set("sede", e.target.value)}
-              >
-                {!editing && <option value="">La del socio</option>}
-                <option value="FITNESS_CENTER">Fitness Center</option>
-                <option value="XTREME">Xtreme</option>
-              </select>
-            </div>
-          </div>
+      <div className="space-y-1">
+        <Label htmlFor="appt-notes">Notas (privadas)</Label>
+        <textarea
+          id="appt-notes"
+          rows={3}
+          value={form.notes}
+          onChange={(e) => set("notes", e.target.value)}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          placeholder="Motivo, qué revisar, acuerdos…"
+        />
+      </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="appt-notes">Notas (privadas)</Label>
-            <textarea
-              id="appt-notes"
-              rows={3}
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              placeholder="Motivo, qué revisar, acuerdos…"
-            />
-          </div>
-
-          <div className="flex flex-wrap justify-between gap-2 pt-1">
-            {editing && appointment.status === "SCHEDULED" ? (
-              <div className="flex gap-1">
-                <Button type="button" size="sm" variant="secondary" disabled={isPending} onClick={() => mark("ATTENDED")}>
-                  Atendido
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={isPending} onClick={() => mark("NO_SHOW")}>
-                  No vino
-                </Button>
-                <Button type="button" size="sm" variant="ghost" disabled={isPending} onClick={() => mark("CANCELLED")}>
-                  Cancelar cita
-                </Button>
-              </div>
-            ) : (
-              <span />
-            )}
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Guardando…" : editing ? "Guardar" : "Agendar"}
+      <div className="flex flex-wrap justify-between gap-2 pt-1">
+        {editing && appointment.status === "SCHEDULED" ? (
+          <div className="flex gap-1">
+            <Button type="button" size="sm" variant="secondary" disabled={isPending} onClick={() => mark("ATTENDED")}>
+              Atendido
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={isPending} onClick={() => mark("NO_SHOW")}>
+              No vino
+            </Button>
+            <Button type="button" size="sm" variant="ghost" disabled={isPending} onClick={() => mark("CANCELLED")}>
+              Cancelar cita
             </Button>
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        ) : (
+          <span />
+        )}
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" disabled={isPending} onClick={() => router.push(backHref)}>
+            {editing ? "Volver" : "Cancelar"}
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Guardando…" : editing ? "Guardar" : "Agendar"}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }

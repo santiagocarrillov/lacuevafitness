@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { setAppointmentStatus } from "@/lib/actions/nutrition-appointments";
@@ -16,7 +16,6 @@ import {
   type AppointmentKind,
   type AppointmentStatus,
 } from "@/lib/nutrition/appointments";
-import { AppointmentDialog, type PrefillMember, type StaffOption } from "./appointment-dialog";
 
 type Sede = "FITNESS_CENTER" | "XTREME";
 
@@ -62,16 +61,11 @@ export function AgendaView(props: {
   sede: Sede | null;
   sedeLocked: boolean;
   appointments: AgendaAppointment[];
-  staff: StaffOption[];
-  defaultStaffId: string;
-  prefillMember: PrefillMember | null;
 }) {
-  const { date, today, view, from, sede, sedeLocked, appointments, staff, defaultStaffId } = props;
+  const { date, today, view, from, sede, sedeLocked, appointments } = props;
   const router = useRouter();
-  const [creating, setCreating] = useState(props.prefillMember !== null);
-  const [editing, setEditing] = useState<AgendaAppointment | null>(null);
 
-  function go(patch: Record<string, string | null>) {
+  function agendaHref(patch: Record<string, string | null> = {}) {
     const sp = new URLSearchParams();
     if (date !== today) sp.set("fecha", date);
     if (view === "semana") sp.set("vista", view);
@@ -80,8 +74,17 @@ export function AgendaView(props: {
       if (v === null) sp.delete(k);
       else sp.set(k, v);
     }
-    router.push(`/dashboard/nutricion?${sp.toString()}`);
+    const qs = sp.toString();
+    return qs ? `/dashboard/nutricion?${qs}` : "/dashboard/nutricion";
   }
+
+  function go(patch: Record<string, string | null>) {
+    router.push(agendaHref(patch));
+  }
+
+  // Booking and editing are full pages; they come back to this exact agenda view.
+  const volver = encodeURIComponent(agendaHref());
+  const editHref = (id: string) => `/dashboard/nutricion/citas/${id}?volver=${volver}`;
 
   const step = view === "semana" ? 7 : 1;
   const counts = {
@@ -138,9 +141,12 @@ export function AgendaView(props: {
             <option value="XTREME">Xtreme</option>
           </select>
         )}
-        <Button size="sm" className="ml-auto" onClick={() => setCreating(true)}>
+        <Link
+          href={`/dashboard/nutricion/citas/nueva?fecha=${date}&volver=${volver}`}
+          className={buttonVariants({ size: "sm", className: "ml-auto" })}
+        >
           + Nueva cita
-        </Button>
+        </Link>
       </div>
 
       <div>
@@ -165,7 +171,7 @@ export function AgendaView(props: {
         ) : (
           <div className="space-y-2">
             {appointments.map((a) => (
-              <AppointmentCard key={a.id} a={a} showSede={!sede} onEdit={() => setEditing(a)} />
+              <AppointmentCard key={a.id} a={a} showSede={!sede} editHref={editHref(a.id)} />
             ))}
           </div>
         )
@@ -187,14 +193,14 @@ export function AgendaView(props: {
                   {dayTitle(d, { weekday: "short", day: "numeric" })}
                 </button>
                 {dayAppts.map((a) => (
-                  <button
+                  <Link
                     key={a.id}
-                    onClick={() => setEditing(a)}
+                    href={editHref(a.id)}
                     className={`block w-full text-left rounded px-2 py-1 text-xs ${STATUS_CLS[a.status]}`}
                   >
                     <span className="font-semibold">{ecuadorTimeString(new Date(a.startsAt))}</span>{" "}
                     {a.memberName}
-                  </button>
+                  </Link>
                 ))}
               </div>
             );
@@ -202,22 +208,6 @@ export function AgendaView(props: {
         </div>
       )}
 
-      {(creating || editing) && (
-        <AppointmentDialog
-          open
-          onOpenChange={(o) => {
-            if (!o) {
-              setCreating(false);
-              setEditing(null);
-            }
-          }}
-          staff={staff}
-          defaultStaffId={defaultStaffId}
-          defaultDate={date}
-          prefillMember={creating ? props.prefillMember : null}
-          appointment={editing}
-        />
-      )}
     </div>
   );
 }
@@ -225,11 +215,11 @@ export function AgendaView(props: {
 function AppointmentCard({
   a,
   showSede,
-  onEdit,
+  editHref,
 }: {
   a: AgendaAppointment;
   showSede: boolean;
-  onEdit: () => void;
+  editHref: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -290,9 +280,9 @@ function AppointmentCard({
               Deshacer
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={onEdit}>
+          <Link href={editHref} className={buttonVariants({ size: "sm", variant: "ghost" })}>
             Editar
-          </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
