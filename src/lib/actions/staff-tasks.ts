@@ -993,7 +993,7 @@ async function summarizePerson(person: PersonRef): Promise<PersonSummary | null>
   if (l.owner) facts.push(`Lo lleva ${l.owner.fullName}`);
   return {
     ...person,
-    href: `/dashboard/leads?q=${encodeURIComponent(person.name)}`,
+    href: `/dashboard/leads/${person.id}`,
     phone: l.phone,
     sede: l.sede,
     status: STAGE_LABEL[l.stage],
@@ -1049,6 +1049,7 @@ export async function countMyDueTasks(): Promise<number> {
 /** Tasks tied to one person that this user may see: open first, then the last closed. */
 export async function getPersonTasks(
   person: { kind: "lead" | "member"; id: string },
+  closedTake = 3,
 ): Promise<{ open: TaskListItem[]; closed: TaskListItem[] }> {
   const user = await requireTaskUser();
   const who = person.kind === "member" ? { memberId: person.id } : { leadId: person.id };
@@ -1063,7 +1064,7 @@ export async function getPersonTasks(
       where: { AND: [visibleWhere(user), who, { status: "DONE" }] },
       orderBy: { doneAt: "desc" },
       include: listInclude,
-      take: 3,
+      take: Math.min(Math.max(closedTake, 1), 100),
     }),
   ]);
   return { open: open.map(toListItem), closed: closed.map(toListItem) };

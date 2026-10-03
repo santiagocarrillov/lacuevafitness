@@ -50,7 +50,7 @@ export default async function TareasPage({
     user.role === "ADMIN" && user.sede ? `Recepción ${SEDE_LABEL[user.sede]}` : VIEW_LABEL.pool;
 
   return (
-    <div className="h-[calc(100vh-3rem)] md:h-screen flex flex-col">
+    <div className="h-[calc(100dvh-3rem)] md:h-[calc(100dvh-2.75rem)] flex flex-col">
       <header className="px-4 md:px-6 py-3 border-b border-border shrink-0 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -602,7 +602,17 @@ export function Inbox({
                 >
                   ← Volver
                 </button>
-                <p className="font-semibold text-sm truncate">{thread.contactName}</p>
+                {fichaHref(thread) ? (
+                  <Link
+                    href={fichaHref(thread)!}
+                    title="Abrir su ficha"
+                    className="block font-semibold text-sm truncate hover:underline"
+                  >
+                    {thread.contactName}
+                  </Link>
+                ) : (
+                  <p className="font-semibold text-sm truncate">{thread.contactName}</p>
+                )}
                 <p className="text-xs text-muted-foreground truncate">
                   {SEDE_LABEL[thread.sede] ?? thread.sede}
                   {thread.stage ? ` · ${STAGE_LABEL[thread.stage]}` : ""}
@@ -947,6 +957,13 @@ export function Inbox({
       </div>
     </div>
   );
+}
+
+/** The person's ficha: the socio's if there is one, otherwise the lead's. */
+function fichaHref(thread: ThreadData): string | null {
+  if (thread.memberId) return `/dashboard/socios/${thread.memberId}`;
+  if (thread.leadId) return `/dashboard/leads/${thread.leadId}`;
+  return null;
 }
 
 /**
