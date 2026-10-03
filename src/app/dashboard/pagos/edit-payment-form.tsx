@@ -6,9 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
 import { updatePayment, deletePayment } from "@/lib/actions/payments";
 
 type Payment = {
@@ -48,9 +45,11 @@ function isoDate(d: Date | string | null): string {
   return `${y}-${m}-${day}`;
 }
 
-export function EditPaymentDialog({ payment }: { payment: Payment }) {
+export type EditablePayment = Payment;
+
+export function EditPaymentForm({ payment, backHref }: { payment: Payment; backHref: string }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const done = () => router.push(backHref);
   const [isPending, startTransition] = useTransition();
   const [f, setF] = useState({
     amount: (payment.amountCents / 100).toFixed(2),
@@ -70,8 +69,7 @@ export function EditPaymentDialog({ payment }: { payment: Payment }) {
       try {
         await deletePayment(payment.id);
         toast.success("Pago eliminado.");
-        setOpen(false);
-        router.refresh();
+        done();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Error al eliminar.");
       }
@@ -98,8 +96,7 @@ export function EditPaymentDialog({ payment }: { payment: Payment }) {
           notes: f.notes.trim() || null,
         });
         toast.success("Pago actualizado.");
-        setOpen(false);
-        router.refresh();
+        done();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Error al guardar.");
       }
@@ -107,17 +104,6 @@ export function EditPaymentDialog({ payment }: { payment: Payment }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="text-xs text-muted-foreground hover:text-foreground transition">
-        editar
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Editar pago</DialogTitle>
-          <DialogDescription>
-            Corrige los datos de un pago ya registrado. Los cambios afectan a la membresía vinculada.
-          </DialogDescription>
-        </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -168,14 +154,12 @@ export function EditPaymentDialog({ payment }: { payment: Payment }) {
               Eliminar pago
             </Button>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={done}>Cancelar</Button>
               <Button type="submit" disabled={isPending}>
                 {isPending ? "Guardando…" : "Guardar cambios"}
               </Button>
             </div>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
   );
 }

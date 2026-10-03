@@ -14,7 +14,10 @@ export async function GET(
   const memberships = await prisma.membership.findMany({
     where: { memberId: id, state: { in: ["ACTIVE", "PENDING_PAYMENT"] } },
     orderBy: { endsAt: "desc" },
-    include: { plan: { select: { name: true, priceCents: true, billingCycle: true } } },
+    include: {
+      plan: { select: { name: true, priceCents: true, billingCycle: true } },
+      payments: { where: { status: "SUCCEEDED" }, select: { amountCents: true } },
+    },
     take: 10,
   });
 
@@ -26,6 +29,7 @@ export async function GET(
       startsAt: m.startsAt.toISOString(),
       state: m.state,
       customPriceCents: m.customPriceCents,
+      paidCents: m.payments.reduce((a, p) => a + p.amountCents, 0),
     }))
   );
 }

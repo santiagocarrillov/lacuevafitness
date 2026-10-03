@@ -1,32 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { ecuadorDateString } from "@/lib/timezone";
+import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  registerMemberPayment, findMatchingPoolEntries, assignPoolEntryToMembership,
-  assignPaymentToMembership,
-} from "@/lib/actions/payments";
-import { EditPaymentDialog } from "../../pagos/edit-payment-dialog";
-
-type Match = {
-  id: string;
-  amountCents: number;
-  method: string;
-  paidAt: Date | string | null;
-  depositorName: string | null;
-  bankReference: string | null;
-  bankEntity: string | null;
-  matchedTokens: string[];
-};
+import Link from "next/link";
+import { assignPaymentToMembership } from "@/lib/actions/payments";
 
 type Payment = {
   id: string;
@@ -78,41 +58,18 @@ export function MembershipPaymentPanel({
   memberId,
   membership,
   payments,
-  sede,
   canEdit,
 }: {
   memberId: string;
   membership: Membership;
   payments: Payment[];        // all payments for this member
-  sede: "FITNESS_CENTER" | "XTREME";
+  sede?: "FITNESS_CENTER" | "XTREME"; // the new payment page takes it from the member
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [matchesLoaded, setMatchesLoaded] = useState(false);
-
-  // Load matching pool entries when dialog opens
-  useEffect(() => {
-    if (!open || matchesLoaded) return;
-    findMatchingPoolEntries(memberId)
-      .then((m) => { setMatches(m as Match[]); setMatchesLoaded(true); })
-      .catch(() => setMatchesLoaded(true));
-  }, [open, matchesLoaded, memberId]);
-
-  function handleAssignPool(poolId: string) {
-    startTransition(async () => {
-      try {
-        await assignPoolEntryToMembership(poolId, memberId, membership.id);
-        toast.success("Pago bancario asignado a la membresía.");
-        setOpen(false);
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al asignar.");
-      }
-    });
-  }
+  const here = `/dashboard/socios/${memberId}`;
+  const editHref = (id: string) => `/dashboard/pagos/${id}?volver=${encodeURIComponent(here)}`;
 
   // Payments tied to this membership
   const linked = useMemo(
@@ -166,52 +123,6 @@ export function MembershipPaymentPanel({
     badge = { label: `🕓 Sin pago aún (${daysOld}d)`, cls: "bg-zinc-50 text-zinc-700 border-zinc-200" };
   }
 
-  // ── Form ─────────────────────────────────────────────────────────
-  const [f, setF] = useState({
-    amount: ((remaining > 0 ? remaining : expectedCents) / 100).toFixed(2),
-    method: "CASH",
-    paidAt: ecuadorDateString(),
-    depositorName: "",
-    bankReference: "",
-    bankEntity: "",
-    notes: "",
-  });
-  const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    startTransition(async () => {
-      try {
-        const cents = Math.round(parseFloat(f.amount) * 100);
-        if (isNaN(cents) || cents <= 0) {
-          toast.error("Monto inválido.");
-          return;
-        }
-        await registerMemberPayment({
-          memberId,
-          membershipId: membership.id,
-          amountCents: cents,
-          method: f.method as never,
-          paidAt: f.paidAt,
-          depositorName: f.depositorName || undefined,
-          bankReference: f.bankReference || undefined,
-          bankEntity: f.bankEntity || undefined,
-          sede,
-          notes: f.notes || undefined,
-        });
-        toast.success(
-          f.method === "CASH"
-            ? "Pago registrado (confirmado al instante)."
-            : "Pago registrado en 'fondos sin depositar'. Isabel debe verificar.",
-        );
-        setOpen(false);
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al registrar.");
-      }
-    });
-  }
-
   return (
     <div className="space-y-2 border-t pt-3 mt-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -220,114 +131,12 @@ export function MembershipPaymentPanel({
           <Badge variant="outline" className={`text-xs ${badge.cls}`}>{badge.label}</Badge>
         </div>
         {canEdit && !fullyPaid && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:opacity-90 transition">
-              + Registrar pago
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Registrar pago de la membresía</DialogTitle>
-                <DialogDescription>
-                  {membership.planName} · Precio: {fmt$(expectedCents)}
-                  {succeededTotal > 0 && ` · Pagado: ${fmt$(succeededTotal)} · Falta: ${fmt$(remaining)}`}
-                </DialogDescription>
-              </DialogHeader>
-
-              {/* Bank pool matches (Isabel's deposits with similar depositor name) */}
-              {matches.length > 0 && (
-                <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-emerald-900">
-                    💡 Posibles coincidencias del banco
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Pagos que Isabel ya cargó del banco y parecen ser de este socio. Asigna uno con un click y queda conciliado al instante.
-                  </p>
-                  <div className="space-y-1">
-                    {matches.map((m) => (
-                      <div key={m.id} className="flex items-center justify-between gap-2 rounded border bg-background px-2.5 py-1.5">
-                        <div className="text-xs space-y-0.5 flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {fmt$(m.amountCents)} · {m.depositorName}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {fmtDate(m.paidAt)}
-                            {m.bankEntity && ` · ${m.bankEntity}`}
-                            {m.bankReference && ` · Ref ${m.bankReference}`}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isPending}
-                          onClick={() => handleAssignPool(m.id)}
-                          className="shrink-0"
-                        >
-                          Asignar
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground italic">
-                    O ingresa un pago manual abajo si ninguno coincide.
-                  </p>
-                </div>
-              )}
-
-              <form onSubmit={submit} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Monto ($)</Label>
-                    <Input type="number" step="0.01" min="0" value={f.amount}
-                      onChange={(e) => set("amount", e.target.value)} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Fecha</Label>
-                    <Input type="date" value={f.paidAt} onChange={(e) => set("paidAt", e.target.value)} />
-                  </div>
-                  <div className="space-y-1 col-span-2">
-                    <Label className="text-xs">Método</Label>
-                    <select value={f.method} onChange={(e) => set("method", e.target.value)}
-                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
-                      <option value="CASH">Efectivo (se confirma al instante)</option>
-                      <option value="BANK_TRANSFER">Transferencia (queda pendiente hasta verificar)</option>
-                      <option value="STRIPE_CARD">Tarjeta</option>
-                      <option value="PLUX_CARD">TC Plux</option>
-                      <option value="STRIPE_LINK">Link Stripe</option>
-                      <option value="OTHER">Otro</option>
-                    </select>
-                  </div>
-                </div>
-                {f.method !== "CASH" && (
-                  <>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Depositante / titular</Label>
-                      <Input value={f.depositorName} onChange={(e) => set("depositorName", e.target.value)} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Referencia bancaria</Label>
-                        <Input value={f.bankReference} onChange={(e) => set("bankReference", e.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Banco</Label>
-                        <Input value={f.bankEntity} onChange={(e) => set("bankEntity", e.target.value)} />
-                      </div>
-                    </div>
-                  </>
-                )}
-                <div className="space-y-1">
-                  <Label className="text-xs">Notas</Label>
-                  <Input value={f.notes} onChange={(e) => set("notes", e.target.value)} />
-                </div>
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? "Guardando…" : "Registrar pago"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Link
+            href={`/dashboard/pagos/nuevo?socio=${memberId}&membresia=${membership.id}&volver=${encodeURIComponent(here)}`}
+            className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:opacity-90 transition"
+          >
+            + Registrar pago
+          </Link>
         )}
       </div>
 
@@ -351,7 +160,7 @@ export function MembershipPaymentPanel({
                   </span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <EditPaymentDialog payment={p} />
+                  <Link href={editHref(p.id)} className="text-xs text-muted-foreground hover:text-foreground">editar</Link>
                   <Button size="sm" variant="outline" disabled={isPending}
                     onClick={() => handleAssignExisting(p.id)}>
                     Asignar
@@ -412,7 +221,7 @@ export function MembershipPaymentPanel({
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-muted-foreground">{fmtDate(p.paidAt)}</span>
-                {canEdit && <EditPaymentDialog payment={p} />}
+                {canEdit && <Link href={editHref(p.id)} className="text-xs text-muted-foreground hover:text-foreground">editar</Link>}
               </div>
             </div>
           ))}

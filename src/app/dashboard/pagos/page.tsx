@@ -7,14 +7,10 @@ import {
   getPendingMemberPayments,
   getPaymentSummary,
 } from "@/lib/actions/payments";
-import { getMembers } from "@/lib/actions/members";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PoolEntryForm } from "./pool-form";
-import { RegisterPaymentDialog } from "./register-payment-dialog";
-import { ConfirmPaymentDialog } from "./confirm-payment-dialog";
 import { DeleteButton } from "./delete-button";
-import { EditPaymentDialog } from "./edit-payment-dialog";
 import { deletePoolEntry, deletePendingPayment, deletePayment } from "@/lib/actions/payments";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +79,7 @@ export default async function PagosPage({
   const page = parseInt(params.page ?? "1", 10);
 
   // Load data for the active tab
-  const [summary, paymentsData, poolEntries, pendingPayments, membersData] = await Promise.all([
+  const [summary, paymentsData, poolEntries, pendingPayments] = await Promise.all([
     getPaymentSummary(scopedSede ?? undefined),
     activeTab === "pagos"
       ? getMemberPayments({ sede: scopedSede ?? undefined, page })
@@ -94,15 +90,8 @@ export default async function PagosPage({
     activeTab === "sin-asignar" || activeTab === "pagos"
       ? getPendingMemberPayments(scopedSede ?? undefined)
       : Promise.resolve([]),
-    // Load members for the register dialog (admins + owner need this)
-    getMembers({ sede: scopedSede ?? undefined, status: "ACTIVE", pageSize: 500 }),
   ]);
 
-  const members = membersData.members.map((m) => ({
-    id: m.id,
-    firstName: m.firstName,
-    lastName: m.lastName,
-  }));
 
   const tabs = [
     { key: "pagos", label: "Pagos registrados" },
@@ -127,11 +116,9 @@ export default async function PagosPage({
               Cobrar y facturar
             </Link>
           )}
-          <RegisterPaymentDialog
-            members={members}
-            defaultSede={defaultSede}
-            canPickSede={isAccountingOrOwner}
-          />
+          <Link href="/dashboard/pagos/nuevo" className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            + Registrar pago
+          </Link>
         </div>
       </div>
 
@@ -267,19 +254,9 @@ export default async function PagosPage({
                                   facturar
                                 </Link>
                               ))}
-                            <EditPaymentDialog
-                              payment={{
-                                id: p.id,
-                                amountCents: p.amountCents,
-                                method: p.method,
-                                status: p.status,
-                                paidAt: p.paidAt,
-                                depositorName: p.depositorName ?? null,
-                                bankReference: p.bankReference ?? null,
-                                bankEntity: p.bankEntity ?? null,
-                                notes: p.notes ?? null,
-                              }}
-                            />
+                            <Link href={`/dashboard/pagos/${p.id}`} className="text-xs text-muted-foreground hover:text-foreground">
+                              editar
+                            </Link>
                             <DeleteButton
                               action={deletePayment.bind(null, p.id)}
                               label="eliminar"
@@ -355,27 +332,9 @@ export default async function PagosPage({
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold tabular-nums">{fmt(p.amountCents)}</span>
-                        <ConfirmPaymentDialog
-                          payment={{
-                            id: p.id,
-                            amountCents: p.amountCents,
-                            method: p.method,
-                            member: p.member
-                              ? { firstName: p.member.firstName, lastName: p.member.lastName }
-                              : null,
-                            membership: p.membership
-                              ? { plan: { name: p.membership.plan.name } }
-                              : null,
-                          }}
-                          poolEntries={poolEntries.map((pe) => ({
-                            id: pe.id,
-                            paidAt: pe.paidAt,
-                            depositorName: pe.depositorName,
-                            bankReference: pe.bankReference,
-                            bankEntity: pe.bankEntity,
-                            amountCents: pe.amountCents,
-                          }))}
-                        />
+                        <Link href={`/dashboard/pagos/${p.id}/confirmar?volver=${encodeURIComponent("/dashboard/pagos?tab=sin-asignar")}`} className="text-xs font-medium text-primary hover:underline">
+                          Confirmar
+                        </Link>
                         <DeleteButton
                           action={deletePendingPayment.bind(null, p.id)}
                           label="eliminar"

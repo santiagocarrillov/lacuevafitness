@@ -7,17 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 import { confirmPendingPayment } from "@/lib/actions/payments";
 
-type PoolEntry = {
+export type PoolEntry = {
   id: string;
   paidAt: string | Date | null;
   depositorName: string | null;
@@ -26,7 +19,7 @@ type PoolEntry = {
   amountCents: number;
 };
 
-type PendingPayment = {
+export type PendingPayment = {
   id: string;
   amountCents: number;
   method: string;
@@ -57,15 +50,18 @@ function fmtDate(d: string | Date | null) {
   return new Date(d).toLocaleDateString("es-EC");
 }
 
-/** Dialog to confirm a "fondos sin depositar" payment — optionally link to Isabel's pool. */
-export function ConfirmPaymentDialog({
+/** Confirms a "fondos sin depositar" payment — optionally link to Isabel's pool. */
+export function ConfirmPaymentForm({
   payment,
   poolEntries,
+  backHref,
 }: {
   payment: PendingPayment;
   poolEntries: PoolEntry[];
+  backHref: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const done = () => router.push(backHref);
   const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<"pool" | "manual">("pool");
   const [selectedPoolId, setSelectedPoolId] = useState("");
@@ -95,7 +91,7 @@ export function ConfirmPaymentDialog({
           });
           toast.success("Pago confirmado manualmente.");
         }
-        setOpen(false);
+        done();
       } catch (err: any) {
         toast.error(err.message ?? "Error al confirmar.");
       }
@@ -113,21 +109,6 @@ export function ConfirmPaymentDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="text-xs text-primary hover:underline font-medium">
-        Confirmar
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Confirmar pago</DialogTitle>
-          <DialogDescription>
-            {payment.member?.firstName} {payment.member?.lastName} · {fmt(payment.amountCents)}
-            {payment.membership && (
-              <span className="ml-1 text-muted-foreground">· {payment.membership.plan.name}</span>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-
         <div className="space-y-4">
           {/* Mode selector */}
           <div className="flex gap-2">
@@ -244,7 +225,7 @@ export function ConfirmPaymentDialog({
           )}
 
           <div className="flex gap-2 justify-end pt-1">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={done}>
               Cancelar
             </Button>
             <Button onClick={handleConfirm} disabled={isPending}>
@@ -252,7 +233,5 @@ export function ConfirmPaymentDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
   );
 }
