@@ -5,6 +5,7 @@ import { applyPlanToMember } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { Sede, LeadSource, LeadStage, type User } from "@/generated/prisma/client";
+import { STAGE_LABEL } from "@/lib/leads/stages";
 
 // ── Guards ──────────────────────────────────────────────────────────
 // Server actions are public POST endpoints: every export checks its caller.
@@ -114,6 +115,26 @@ export async function createLead(data: {
   return lead;
 }
 
+// ── Ficha ───────────────────────────────────────────────────────────
+
+/** Un lead para su ficha. Admins con sede solo ven los de su sede. */
+export async function getLead(id: string) {
+  const user = await requireLeadManager();
+  const lead = await prisma.lead.findUnique({
+    where: { id },
+    include: {
+      owner: { select: { id: true, fullName: true } },
+      member: { select: { id: true } },
+      conversation: { select: { id: true, botPaused: true, lastInboundAt: true, lastOutboundAt: true } },
+      interactions: { orderBy: { occurredAt: "desc" }, take: 1, select: { occurredAt: true } },
+    },
+  });
+  if (!lead) return null;
+  const scope = getSedeScope(user);
+  if (scope && lead.sede !== scope) return null;
+  return lead;
+}
+
 // ── Update lead stage ───────────────────────────────────────────────
 
 export async function updateLeadStage(id: string, stage: LeadStage) {
@@ -126,12 +147,25 @@ export async function updateLeadStage(id: string, stage: LeadStage) {
     updates.convertedAt = new Date();
   }
 
+  const before = await prisma.lead.findUniqueOrThrow({ where: { id }, select: { stage: true } });
   const lead = await prisma.lead.update({
     where: { id },
     data: updates,
   });
+  // Cada cambio de etapa queda en la actividad de la ficha, con quién lo hizo.
+  if (before.stage !== stage) {
+    await prisma.leadInteraction.create({
+      data: {
+        leadId: id,
+        userId: user.id,
+        channel: "OTHER",
+        summary: `Etapa: ${STAGE_LABEL[before.stage]} → ${STAGE_LABEL[stage]}.`,
+      },
+    });
+  }
 
   revalidatePath("/dashboard/leads");
+  revalidatePath(`/dashboard/leads/${id}`);
   return lead;
 }
 
@@ -150,15 +184,27 @@ export async function updateLead(
     lostReason?: string;
     trialScheduledAt?: string;
     trialAttended?: boolean;
+    ownerUserId?: string | null;
   },
 ) {
   const user = await requireLeadManager();
   await assertLeadInScope(user, id);
+  if (data.ownerUserId) {
+    const owner = await prisma.user.findUnique({ where: { id: data.ownerUserId }, select: { role: true } });
+    if (!owner || owner.role === "MEMBER") throw new Error("Responsable no válido");
+  }
 
+  // Un campo vaciado en el formulario se guarda como null, no como "".
+  const blank = (v: string | undefined) => (v === undefined ? undefined : v.trim() || null);
   const lead = await prisma.lead.update({
     where: { id },
     data: {
       ...data,
+      lastName: blank(data.lastName),
+      email: blank(data.email),
+      phone: blank(data.phone),
+      notes: blank(data.notes),
+      lostReason: blank(data.lostReason),
       trialScheduledAt: data.trialScheduledAt
         ? new Date(data.trialScheduledAt)
         : undefined,
@@ -166,6 +212,7 @@ export async function updateLead(
   });
 
   revalidatePath("/dashboard/leads");
+  revalidatePath(`/dashboard/leads/${id}`);
   return lead;
 }
 
@@ -173,23 +220,26 @@ export async function updateLead(
 
 export async function addLeadInteraction(data: {
   leadId: string;
-  userId?: string;
   channel: LeadSource;
   summary: string;
 }) {
   const user = await requireLeadManager();
   await assertLeadInScope(user, data.leadId);
+  const summary = data.summary.trim().slice(0, 4000);
+  if (!summary) throw new Error("Escribe qué pasó.");
 
   const interaction = await prisma.leadInteraction.create({
     data: {
       leadId: data.leadId,
-      userId: data.userId || undefined,
+      // El autor es quien está en sesión, nunca lo que mande el cliente.
+      userId: user.id,
       channel: data.channel,
-      summary: data.summary,
+      summary,
     },
   });
 
   revalidatePath("/dashboard/leads");
+  revalidatePath(`/dashboard/leads/${data.leadId}`);
   return interaction;
 }
 

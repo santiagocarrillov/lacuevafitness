@@ -239,7 +239,7 @@ export function WeekEditor({ meta, days }: { meta: WeekMeta; days: WeekDayData[]
   return (
     <div className="pb-28">
       {/* ── Sticky header / save bar ── */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b">
+      <div className="sticky top-12 z-20 bg-background/95 backdrop-blur border-b md:top-11">
         <div className="px-6 md:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             <Link

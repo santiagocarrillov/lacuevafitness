@@ -112,6 +112,10 @@ Los admins ven los mismos campos al registrar un pago.
   `/[id]`, contenedor `(finanzas)/form-page.tsx`), no ventanas emergentes — solo confirmaciones cortas en
   diálogo; (4) Finanzas, Facturación, Gastos y Contabilidad viven en el grupo de rutas
   `src/app/dashboard/(finanzas)/` bajo **un solo menú** con barra de secciones (`finance-nav.tsx`).
+- **Ficha única por persona (3 oct 2026)**: lead y socio usan la misma ficha estilo HubSpot de 3 columnas
+  (`src/components/ficha/`): identidad + acciones rápidas | resumen + pestañas + línea de tiempo unificada
+  (`src/lib/ficha/timeline.ts`, todo con su enlace) | lo asociado. `/dashboard/leads/[id]` redirige a la
+  ficha del socio si ya lo es. El menú lateral va agrupado por flujo de trabajo y se esconde con un click o `[`.
 
 ---
 

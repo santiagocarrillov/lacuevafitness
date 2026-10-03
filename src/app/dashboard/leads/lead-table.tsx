@@ -134,16 +134,12 @@ export function LeadTable({
               leads.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">
-                    {l.member ? (
-                      <Link
-                        href={`/dashboard/socios/${l.member.id}`}
-                        className="hover:underline"
-                      >
-                        {l.firstName} {l.lastName ?? ""}
-                      </Link>
-                    ) : (
-                      <span>{l.firstName} {l.lastName ?? ""}</span>
-                    )}
+                    <Link
+                      href={l.member ? `/dashboard/socios/${l.member.id}` : `/dashboard/leads/${l.id}`}
+                      className="hover:underline"
+                    >
+                      {l.firstName} {l.lastName ?? ""}
+                    </Link>
                     {l.member && (
                       <Badge variant="outline" className="ml-2 text-xs text-emerald-600 border-emerald-200">
                         Socio
