@@ -10,6 +10,8 @@ import type { Sede } from "@/generated/prisma/client";
 
 /** Whether push is configured server-side (VAPID keys present). */
 export async function pushConfigured(): Promise<boolean> {
+  const user = await requireAuth();
+  if (!can.manageMembers(user)) throw new Error("Sin permisos");
   return ensureVapid();
 }
 
@@ -43,8 +45,9 @@ export async function savePushSubscription(sub: SubscriptionInput) {
 }
 
 export async function removePushSubscription(endpoint: string) {
-  await requireMember();
-  await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+  const { member } = await requireMember();
+  // Only the socio's own subscription — never someone else's endpoint.
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, memberId: member.id } });
   return { success: true };
 }
 
@@ -72,6 +75,8 @@ export async function sendPushBroadcast(payload: PushPayload & { sede?: Sede | n
 
 /** Count of distinct members with at least one active push subscription (for the dashboard). */
 export async function getPushAudience(): Promise<{ total: number; fitness: number; xtreme: number }> {
+  const user = await requireAuth();
+  if (!can.manageMembers(user)) throw new Error("Sin permisos");
   const rows = await prisma.pushSubscription.findMany({
     select: { memberId: true, member: { select: { sede: true } } },
     distinct: ["memberId"],

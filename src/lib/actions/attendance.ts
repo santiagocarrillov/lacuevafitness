@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { Sede, MembershipState } from "@/generated/prisma/client";
-import { updateChallengeProgress } from "./challenges";
-import { requireAuth, can } from "@/lib/auth";
+import { Sede, MembershipState, type User } from "@/generated/prisma/client";
+import { updateChallengeProgress } from "@/lib/challenges/progress";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { ACTIVE_BASE, TRAINING_BASE } from "@/lib/member-status";
 import { markLeadAttended } from "@/lib/leads/trial-attendance";
 import {
@@ -16,12 +16,35 @@ const todayDate = todayDateUtc;
 const todayDayOfWeek = todayDayOfWeekEcuador;
 const ecuadorDateAt = ecuadorDateAtTz;
 
+// ── Guards ──────────────────────────────────────────────────────────
+// Server actions are public POST endpoints: every export checks its caller.
+
+/** Any staff member (the asistencia page is open to all staff roles). */
+async function requireStaff(): Promise<User> {
+  const user = await requireAuth();
+  if (user.role === "MEMBER") throw new Error("Sin permisos");
+  return user;
+}
+
+/** Scoped admins only see their own sede's classes. */
+function assertSede(user: User, sede: Sede) {
+  const scope = getSedeScope(user);
+  if (scope && sede !== scope) throw new Error("Sin permisos");
+}
+
 // ── Get or create today's class session ─────────────────────────────
 
 export async function getOrCreateTodaySession(scheduleId: string) {
+  const user = await requireStaff();
+  return getOrCreateTodaySessionFor(user, scheduleId);
+}
+
+/** Core of getOrCreateTodaySession for callers that already checked the user. */
+async function getOrCreateTodaySessionFor(user: User, scheduleId: string) {
   const schedule = await prisma.classSchedule.findUniqueOrThrow({
     where: { id: scheduleId },
   });
+  assertSede(user, schedule.sede);
 
   const today = todayDate();
   const [hours, minutes] = schedule.startTime.split(":").map(Number);
@@ -58,6 +81,8 @@ export async function getOrCreateTodaySession(scheduleId: string) {
 // ── List today's schedules for a sede ───────────────────────────────
 
 export async function getTodaySchedules(sede: Sede) {
+  const user = await requireStaff();
+  assertSede(user, sede);
   const dayOfWeek = todayDayOfWeek();
 
   const schedules = await prisma.classSchedule.findMany({
@@ -97,6 +122,8 @@ export async function getTodaySchedules(sede: Sede) {
 // ── Get active members for a sede (for the dropdown) ────────────────
 
 export async function getActiveMembers(sede: Sede) {
+  const user = await requireStaff();
+  assertSede(user, sede);
   return prisma.member.findMany({
     where: {
       // A member can train at this sede as their primary OR secondary sede, so
@@ -181,8 +208,8 @@ export type TrialLeadRow = {
  * "she came" without opening the CRM separately.
  */
 export async function getTodayTrialLeads(sede: Sede): Promise<TrialLeadRow[]> {
-  const user = await requireAuth();
-  if (user.role === "MEMBER") throw new Error("Sin permisos");
+  const user = await requireStaff();
+  assertSede(user, sede);
 
   const dayStart = ecuadorDateAt(todayDate(), 0, 0);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
@@ -292,7 +319,7 @@ export async function recordTrialAttendance(
     }
   }
 
-  const session = await getOrCreateTodaySession(scheduleId);
+  const session = await getOrCreateTodaySessionFor(user, scheduleId);
 
   const memberId = await prisma.$transaction(async (tx) => {
     // The lead may already be a socio (came back, or was converted earlier).
@@ -384,7 +411,7 @@ export async function recordAttendance(
     throw new Error("La ventana de registro está cerrada (cierra a las 9:30pm Ecuador). El siguiente día empieza a las 12:00 AM.");
   }
 
-  const session = await getOrCreateTodaySession(scheduleId);
+  const session = await getOrCreateTodaySessionFor(user, scheduleId);
 
   // Check for expired memberships
   const members = await prisma.member.findMany({
@@ -579,8 +606,10 @@ export async function confirmCoachCount(
 // ── Get session detail (for coach view) ─────────────────────────────
 
 export async function getSessionDetail(sessionId: string) {
-  return prisma.classSession.findUnique({
-    where: { id: sessionId },
+  const user = await requireStaff();
+  const scope = getSedeScope(user);
+  return prisma.classSession.findFirst({
+    where: { id: sessionId, ...(scope ? { sede: scope } : {}) },
     include: {
       schedule: true,
       attendance: {
@@ -595,8 +624,10 @@ export async function getSessionDetail(sessionId: string) {
 // ── Dashboard stats ─────────────────────────────────────────────────
 
 export async function getDashboardStats(sede?: Sede) {
+  const user = await requireStaff();
+  const effectiveSede = getSedeScope(user) ?? sede;
   const today = todayDate();
-  const sedeFilter = sede ? { sede } : {};
+  const sedeFilter = effectiveSede ? { sede: effectiveSede } : {};
 
   // Build a "today in Ecuador" range for paidAt filtering (paidAt is a real timestamp).
   const todayEndUtc = new Date(today.getTime() + 24 * 60 * 60 * 1000);

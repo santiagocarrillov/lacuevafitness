@@ -20,11 +20,14 @@ export function MemberActions({
   memberId,
   status,
   canAssignPlan,
+  canChurn,
 }: {
   memberId: string;
   status: string;
   /** Front desk + accounting sell plans (same rule as Renovar). */
   canAssignPlan: boolean;
+  /** Dar de baja / reactivar: only roles that manage members (server enforces it too). */
+  canChurn: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -61,7 +64,7 @@ export function MemberActions({
       )}
 
       {/* Churn / Reactivate — short confirmation, stays a dialog */}
-      {status === "CHURNED" ? (
+      {!canChurn ? null : status === "CHURNED" ? (
         <Button variant="outline" size="sm" onClick={handleReactivate} disabled={isPending}>
           Reactivar
         </Button>

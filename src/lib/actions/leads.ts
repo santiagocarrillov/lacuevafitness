@@ -3,7 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { applyPlanToMember } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
-import { Sede, LeadSource, LeadStage } from "@/generated/prisma/client";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
+import { Sede, LeadSource, LeadStage, type User } from "@/generated/prisma/client";
+
+// ── Guards ──────────────────────────────────────────────────────────
+// Server actions are public POST endpoints: every export checks its caller.
+
+async function requireLeadManager(): Promise<User> {
+  const user = await requireAuth();
+  if (!can.manageLeads(user)) throw new Error("No autorizado");
+  return user;
+}
+
+/** Scoped admins only touch leads of their own sede. */
+async function assertLeadInScope(user: User, leadId: string) {
+  const scope = getSedeScope(user);
+  if (!scope) return;
+  const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { sede: true } });
+  if (!lead) throw new Error("Lead no encontrado");
+  if (lead.sede !== scope) throw new Error("No autorizado");
+}
 
 // ── List / Search ───────────────────────────────────────────────────
 
@@ -22,8 +41,11 @@ export async function getLeads({
   page?: number;
   pageSize?: number;
 }) {
+  const user = await requireLeadManager();
+  const effectiveSede = getSedeScope(user) ?? sede;
+
   const where: any = {};
-  if (sede) where.sede = sede;
+  if (effectiveSede) where.sede = effectiveSede;
   if (stage) where.stage = stage;
   if (source) where.source = source;
   if (search) {
@@ -71,6 +93,10 @@ export async function createLead(data: {
   notes?: string;
   ownerUserId?: string;
 }) {
+  const user = await requireLeadManager();
+  const scope = getSedeScope(user);
+  if (scope && data.sede !== scope) throw new Error("Solo puedes crear leads de tu sede.");
+
   const lead = await prisma.lead.create({
     data: {
       firstName: data.firstName,
@@ -91,6 +117,9 @@ export async function createLead(data: {
 // ── Update lead stage ───────────────────────────────────────────────
 
 export async function updateLeadStage(id: string, stage: LeadStage) {
+  const user = await requireLeadManager();
+  await assertLeadInScope(user, id);
+
   const updates: any = { stage };
 
   if (stage === LeadStage.CONVERTED) {
@@ -123,6 +152,9 @@ export async function updateLead(
     trialAttended?: boolean;
   },
 ) {
+  const user = await requireLeadManager();
+  await assertLeadInScope(user, id);
+
   const lead = await prisma.lead.update({
     where: { id },
     data: {
@@ -145,6 +177,9 @@ export async function addLeadInteraction(data: {
   channel: LeadSource;
   summary: string;
 }) {
+  const user = await requireLeadManager();
+  await assertLeadInScope(user, data.leadId);
+
   const interaction = await prisma.leadInteraction.create({
     data: {
       leadId: data.leadId,
@@ -164,9 +199,12 @@ export async function convertLeadToMember(
   leadId: string,
   planId: string,
 ) {
+  const user = await requireLeadManager();
   const lead = await prisma.lead.findUniqueOrThrow({
     where: { id: leadId },
   });
+  const scope = getSedeScope(user);
+  if (scope && lead.sede !== scope) throw new Error("No autorizado");
 
   const plan = await prisma.membershipPlan.findUniqueOrThrow({
     where: { id: planId },
@@ -215,7 +253,9 @@ export async function convertLeadToMember(
 // ── Pipeline stats ──────────────────────────────────────────────────
 
 export async function getLeadStats(sede?: Sede) {
-  const sedeFilter = sede ? { sede } : {};
+  const user = await requireLeadManager();
+  const effectiveSede = getSedeScope(user) ?? sede;
+  const sedeFilter = effectiveSede ? { sede: effectiveSede } : {};
 
   const stages = await prisma.lead.groupBy({
     by: ["stage"],
@@ -260,6 +300,7 @@ export async function getLeadStats(sede?: Sede) {
 // ── Get staff for owner assignment ──────────────────────────────────
 
 export async function getStaffUsers() {
+  await requireLeadManager();
   return prisma.user.findMany({
     where: { role: { in: ["OWNER", "ADMIN"] }, active: true },
     select: { id: true, fullName: true, sede: true },

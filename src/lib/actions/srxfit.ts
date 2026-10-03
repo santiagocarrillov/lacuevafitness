@@ -6,6 +6,19 @@ import { OFFICIAL_ENTRY_WHERE } from "@/lib/entry-source";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { Sede, EvaluationType, TestKey } from "@/generated/prisma/client";
 
+// ─── Guards ──────────────────────────────────────────────────────────
+// Server actions are public POST endpoints: every export checks its caller.
+
+/**
+ * Evaluaciones reports: same rule as the evaluaciones page (editTests or
+ * manageMembers). Scoped admins always get their own sede.
+ */
+async function evalReportSede(requested: Sede | undefined): Promise<Sede | undefined> {
+  const user = await requireAuth();
+  if (!can.editTests(user) && !can.manageMembers(user)) throw new Error("Sin permisos");
+  return getSedeScope(user) ?? requested;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 function rangeBounds(from: string, to: string) {
@@ -22,6 +35,7 @@ export async function getEvaluationCompliance(
   from: string,
   to: string,
 ) {
+  sede = await evalReportSede(sede);
   const { start, end } = rangeBounds(from, to);
 
   async function forSede(s: Sede | undefined) {
@@ -69,6 +83,7 @@ export async function getBodyFatMetrics(
   from: string,
   to: string,
 ) {
+  sede = await evalReportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const memberFilter = sede ? { sede } : {};
 
@@ -139,6 +154,7 @@ export async function getMembersEvalStatus(
   from: string,
   to: string,
 ) {
+  sede = await evalReportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
@@ -503,6 +519,10 @@ export async function assignTrainingLevel(
 // ─── Quick stats for hub ──────────────────────────────────────────────
 
 export async function getSrxfitHubStats(sede: Sede | undefined) {
+  // The SRXFit hub is open to every staff role; scoped admins see their sede.
+  const user = await requireAuth();
+  if (user.role === "MEMBER") throw new Error("Sin permisos");
+  sede = getSedeScope(user) ?? sede;
   const sedeFilter = sede ? { sede } : {};
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

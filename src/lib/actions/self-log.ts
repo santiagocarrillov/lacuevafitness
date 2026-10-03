@@ -201,7 +201,10 @@ export async function rejectSelfEntry(
  * validation).
  */
 export async function getMemberSelfEntries(memberId: string) {
-  await requireAuth();
+  // Staff view on the socio ficha. A socio must not read another socio's data
+  // through this id-based action.
+  const user = await requireAuth();
+  if (user.role === "MEMBER") throw new Error("Sin permisos");
 
   const [comps, prs] = await Promise.all([
     prisma.bodyComposition.findMany({

@@ -2,8 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { ACTIVE_BASE } from "@/lib/member-status";
 import { Sede } from "@/generated/prisma/client";
+
+// ── Guards ──────────────────────────────────────────────────────────
+// Server actions are public POST endpoints: every export checks its caller.
+
+/**
+ * Reportes: OWNER / ACCOUNTING / ADMIN (can.viewReports). Returns the sede the
+ * caller may query — a scoped admin always gets their own sede, whatever was
+ * asked for (same rule the reportes pages already apply to the URL).
+ */
+async function reportSede(requested: Sede | undefined): Promise<Sede | undefined> {
+  const user = await requireAuth();
+  if (!can.viewReports(user)) throw new Error("No autorizado");
+  return getSedeScope(user) ?? requested;
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -28,6 +43,7 @@ function prevMonth(year: number, month: number) {
 // Distinct members who attended (not total visits), engagement vs active
 // members, and payment status of the active base.
 export async function getAttendanceReport(sede: Sede | undefined, from: string, to: string) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const now = new Date();
   // Los socios en evaluación (TRIAL) no cuentan como base activa — ver ACTIVE_BASE.
@@ -137,6 +153,7 @@ export async function getManagementKPIs(
   year: number,
   month: number,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = monthBounds(year, month);
   const sedeFilter = sede ? { sede } : {};
   const memberSedeFilter = sede ? { member: { sede } } : {};
@@ -357,6 +374,9 @@ export async function getMonthlyFinancials(
   sede: Sede | undefined,
   monthsBack = 12,
 ) {
+  const user = await requireAuth();
+  if (!can.viewFinancials(user)) throw new Error("No autorizado");
+  sede = getSedeScope(user) ?? sede;
   const now = new Date();
   const months: { year: number; month: number }[] = [];
   for (let i = monthsBack - 1; i >= 0; i--) {
@@ -481,6 +501,7 @@ export async function getCommercialReport(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
@@ -546,6 +567,7 @@ export async function getAdAttributionReport(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
@@ -589,6 +611,9 @@ export async function upsertMonthlyTarget(data: {
   workingDays?: number;
   projectedICVPct?: number;
 }) {
+  const allowed = await reportSede(data.sede);
+  if (allowed !== data.sede) throw new Error("Solo puedes editar las metas de tu sede.");
+
   const target = await prisma.monthlyTarget.upsert({
     where: { sede_year_month: { sede: data.sede, year: data.year, month: data.month } },
     update: {
@@ -625,6 +650,7 @@ export async function getCommercialPipeline(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
@@ -669,6 +695,7 @@ export async function getRevenueDetail(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
@@ -696,6 +723,7 @@ export async function getLeadsDetail(
   to: string,
   stage?: string[],
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
 
@@ -723,6 +751,7 @@ export async function getSalesDetail(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const memberSedeFilter = sede ? { member: { sede } } : {};
 
@@ -743,6 +772,7 @@ export async function getSalesDetail(
 // ── Drill-down: socios activos / vencidos / por vencer / bajas ────────
 
 export async function getActiveMembersDetail(sede: Sede | undefined) {
+  sede = await reportSede(sede);
   const sedeFilter = sede ? { sede } : {};
   return prisma.member.findMany({
     where: { ...sedeFilter, status: { in: ACTIVE_BASE } },
@@ -760,6 +790,7 @@ export async function getActiveMembersDetail(sede: Sede | undefined) {
 }
 
 export async function getExpiredMembershipsDetail(sede: Sede | undefined) {
+  sede = await reportSede(sede);
   const memberSedeFilter = sede ? { member: { sede } } : {};
   return prisma.membership.findMany({
     where: {
@@ -774,6 +805,7 @@ export async function getExpiredMembershipsDetail(sede: Sede | undefined) {
 }
 
 export async function getUpcomingRenewalsDetail(sede: Sede | undefined, days = 7) {
+  sede = await reportSede(sede);
   const memberSedeFilter = sede ? { member: { sede } } : {};
   const now = new Date();
   return prisma.membership.findMany({
@@ -793,6 +825,7 @@ export async function getChurnsDetail(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
   return prisma.member.findMany({
@@ -810,6 +843,7 @@ export async function getRenewalsDetail(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   return prisma.membership.findMany({
     where: {
@@ -828,6 +862,7 @@ export async function getAttendanceDetail(
   from: string,
   to: string,
 ) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
   return prisma.attendance.findMany({
@@ -844,6 +879,7 @@ export async function getAttendanceDetail(
 }
 
 export async function getDiscrepanciesDetail(sede: Sede | undefined, from: string, to: string) {
+  sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
   return prisma.classSession.findMany({
