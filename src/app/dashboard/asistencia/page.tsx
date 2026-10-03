@@ -6,7 +6,12 @@ import { ScheduleList } from "./schedule-list";
 
 export const dynamic = "force-dynamic";
 
-export default async function AsistenciaPage() {
+export default async function AsistenciaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ horario?: string }>;
+}) {
+  const { horario } = await searchParams;
   const user = await requireAuth();
   const scopedSede = getSedeScope(user);
   const isCoach = user.role === "COACH";
@@ -50,6 +55,7 @@ export default async function AsistenciaPage() {
               sede="FITNESS_CENTER"
               userRole={user.role}
               windowOpen={windowOpen}
+              initialScheduleId={horario ?? null}
             />
           </section>
         )}
@@ -63,6 +69,7 @@ export default async function AsistenciaPage() {
               sede="XTREME"
               userRole={user.role}
               windowOpen={windowOpen}
+              initialScheduleId={horario ?? null}
             />
           </section>
         )}

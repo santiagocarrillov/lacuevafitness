@@ -7,13 +7,6 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { createStaffTask } from "@/lib/actions/staff-tasks";
 import { ecuadorDateString } from "@/lib/timezone";
 import {
@@ -28,7 +21,7 @@ import {
 import { PersonPicker } from "./person-picker";
 import { AssigneeOptions, POOL, SELECT_CLASS } from "./fields";
 
-export type TaskDialogBase = {
+export type TaskFormBase = {
   users: AssignableUser[];
   currentUserId: string;
   canPool: boolean;
@@ -38,78 +31,24 @@ export type TaskDialogBase = {
 export type TaskPrefill = {
   title?: string;
   detail?: string;
+  type?: TaskType;
   person?: PersonRef | null;
 };
 
-/** "+ Nueva tarea" on /dashboard/tareas: opens the new task afterwards. */
-export function NewTaskButton({ baseQuery, ...base }: TaskDialogBase & { baseQuery: string }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-8 px-3"
-      >
-        + Nueva tarea
-      </button>
-      <NewTaskDialog
-        {...base}
-        open={open}
-        onOpenChange={setOpen}
-        onCreated={(id) => router.push(`/dashboard/tareas?${baseQuery}&t=${id}`)}
-      />
-    </>
-  );
-}
-
 /**
- * The create form, controlled from outside so the inbox and the socio's file
- * can open it with the person (and a quoted message) already filled in.
+ * Full-page "nueva tarea" (/dashboard/tareas/nueva; was a popup). The inbox and
+ * the socio's file link here with the person (and a quoted message) filled in.
+ * With `openCreated` the new task is opened on the return screen (`&t=`).
  */
-export function NewTaskDialog({
-  open,
-  onOpenChange,
-  prefill,
-  onCreated,
-  ...base
-}: TaskDialogBase & {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  prefill?: TaskPrefill;
-  onCreated?: (id: string) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nueva tarea</DialogTitle>
-          <DialogDescription>Para ti o para alguien del equipo.</DialogDescription>
-        </DialogHeader>
-        {open && (
-          <NewTaskForm
-            {...base}
-            prefill={prefill}
-            onDone={(id) => {
-              onOpenChange(false);
-              if (onCreated) onCreated(id);
-            }}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function NewTaskForm({
+export function NewTaskForm({
   users,
   currentUserId,
   canPool,
   defaultSede,
   prefill,
-  onDone,
-}: TaskDialogBase & { prefill?: TaskPrefill; onDone: (id: string) => void }) {
+  backHref,
+  openCreated,
+}: TaskFormBase & { prefill?: TaskPrefill; backHref: string; openCreated: boolean }) {
   const router = useRouter();
   const [isPending, start] = useTransition();
   const [form, setForm] = useState({
@@ -119,7 +58,7 @@ function NewTaskForm({
     sede: (defaultSede ?? "") as SedeValue | "",
     dueDate: ecuadorDateString(),
     dueTime: "",
-    type: "TASK" as TaskType,
+    type: (prefill?.type ?? "TASK") as TaskType,
     priority: 0,
     repeat: "" as TaskRepeat | "",
   });
@@ -152,11 +91,15 @@ function NewTaskForm({
         toast.error(res.error);
         return;
       }
+      if (openCreated) {
+        toast.success("Tarea creada.");
+        router.push(`${backHref}${backHref.includes("?") ? "&" : "?"}t=${res.id}`);
+        return;
+      }
       toast.success("Tarea creada.", {
         action: { label: "Ver", onClick: () => router.push(`/dashboard/tareas?t=${res.id}`) },
       });
-      onDone(res.id);
-      router.refresh();
+      router.push(backHref);
     });
   };
 
@@ -176,7 +119,7 @@ function NewTaskForm({
   );
 
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <form onSubmit={submit} className="space-y-4">
       <div className="space-y-1">
         <Label>Título *</Label>
         <Input
@@ -287,7 +230,10 @@ function NewTaskForm({
           placeholder="Contexto, qué se acordó, qué falta…"
         />
       </div>
-      <div className="flex justify-end">
+      <div className="flex gap-2 justify-end pt-1">
+        <Button type="button" variant="outline" onClick={() => router.push(backHref)} disabled={isPending}>
+          Cancelar
+        </Button>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Creando…" : "Crear tarea"}
         </Button>

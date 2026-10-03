@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
 import { getConversations, getAssignableStaff } from "@/lib/actions/comunicacion";
-import { getAssignableUsers } from "@/lib/actions/staff-tasks";
 import { Inbox } from "./inbox";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +15,9 @@ export default async function ComunicacionPage({
   const user = await requireAuth();
   if (!can.manageLeads(user)) redirect("/dashboard?forbidden=1");
 
-  const [conversations, staff, taskUsers] = await Promise.all([
+  const [conversations, staff] = await Promise.all([
     getConversations("all"),
     getAssignableStaff(),
-    getAssignableUsers(),
   ]);
 
   return (
@@ -45,12 +43,6 @@ export default async function ComunicacionPage({
         staff={staff}
         currentUserId={user.id}
         initialOpenId={openId ?? null}
-        taskDialog={{
-          users: taskUsers,
-          currentUserId: user.id,
-          canPool: true,
-          defaultSede: user.sede,
-        }}
       />
     </div>
   );

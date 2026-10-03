@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { InviteUserButton } from "./invite-user-button";
-import { EditUserButton, ResetPasswordButton, DeleteUserButton } from "./user-actions";
+import { ResetPasswordButton, DeleteUserButton } from "./user-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +53,12 @@ export default async function UsuariosPage() {
             Gestión del equipo — crear cuentas, asignar roles y sedes.
           </p>
         </div>
-        <InviteUserButton />
+        <Link
+          href="/dashboard/usuarios/nuevo"
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-7 px-2.5 hover:bg-primary/90"
+        >
+          + Invitar usuario
+        </Link>
       </header>
 
       <Card>
@@ -104,7 +109,12 @@ export default async function UsuariosPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <EditUserButton user={u} currentUserId={user.id} />
+                      <Link
+                        href={`/dashboard/usuarios/${u.id}`}
+                        className="text-xs text-muted-foreground hover:text-foreground transition underline underline-offset-2"
+                      >
+                        Editar
+                      </Link>
                       {u.supabaseUserId && <ResetPasswordButton user={u} />}
                       <DeleteUserButton user={u} currentUserId={user.id} />
                     </div>

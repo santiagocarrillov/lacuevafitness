@@ -4,7 +4,6 @@ import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions/auth";
-import { ChangePasswordButton } from "./change-password-button";
 import { StaffPushToggle } from "./staff-push-toggle";
 import { BackButton, useTrackNavigation } from "./back-button";
 
@@ -130,7 +129,16 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             </Link>
           )}
           <StaffPushToggle />
-          <ChangePasswordButton />
+          <Link
+            href={
+              pathname.startsWith("/dashboard/cuenta/")
+                ? "/dashboard/cuenta/contrasena"
+                : `/dashboard/cuenta/contrasena?volver=${encodeURIComponent(pathname)}`
+            }
+            className="block w-full text-left text-xs text-muted-foreground hover:text-foreground transition"
+          >
+            Cambiar contraseña
+          </Link>
           <form action={signOut}>
             <button
               type="submit"

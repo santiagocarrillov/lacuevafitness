@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -15,11 +16,8 @@ import {
   confirmCoachCount,
   searchMembersAllSedes,
   getTodayTrialLeads,
-  recordTrialAttendance,
   type TrialLeadRow,
-  type TrialMemberDraft,
 } from "@/lib/actions/attendance";
-import { TrialCheckinDialog } from "./trial-checkin-dialog";
 
 type Member = {
   id: string;
@@ -54,8 +52,6 @@ export function AttendancePanel({
   const [coachCount, setCoachCount] = useState("");
   const [crossResults, setCrossResults] = useState<CrossMember[] | null>(null);
   const [trialLeads, setTrialLeads] = useState<TrialLeadRow[]>([]);
-  /** Lead cuyo alta está abierta en el diálogo de check-in. */
-  const [checkinLead, setCheckinLead] = useState<TrialLeadRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function updateSearch(v: string) {
@@ -118,29 +114,14 @@ export function AttendancePanel({
   }
 
   /**
-   * Register a booked lead's evaluation: attendance + funnel + alta del socio.
-   *
-   * Los datos vienen del diálogo, no del perfil de WhatsApp: si falla (email
-   * repetido, apellido vacío) el diálogo se queda abierto para corregir.
+   * A booked lead's evaluation (attendance + funnel + alta del socio) is
+   * registered on its own screen, which confirms the real name and comes back
+   * to this class.
    */
-  async function handleAddTrialLead(leadId: string, draft: TrialMemberDraft) {
-    startTransition(async () => {
-      try {
-        const { memberName } = await recordTrialAttendance(scheduleId, leadId, draft);
-        toast.success(`${memberName} registrada: asistió a su evaluación ✅`);
-        setCheckinLead(null);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "No se pudo registrar.");
-        return;
-      }
-      const [s, leads] = await Promise.all([
-        getOrCreateTodaySession(scheduleId),
-        getTodayTrialLeads(sede as "FITNESS_CENTER" | "XTREME").catch(() => [] as TrialLeadRow[]),
-      ]);
-      setSession(s);
-      setTrialLeads(leads);
-    });
-  }
+  const altaHref = (leadId: string) => {
+    const here = `/dashboard/asistencia?horario=${scheduleId}`;
+    return `/dashboard/asistencia/alta?horario=${scheduleId}&lead=${leadId}&volver=${encodeURIComponent(here)}`;
+  };
 
   async function handleRemoveMember(memberId: string) {
     if (!session) return;
@@ -214,16 +195,19 @@ export function AttendancePanel({
                     <Badge variant="outline" className="text-emerald-600 border-emerald-300 shrink-0">
                       ✅ Asistió
                     </Badge>
-                  ) : (
+                  ) : !windowOpen ? (
                     <Button
                       size="sm"
-                      onClick={() => setCheckinLead(l)}
-                      disabled={isPending || !windowOpen}
-                      title={!windowOpen ? "Ventana de registro cerrada (después de las 9:30pm)" : undefined}
+                      disabled
+                      title="Ventana de registro cerrada (después de las 9:30pm)"
                       className="shrink-0"
                     >
                       Registrar asistencia
                     </Button>
+                  ) : (
+                    <Link href={altaHref(l.leadId)} className={`${buttonVariants({ size: "sm" })} shrink-0`}>
+                      Registrar asistencia
+                    </Link>
                   )}
                 </div>
               ))}
@@ -234,14 +218,6 @@ export function AttendancePanel({
             </p>
           </div>
         )}
-
-        <TrialCheckinDialog
-          lead={checkinLead}
-          open={checkinLead !== null}
-          onOpenChange={(o) => !o && setCheckinLead(null)}
-          isPending={isPending}
-          onConfirm={(draft) => checkinLead && handleAddTrialLead(checkinLead.leadId, draft)}
-        />
 
         {/* ── Add member ─────────────────────────────────────────── */}
         <div className="space-y-2">

@@ -30,7 +30,7 @@ import { ChurnRiskBadge } from "./churn-risk-badge";
 import { FrequencyBadge } from "@/components/frequency-badge";
 import { MemberInfoEditor } from "./member-info-editor";
 import { MemberTasksCard } from "./member-tasks-card";
-import { getAssignableUsers, getPersonTasks } from "@/lib/actions/staff-tasks";
+import { getPersonTasks } from "@/lib/actions/staff-tasks";
 import { ecuadorDateString } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
@@ -101,7 +101,7 @@ export default async function MemberDetailPage({
 }) {
   const { id } = await params;
   const user = await requireAuth();
-  const [member, plans, notes, challenges, analytics, selfEntries, tasks, taskUsers] = await Promise.all([
+  const [member, plans, notes, challenges, analytics, selfEntries, tasks] = await Promise.all([
     getMember(id),
     getMembershipPlans(),
     getMemberNotes(id),
@@ -109,7 +109,6 @@ export default async function MemberDetailPage({
     getMemberAnalytics(id),
     getMemberSelfEntries(id),
     getPersonTasks({ kind: "member", id }),
-    getAssignableUsers(),
   ]);
   if (!member) return notFound();
   const canEditHealth = user.role === "OWNER" || user.role === "NUTRITIONIST";
@@ -234,12 +233,6 @@ export default async function MemberDetailPage({
         open={tasks.open}
         closed={tasks.closed}
         today={ecuadorDateString()}
-        taskDialog={{
-          users: taskUsers,
-          currentUserId: user.id,
-          canPool: can.manageLeads(user),
-          defaultSede: user.sede,
-        }}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
