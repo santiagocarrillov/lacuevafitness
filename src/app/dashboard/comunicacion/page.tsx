@@ -21,7 +21,7 @@ export default async function ComunicacionPage({
   ]);
 
   return (
-    <div className="h-[calc(100vh-3rem)] md:h-screen flex flex-col">
+    <div className="h-[calc(100dvh-3rem)] md:h-[calc(100dvh-2.75rem)] flex flex-col">
       <header className="px-4 md:px-6 py-3 border-b border-border shrink-0 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Comunicación</h1>

@@ -57,9 +57,9 @@ export function NewLeadForm({
     }
     startTransition(async () => {
       try {
-        await createLead(form);
+        const lead = await createLead(form);
         toast.success(`Lead ${form.firstName} registrado.`);
-        router.push(backHref);
+        router.push(backHref === "/dashboard/leads" ? `/dashboard/leads/${lead.id}` : backHref);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "No se pudo registrar el lead.");
       }

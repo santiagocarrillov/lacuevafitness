@@ -151,7 +151,14 @@ export async function getMember(id: string) {
       testResults: { orderBy: { recordedAt: "desc" }, take: 20 },
       trainingLevels: { orderBy: { assignedAt: "desc" }, take: 1 },
       goals: { orderBy: { createdAt: "desc" } },
-      lead: { include: { interactions: { orderBy: { occurredAt: "desc" }, take: 5 } } },
+      lead: {
+        include: {
+          interactions: { orderBy: { occurredAt: "desc" }, take: 5 },
+          conversation: { select: { id: true, lastInboundAt: true, lastOutboundAt: true } },
+          owner: { select: { fullName: true } },
+        },
+      },
+      conversation: { select: { id: true, lastInboundAt: true, lastOutboundAt: true } },
     },
   });
 }

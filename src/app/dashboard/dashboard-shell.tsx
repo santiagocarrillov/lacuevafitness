@@ -3,24 +3,52 @@
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { StaffPushToggle } from "./staff-push-toggle";
 import { BackButton, useTrackNavigation } from "./back-button";
+import { SIDEBAR_COOKIE } from "./sidebar-cookie";
 
 type NavItem = { href: string; label: string; badge?: number; match?: string[] };
+type NavGroup = { label?: string; items: NavItem[] };
 
 type Props = {
   children: ReactNode;
-  nav: NavItem[];
+  nav: NavGroup[];
   userName: string;
   userMeta: string;
   showAthleteView?: boolean;
+  initialCollapsed?: boolean;
 };
 
-export function DashboardShell({ children, nav, userName, userMeta, showAthleteView }: Props) {
+export function DashboardShell({ children, nav: groups, userName, userMeta, showAthleteView, initialCollapsed = false }: Props) {
   const [open, setOpen] = useState(false);
+  // Desktop only: hide the whole menu with one click to give the page the full width.
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
   const pathname = usePathname();
   useTrackNavigation();
+  const nav = groups.flatMap((g) => g.items);
+  const groupOf = (href?: string) => groups.find((g) => g.items.some((i) => i.href === href))?.label;
+
+  function toggleCollapsed() {
+    setCollapsed((c) => {
+      const next = !c;
+      document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "open"}; path=/; max-age=31536000; samesite=lax`;
+      return next;
+    });
+  }
+
+  // "[" toggles the menu on desktop, like Linear/Notion (ignored while typing).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "[" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      toggleCollapsed();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Highlight the section the user is in (longest matching prefix wins).
   const prefixes = (i: NavItem) => [i.href, ...(i.match ?? [])];
@@ -71,10 +99,10 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:static inset-y-0 left-0 z-50 w-60 border-r border-border bg-background md:bg-muted/30 flex flex-col
+          fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 shrink-0 border-r border-border bg-background md:bg-muted/30 flex flex-col
           transform transition-transform duration-200
           ${open ? "translate-x-0" : "-translate-x-full"}
-          md:translate-x-0
+          md:translate-x-0 ${collapsed ? "md:hidden" : ""}
         `}
       >
         <div className="px-6 py-5 border-b border-border flex items-center justify-between">
@@ -82,6 +110,14 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             <p className="text-xs tracking-[0.3em] text-muted-foreground uppercase">La Cueva</p>
             <p className="font-heading text-base font-semibold uppercase tracking-wide">Dashboard SRXFit</p>
           </div>
+          <button
+            onClick={toggleCollapsed}
+            aria-label="Esconder menú"
+            title="Esconder menú ( [ )"
+            className="hidden md:inline-flex p-1 -mr-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
           <button
             onClick={() => setOpen(false)}
             aria-label="Cerrar menú"
@@ -93,26 +129,37 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
             </svg>
           </button>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1 text-sm overflow-y-auto">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={item.href === activeHref ? "page" : undefined}
-              className={`flex items-center justify-between px-3 py-2 rounded-md transition ${
-                item.href === activeHref ? "bg-accent font-medium text-foreground" : "hover:bg-accent"
-              }`}
-            >
-              {item.label}
-              {item.badge ? (
-                <span
-                  className="min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-medium leading-5 text-white"
-                  title="Tareas tuyas o de tu recepción para hoy o vencidas"
-                >
-                  {item.badge}
-                </span>
-              ) : null}
-            </Link>
+        <nav className="flex-1 px-3 py-3 text-sm overflow-y-auto">
+          {groups.map((group, gi) => (
+            <div key={group.label ?? gi} className={gi > 0 ? "mt-4" : ""}>
+              {group.label && (
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={item.href === activeHref ? "page" : undefined}
+                    className={`flex items-center justify-between px-3 py-1.5 rounded-md transition ${
+                      item.href === activeHref ? "bg-accent font-medium text-foreground" : "hover:bg-accent"
+                    }`}
+                  >
+                    {item.label}
+                    {item.badge ? (
+                      <span
+                        className="min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-medium leading-5 text-white"
+                        title="Tareas tuyas o de tu recepción para hoy o vencidas"
+                      >
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="border-t border-border p-4 space-y-2">
@@ -150,11 +197,28 @@ export function DashboardShell({ children, nav, userName, userMeta, showAthleteV
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto pt-12 md:pt-0">
-        {/* Desktop top bar: Back, like the popular apps. */}
+      <main className="min-w-0 flex-1 pt-12 md:pt-0">
+        {/* Desktop top bar: show/hide the menu, Back, and where you are. */}
         <div className="sticky top-0 z-30 hidden h-11 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur md:flex md:px-6">
+          {collapsed && (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Mostrar menú"
+              title="Mostrar menú ( [ )"
+              className="-ml-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            >
+              <PanelLeftOpen className="size-4" />
+            </button>
+          )}
           <BackButton />
-          <span className="text-sm text-muted-foreground">{pathname === "/dashboard" ? "" : current?.label}</span>
+          <span className="text-sm text-muted-foreground">
+            {pathname === "/dashboard" || !current
+              ? ""
+              : groupOf(current.href) && groupOf(current.href) !== current.label
+                ? `${groupOf(current.href)} › ${current.label}`
+                : current.label}
+          </span>
         </div>
         {children}
       </main>

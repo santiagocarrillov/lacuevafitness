@@ -140,7 +140,7 @@ export function FocusRunner({
   const needsOutcome = !!task?.person;
 
   return (
-    <div className="min-h-[calc(100vh-3rem)] md:min-h-screen flex flex-col">
+    <div className="min-h-[calc(100dvh-3rem)] md:min-h-[calc(100dvh-2.75rem)] flex flex-col">
       {/* Progress */}
       <header className="px-4 md:px-6 py-3 border-b border-border space-y-2 shrink-0">
         <div className="flex items-center justify-between gap-3">
