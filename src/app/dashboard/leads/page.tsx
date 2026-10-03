@@ -3,9 +3,9 @@ import { getLeads, getLeadStats } from "@/lib/actions/leads";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { LeadTable } from "./lead-table";
 import { LeadFilters } from "./lead-filters";
-import { NewLeadButton } from "./new-lead-button";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,12 @@ export default async function LeadsPage({
             Seguimiento de prospectos — desde el primer contacto hasta la inscripción.
           </p>
         </div>
-        <NewLeadButton />
+        <Link
+          href="/dashboard/leads/nuevo"
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-7 px-2.5 hover:bg-primary/90"
+        >
+          + Nuevo lead
+        </Link>
       </header>
 
       {/* Pipeline funnel */}

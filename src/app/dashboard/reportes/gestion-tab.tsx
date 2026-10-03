@@ -4,7 +4,6 @@ import { getManagementKPIs } from "@/lib/actions/reports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlanPieChart } from "./plan-pie-chart";
-import { TargetsEditor } from "./targets-editor";
 
 function fmtPct(n: number) {
   return `${n.toFixed(1)}%`;
@@ -74,10 +73,13 @@ export async function GestionTab({
   sede,
   year,
   month,
+  backHref,
 }: {
   sede?: Sede;
   year: number;
   month: number;
+  /** The Reportes URL the user is on; the targets screen returns here. */
+  backHref: string;
 }) {
   const kpis = await getManagementKPIs(sede, year, month);
 
@@ -128,7 +130,18 @@ export async function GestionTab({
       <section className="space-y-2">
         <h2 className="text-sm font-medium bg-orange-50 text-orange-900 px-3 py-1.5 rounded flex items-center justify-between">
           <span>Metas del mes</span>
-          {sede && <TargetsEditor sede={sede} year={year} month={month} current={kpis.targets} />}
+          {sede && (
+            <Link
+              href={`/dashboard/reportes/metas?${new URLSearchParams({
+                mes: `${year}-${String(month).padStart(2, "0")}`,
+                sede,
+                volver: backHref,
+              }).toString()}`}
+              className="text-xs text-orange-900 hover:underline font-normal"
+            >
+              {kpis.targets ? "Editar metas" : "+ Definir metas"}
+            </Link>
+          )}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KPI label="Meta de ventas" value={kpis.targets?.salesTarget ?? 0} hint={`${metaVentasDiaria.toFixed(1)} / día`} />

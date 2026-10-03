@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { NewTaskDialog, type TaskDialogBase } from "@/app/dashboard/tareas/new-task-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import {
   STATUS_LABEL,
   STATUS_TONE,
@@ -20,15 +18,13 @@ export function MemberTasksCard({
   open,
   closed,
   today,
-  taskDialog,
 }: {
   person: PersonRef;
   open: TaskListItem[];
   closed: TaskListItem[];
   today: string;
-  taskDialog: TaskDialogBase;
 }) {
-  const [creating, setCreating] = useState(false);
+  const here = `/dashboard/socios/${person.id}`;
 
   return (
     <Card>
@@ -41,9 +37,12 @@ export function MemberTasksCard({
               : `${open.length} pendiente${open.length === 1 ? "" : "s"}.`}
           </CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+        <Link
+          href={`/dashboard/tareas/nueva?${person.kind === "member" ? "socio" : "lead"}=${person.id}&volver=${encodeURIComponent(here)}`}
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+        >
           + Tarea
-        </Button>
+        </Link>
       </CardHeader>
       {(open.length > 0 || closed.length > 0) && (
         <CardContent className="space-y-1.5">
@@ -67,12 +66,6 @@ export function MemberTasksCard({
           )}
         </CardContent>
       )}
-      <NewTaskDialog
-        {...taskDialog}
-        open={creating}
-        onOpenChange={setCreating}
-        prefill={{ person }}
-      />
     </Card>
   );
 }

@@ -12,7 +12,6 @@ import {
 import { VIEW_LABEL, SEDE_LABEL, dueBucket, type TaskView } from "@/lib/tasks/meta";
 import { TaskList } from "./task-list";
 import { TaskPanel } from "./task-panel";
-import { NewTaskButton } from "./new-task-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -70,13 +69,12 @@ export default async function TareasPage({
               Enfocar ({focusCount})
             </Link>
           )}
-          <NewTaskButton
-            users={users}
-            currentUserId={user.id}
-            canPool={can.manageLeads(user)}
-            defaultSede={user.sede}
-            baseQuery={base}
-          />
+          <Link
+            href={`/dashboard/tareas/nueva?volver=${encodeURIComponent(`/dashboard/tareas?${base}`)}`}
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:bg-primary/90"
+          >
+            + Nueva tarea
+          </Link>
           </div>
         </div>
         <nav className="flex flex-wrap items-center gap-1.5 text-sm">

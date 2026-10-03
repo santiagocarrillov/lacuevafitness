@@ -32,14 +32,19 @@ export function ScheduleList({
   sede,
   userRole,
   windowOpen,
+  initialScheduleId,
 }: {
   schedules: Schedule[];
   members: Member[];
   sede: string;
   userRole: string;
   windowOpen: boolean;
+  /** `?horario=` — reopen the class someone came back to (e.g. after an alta). */
+  initialScheduleId?: string | null;
 }) {
-  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
+    initialScheduleId && schedules.some((s) => s.scheduleId === initialScheduleId) ? initialScheduleId : null,
+  );
 
   if (schedules.length === 0) {
     return (

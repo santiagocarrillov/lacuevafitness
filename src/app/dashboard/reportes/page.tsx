@@ -153,7 +153,7 @@ export default async function ReportesPage({
       </div>
 
       {tab === "gestion" && (
-        <GestionTab sede={sede || undefined} year={gestionYear} month={gestionMonth} />
+        <GestionTab sede={sede || undefined} year={gestionYear} month={gestionMonth} backHref={buildUrl({})} />
       )}
       {tab === "asistencia" && (
         <AsistenciaTab sede={sede || undefined} from={from} to={to} />

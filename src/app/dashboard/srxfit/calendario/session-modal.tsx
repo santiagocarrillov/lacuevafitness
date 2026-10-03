@@ -3,11 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SrxfitSession } from "@/lib/srxfit-calendar";
-import {
-  activacionToMd, fuerzaToMd, acondicionamientoToMd, regulacionToMd, MarkdownText,
-} from "@/lib/srxfit-md";
+import { MarkdownText } from "@/lib/srxfit-md";
 import { getSessionOverride, type SessionOverrideData } from "@/lib/actions/srxfit-overrides";
-import { EditSessionDialog } from "./edit-session-dialog";
 
 interface Props {
   session: SrxfitSession;
@@ -326,23 +323,20 @@ export function SessionModal({ session, date, canEdit, onClose }: Props) {
   const weekNumber = session.weekNumber;
 
   const [override, setOverride] = useState<SessionOverrideData | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     getSessionOverride(weekNumber, dayIndex)
-      .then((o) => { if (!cancelled) { setOverride(o); setLoaded(true); } })
-      .catch(() => { if (!cancelled) setLoaded(true); });
+      .then((o) => { if (!cancelled) setOverride(o); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [weekNumber, dayIndex]);
 
   const hasOverride = !!override && Object.values(override).some((v) => typeof v === "string" && v);
-
-  function refreshOverride() {
-    setEditing(false);
-    getSessionOverride(weekNumber, dayIndex).then(setOverride).catch(() => {});
-  }
+  // Editing a day is its own screen; it comes back to this month of the calendar.
+  const editDayHref = `/dashboard/srxfit/calendario/sesion?semana=${weekNumber}&dia=${dayIndex}&volver=${encodeURIComponent(
+    `/dashboard/srxfit/calendario?year=${y}&month=${m}`,
+  )}`;
 
   return (
     <div
@@ -373,13 +367,13 @@ export function SessionModal({ session, date, canEdit, onClose }: Props) {
               </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              {canEdit && loaded && (
-                <button
-                  onClick={() => setEditing(true)}
+              {canEdit && (
+                <Link
+                  href={editDayHref}
                   className="text-xs px-2 py-1 rounded border hover:bg-accent transition"
                 >
                   Editar día
-                </button>
+                </Link>
               )}
               {canEdit && (
                 <Link
@@ -446,23 +440,6 @@ export function SessionModal({ session, date, canEdit, onClose }: Props) {
           )}
         </div>
       </div>
-
-      {editing && (
-        <EditSessionDialog
-          open={editing}
-          onClose={(refreshed) => refreshed ? refreshOverride() : setEditing(false)}
-          weekNumber={weekNumber}
-          dayIndex={dayIndex}
-          hasOverride={hasOverride}
-          initial={{
-            activacionMd: override?.activacionMd ?? activacionToMd(session.blocks.activacion),
-            fuerzaMd: override?.fuerzaMd ?? fuerzaToMd(session.blocks.fuerza),
-            acondicionamientoMd: override?.acondicionamientoMd ?? acondicionamientoToMd(session.blocks.acondicionamiento),
-            regulacionMd: override?.regulacionMd ?? regulacionToMd(session.blocks.regulacion),
-            coachNotesMd: override?.coachNotesMd ?? (session.coachNotes ?? ""),
-          }}
-        />
-      )}
     </div>
   );
 }

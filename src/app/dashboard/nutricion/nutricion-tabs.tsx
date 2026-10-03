@@ -22,7 +22,9 @@ export function NutricionTabs({ showClinical }: { showClinical: boolean }) {
     <nav className="flex gap-1 border-b border-border overflow-x-auto">
       {TABS.filter((t) => showClinical || !t.clinical).map((t) => {
         const active =
-          t.href === "/dashboard/nutricion" ? pathname === t.href : pathname.startsWith(t.href);
+          t.href === "/dashboard/nutricion"
+            ? pathname === t.href || pathname.startsWith("/dashboard/nutricion/citas")
+            : pathname.startsWith(t.href);
         return (
           <Link
             key={t.href}
