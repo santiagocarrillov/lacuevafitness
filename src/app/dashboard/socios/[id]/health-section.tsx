@@ -1,15 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
 import {
   computeAge, bmi, whtr, trigHdl, trend,
   evaluateBodyFat, evaluateMusclePct, evaluateWaist, evaluateWHtR, evaluateBMI,
@@ -19,11 +15,8 @@ import {
   STATUS_STYLES,
   type Status, type Sex, type MenoStatus, type RangeSpec, type TrendInfo,
 } from "@/lib/health-ranges";
-import {
-  recordBodyComp, updateBodyComp, deleteBodyComp,
-  recordClinicalMarker, updateClinicalMarker, deleteClinicalMarker,
-  updateMemberSex,
-} from "@/lib/actions/health";
+import { deleteBodyComp, deleteClinicalMarker, updateMemberSex } from "@/lib/actions/health";
+import { musclePct } from "./health-forms";
 
 type BodyComp = {
   id: string;
@@ -69,29 +62,6 @@ type Props = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────
-
-function num(v: string): number | null {
-  const t = v.trim();
-  if (!t) return null;
-  const n = parseFloat(t);
-  return isNaN(n) ? null : n;
-}
-
-// muscle %: prefer stored pct, else derive from kg / weight if both present
-function musclePct(bc: { muscleMassPct: number | null; muscleMassKg: number | null; weightKg: number | null }): number | null {
-  if (bc.muscleMassPct != null) return bc.muscleMassPct;
-  if (bc.muscleMassKg != null && bc.weightKg) return (bc.muscleMassKg / bc.weightKg) * 100;
-  return null;
-}
-
-function isoDateLocal(d: Date | string): string {
-  const dt = typeof d === "string" ? new Date(d) : d;
-  // Use local components, not UTC, so the date input shows the day the user entered.
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, "0");
-  const day = String(dt.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 // ─── Small UI primitives ─────────────────────────────────────────────
 
@@ -177,254 +147,13 @@ function MetricCard({
   );
 }
 
-// ─── Body composition dialog (create + edit) ─────────────────────────
-
-type BCFields = {
-  measuredAt: string;
-  weightKg: string; heightCm: string; bodyFatPct: string;
-  muscleMassPct: string; waistCm: string;
-  hipCm: string; chestCm: string; armCm: string; thighCm: string;
-  basalMetabolism: string; notes: string;
-};
-
-function emptyBCFields(): BCFields {
-  return {
-    measuredAt: isoDateLocal(new Date()),
-    weightKg: "", heightCm: "", bodyFatPct: "", muscleMassPct: "",
-    waistCm: "", hipCm: "", chestCm: "", armCm: "", thighCm: "",
-    basalMetabolism: "", notes: "",
-  };
-}
-
-function bcToFields(bc: BodyComp): BCFields {
-  return {
-    measuredAt: isoDateLocal(bc.measuredAt),
-    weightKg: bc.weightKg?.toString() ?? "",
-    heightCm: bc.heightCm?.toString() ?? "",
-    bodyFatPct: bc.bodyFatPct?.toString() ?? "",
-    muscleMassPct: musclePct(bc) != null ? musclePct(bc)!.toFixed(1) : "",
-    waistCm: bc.waistCm?.toString() ?? "",
-    hipCm: bc.hipCm?.toString() ?? "",
-    chestCm: bc.chestCm?.toString() ?? "",
-    armCm: bc.armCm?.toString() ?? "",
-    thighCm: bc.thighCm?.toString() ?? "",
-    basalMetabolism: bc.basalMetabolism?.toString() ?? "",
-    notes: bc.notes ?? "",
-  };
-}
-
-function BodyCompDialog({
-  open, onClose, memberId, edit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  memberId: string;
-  edit: BodyComp | null;
-}) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [f, setF] = useState<BCFields>(edit ? bcToFields(edit) : emptyBCFields());
-  const set = (k: keyof BCFields, v: string) => setF((p) => ({ ...p, [k]: v }));
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    startTransition(async () => {
-      try {
-        const payload = {
-          weightKg: num(f.weightKg),
-          heightCm: num(f.heightCm),
-          bodyFatPct: num(f.bodyFatPct),
-          muscleMassPct: num(f.muscleMassPct),
-          waistCm: num(f.waistCm),
-          hipCm: num(f.hipCm),
-          chestCm: num(f.chestCm),
-          armCm: num(f.armCm),
-          thighCm: num(f.thighCm),
-          basalMetabolism: num(f.basalMetabolism) != null ? Math.round(num(f.basalMetabolism)!) : null,
-          notes: f.notes,
-          measuredAt: f.measuredAt,
-        };
-        if (edit) await updateBodyComp(edit.id, memberId, payload);
-        else await recordBodyComp(memberId, payload);
-        toast.success(edit ? "Medición actualizada." : "Medición guardada.");
-        onClose();
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al guardar");
-      }
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{edit ? "Editar medición" : "Nueva medición"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={submit} className="grid grid-cols-2 gap-3">
-          <div className="space-y-1 col-span-2"><Label className="text-xs">Fecha</Label>
-            <Input type="date" value={f.measuredAt} onChange={(e) => set("measuredAt", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Peso (kg)</Label>
-            <Input type="number" step="0.1" value={f.weightKg} onChange={(e) => set("weightKg", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Altura (cm)</Label>
-            <Input type="number" step="0.1" value={f.heightCm} onChange={(e) => set("heightCm", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">% Grasa</Label>
-            <Input type="number" step="0.1" value={f.bodyFatPct} onChange={(e) => set("bodyFatPct", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">% Músculo</Label>
-            <Input type="number" step="0.1" value={f.muscleMassPct} onChange={(e) => set("muscleMassPct", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Cintura (cm)</Label>
-            <Input type="number" step="0.1" value={f.waistCm} onChange={(e) => set("waistCm", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Cadera (cm)</Label>
-            <Input type="number" step="0.1" value={f.hipCm} onChange={(e) => set("hipCm", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Pecho (cm)</Label>
-            <Input type="number" step="0.1" value={f.chestCm} onChange={(e) => set("chestCm", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Brazo (cm)</Label>
-            <Input type="number" step="0.1" value={f.armCm} onChange={(e) => set("armCm", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Muslo (cm)</Label>
-            <Input type="number" step="0.1" value={f.thighCm} onChange={(e) => set("thighCm", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Met. basal (kcal)</Label>
-            <Input type="number" value={f.basalMetabolism} onChange={(e) => set("basalMetabolism", e.target.value)} /></div>
-          <div className="space-y-1 col-span-2"><Label className="text-xs">Notas</Label>
-            <Input value={f.notes} onChange={(e) => set("notes", e.target.value)} /></div>
-          <div className="col-span-2 flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Guardando…" : edit ? "Guardar cambios" : "Guardar medición"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Clinical marker dialog ──────────────────────────────────────────
-
-type CMFields = {
-  measuredAt: string;
-  glucoseFasting: string; triglycerides: string; hdlCholesterol: string; hsCRP: string;
-  testosteroneFree: string; estradiolE2: string; cycleDay: string;
-  menopausalStatus: "" | MenoStatus; notes: string;
-};
-
-function emptyCMFields(): CMFields {
-  return {
-    measuredAt: isoDateLocal(new Date()),
-    glucoseFasting: "", triglycerides: "", hdlCholesterol: "", hsCRP: "",
-    testosteroneFree: "", estradiolE2: "", cycleDay: "",
-    menopausalStatus: "", notes: "",
-  };
-}
-
-function cmToFields(cm: ClinicalMarker): CMFields {
-  return {
-    measuredAt: isoDateLocal(cm.measuredAt),
-    glucoseFasting: cm.glucoseFasting?.toString() ?? "",
-    triglycerides: cm.triglycerides?.toString() ?? "",
-    hdlCholesterol: cm.hdlCholesterol?.toString() ?? "",
-    hsCRP: cm.hsCRP?.toString() ?? "",
-    testosteroneFree: cm.testosteroneFree?.toString() ?? "",
-    estradiolE2: cm.estradiolE2?.toString() ?? "",
-    cycleDay: cm.cycleDay?.toString() ?? "",
-    menopausalStatus: cm.menopausalStatus ?? "",
-    notes: cm.notes ?? "",
-  };
-}
-
-function ClinicalDialog({
-  open, onClose, memberId, edit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  memberId: string;
-  edit: ClinicalMarker | null;
-}) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [f, setF] = useState<CMFields>(edit ? cmToFields(edit) : emptyCMFields());
-  const set = (k: keyof CMFields, v: string) => setF((p) => ({ ...p, [k]: v }));
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    startTransition(async () => {
-      try {
-        const payload = {
-          glucoseFasting: num(f.glucoseFasting),
-          triglycerides: num(f.triglycerides),
-          hdlCholesterol: num(f.hdlCholesterol),
-          hsCRP: num(f.hsCRP),
-          testosteroneFree: num(f.testosteroneFree),
-          estradiolE2: num(f.estradiolE2),
-          cycleDay: num(f.cycleDay) != null ? Math.round(num(f.cycleDay)!) : null,
-          menopausalStatus: (f.menopausalStatus || null) as MenoStatus | null,
-          notes: f.notes,
-          measuredAt: f.measuredAt,
-        };
-        if (edit) await updateClinicalMarker(edit.id, memberId, payload);
-        else await recordClinicalMarker(memberId, payload);
-        toast.success(edit ? "Marcadores actualizados." : "Marcadores guardados.");
-        onClose();
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al guardar");
-      }
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{edit ? "Editar laboratorio" : "Nuevo laboratorio"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={submit} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="space-y-1 col-span-2 sm:col-span-3"><Label className="text-xs">Fecha</Label>
-            <Input type="date" value={f.measuredAt} onChange={(e) => set("measuredAt", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Glucosa (mg/dL)</Label>
-            <Input type="number" step="0.1" value={f.glucoseFasting} onChange={(e) => set("glucoseFasting", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Triglicéridos (mg/dL)</Label>
-            <Input type="number" step="0.1" value={f.triglycerides} onChange={(e) => set("triglycerides", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">HDL (mg/dL)</Label>
-            <Input type="number" step="0.1" value={f.hdlCholesterol} onChange={(e) => set("hdlCholesterol", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">PCR-us (mg/L)</Label>
-            <Input type="number" step="0.01" value={f.hsCRP} onChange={(e) => set("hsCRP", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Testosterona libre (ng/dL)</Label>
-            <Input type="number" step="0.1" value={f.testosteroneFree} onChange={(e) => set("testosteroneFree", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Estradiol E2 (pg/mL)</Label>
-            <Input type="number" step="0.1" value={f.estradiolE2} onChange={(e) => set("estradiolE2", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Día del ciclo (1-28)</Label>
-            <Input type="number" value={f.cycleDay} onChange={(e) => set("cycleDay", e.target.value)} /></div>
-          <div className="space-y-1"><Label className="text-xs">Estado menopáusico</Label>
-            <select value={f.menopausalStatus} onChange={(e) => set("menopausalStatus", e.target.value as MenoStatus | "")}
-              className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="">—</option>
-              <option value="PRE">Premenopausia</option>
-              <option value="PERI">Perimenopausia</option>
-              <option value="POST">Posmenopausia</option>
-            </select>
-          </div>
-          <div className="space-y-1 col-span-2 sm:col-span-3"><Label className="text-xs">Notas</Label>
-            <Input value={f.notes} onChange={(e) => set("notes", e.target.value)} /></div>
-          <div className="col-span-2 sm:col-span-3 flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Guardando…" : edit ? "Guardar cambios" : "Guardar marcadores"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ─── Main section ────────────────────────────────────────────────────
 
 export function HealthSection({
   memberId, memberName, dateOfBirth, sex, bodyComps, clinicalMarkers, canEdit,
 }: Props) {
   const router = useRouter();
-  const [bcDialog, setBcDialog] = useState<{ open: boolean; edit: BodyComp | null }>({ open: false, edit: null });
-  const [cmDialog, setCmDialog] = useState<{ open: boolean; edit: ClinicalMarker | null }>({ open: false, edit: null });
+  const base = `/dashboard/socios/${memberId}`;
   const [, startTr] = useTransition();
 
   const age = computeAge(dateOfBirth);
@@ -580,9 +309,9 @@ export function HealthSection({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Composición corporal</CardTitle>
           {canEdit && (
-            <Button size="sm" variant="outline" onClick={() => setBcDialog({ open: true, edit: null })}>
+            <Link href={`${base}/medicion/nueva`} className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-7 px-2.5 hover:bg-accent transition">
               + Registrar medición
-            </Button>
+            </Link>
           )}
         </CardHeader>
         <CardContent className="space-y-3">
@@ -633,9 +362,9 @@ export function HealthSection({
                     <div className="col-span-2 text-muted-foreground italic truncate">{bc.notes ?? ""}</div>
                     {canEdit && (
                       <div className="text-right text-[11px] flex gap-2 justify-end">
-                        <button onClick={() => setBcDialog({ open: true, edit: bc })} className="text-muted-foreground hover:text-foreground">
+                        <Link href={`${base}/medicion/${bc.id}`} className="text-muted-foreground hover:text-foreground">
                           editar
-                        </button>
+                        </Link>
                         <button onClick={() => handleDeleteBC(bc.id)} className="text-red-600 hover:text-red-700">
                           eliminar
                         </button>
@@ -654,9 +383,9 @@ export function HealthSection({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Longevidad clínica</CardTitle>
           {canEdit && (
-            <Button size="sm" variant="outline" onClick={() => setCmDialog({ open: true, edit: null })}>
+            <Link href={`${base}/laboratorio/nuevo`} className="inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium h-7 px-2.5 hover:bg-accent transition">
               + Registrar laboratorio
-            </Button>
+            </Link>
           )}
         </CardHeader>
         <CardContent className="space-y-3">
@@ -732,9 +461,9 @@ export function HealthSection({
                     <div className="col-span-2 text-muted-foreground italic truncate">{cm.notes ?? ""}</div>
                     {canEdit && (
                       <div className="text-right text-[11px] flex gap-2 justify-end">
-                        <button onClick={() => setCmDialog({ open: true, edit: cm })} className="text-muted-foreground hover:text-foreground">
+                        <Link href={`${base}/laboratorio/${cm.id}`} className="text-muted-foreground hover:text-foreground">
                           editar
-                        </button>
+                        </Link>
                         <button onClick={() => handleDeleteCM(cm.id)} className="text-red-600 hover:text-red-700">
                           eliminar
                         </button>
@@ -762,23 +491,6 @@ export function HealthSection({
           </p>
         </CardContent>
       </Card>
-
-      {bcDialog.open && canEdit && (
-        <BodyCompDialog
-          open={bcDialog.open}
-          onClose={() => setBcDialog({ open: false, edit: null })}
-          memberId={memberId}
-          edit={bcDialog.edit}
-        />
-      )}
-      {cmDialog.open && canEdit && (
-        <ClinicalDialog
-          open={cmDialog.open}
-          onClose={() => setCmDialog({ open: false, edit: null })}
-          memberId={memberId}
-          edit={cmDialog.edit}
-        />
-      )}
     </div>
   );
 }

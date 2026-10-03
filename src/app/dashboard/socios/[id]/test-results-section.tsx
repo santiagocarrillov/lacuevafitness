@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SingleTestDialog } from "./single-test-dialog";
 
 type TestResult = {
   id: string;
@@ -29,10 +28,15 @@ export function TestResultsSection({
 }) {
   const addUrl = `/dashboard/srxfit/evaluaciones/${memberId}`;
 
-  const AddButton = () =>
+  const addButton =
     canRegister && memberIsActive ? (
       <div className="flex items-center gap-2">
-        <SingleTestDialog memberId={memberId} />
+        <Link
+          href={`/dashboard/socios/${memberId}/test`}
+          className="inline-flex items-center justify-center rounded-md border border-input text-sm font-medium h-8 px-3 hover:bg-accent transition"
+        >
+          + Test individual
+        </Link>
         <Link
           href={addUrl}
           className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium h-8 px-3 hover:opacity-90 transition"
@@ -47,7 +51,7 @@ export function TestResultsSection({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Tests físicos SRXFit</CardTitle>
-          <AddButton />
+          {addButton}
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -76,7 +80,7 @@ export function TestResultsSection({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Tests físicos SRXFit</CardTitle>
-        <AddButton />
+        {addButton}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
