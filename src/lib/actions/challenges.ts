@@ -2,10 +2,50 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { OFFICIAL_ENTRY_WHERE } from "@/lib/entry-source";
-import { Sede, ChallengeRuleType, TestKey } from "@/generated/prisma/client";
+import { Sede, ChallengeRuleType, TestKey, type User } from "@/generated/prisma/client";
 import { TEST_LABELS } from "@/lib/portal/test-labels";
 import { isMetricRule, type MetricLeaderboard, type MetricLeaderboardEntry } from "@/lib/challenges/metrics";
+import { computeAttendanceCount } from "@/lib/challenges/progress";
+
+// ── Guards ──────────────────────────────────────────────────────────
+// Server actions are public POST endpoints: every export checks its caller.
+// (Attendance-driven progress lives in lib/challenges/progress.ts, called by
+// the attendance actions after their own permission check.)
+
+/** Any staff member may read retos (socios join theirs via lib/actions/portal). */
+async function requireStaff(): Promise<User> {
+  const user = await requireAuth();
+  if (!can.viewMembers(user)) throw new Error("No autorizado");
+  return user;
+}
+
+/**
+ * Who creates and runs retos: the same roles the SRXFit hub shows the Retos
+ * module to ("Crea y administra los retos") — manageChallenges plus coaches and
+ * the nutritionist.
+ */
+async function requireRetosManager(): Promise<User> {
+  const user = await requireAuth();
+  if (!(can.manageChallenges(user) || user.role === "COACH" || user.role === "NUTRITIONIST")) {
+    throw new Error("No autorizado");
+  }
+  return user;
+}
+
+/** Scoped admins only run retos of their sede (or open to both sedes). */
+function assertChallengeSede(user: User, sede: Sede | null | undefined) {
+  const scope = getSedeScope(user);
+  if (scope && sede && sede !== scope) throw new Error("Solo puedes gestionar retos de tu sede.");
+}
+
+async function assertChallengeInScope(user: User, challengeId: string) {
+  if (!getSedeScope(user)) return;
+  const c = await prisma.challenge.findUnique({ where: { id: challengeId }, select: { sede: true } });
+  if (!c) throw new Error("Reto no encontrado");
+  assertChallengeSede(user, c.sede);
+}
 
 const LB_PER_KG = 2.20462;
 
@@ -25,6 +65,9 @@ type ChallengeInput = {
 // ── Create challenge ────────────────────────────────────────────────
 
 export async function createChallenge(data: ChallengeInput) {
+  const user = await requireRetosManager();
+  assertChallengeSede(user, data.sede);
+
   const challenge = await prisma.challenge.create({
     data: {
       name: data.name,
@@ -47,6 +90,10 @@ export async function createChallenge(data: ChallengeInput) {
 // ── Update challenge ────────────────────────────────────────────────
 
 export async function updateChallenge(id: string, data: ChallengeInput) {
+  const user = await requireRetosManager();
+  await assertChallengeInScope(user, id);
+  assertChallengeSede(user, data.sede);
+
   const challenge = await prisma.challenge.update({
     where: { id },
     data: {
@@ -65,7 +112,7 @@ export async function updateChallenge(id: string, data: ChallengeInput) {
 
   // Editing rule/target/dates changes who qualifies — recompute stored
   // attendance progress so the ranking reflects reality (metric rules are live).
-  await recomputeChallenge(id);
+  await recomputeChallengeCore(id);
 
   revalidatePath("/dashboard/retos");
   return challenge;
@@ -74,6 +121,9 @@ export async function updateChallenge(id: string, data: ChallengeInput) {
 // ── Delete challenge (soft delete — hides it from all views) ─────────
 
 export async function deleteChallenge(id: string) {
+  const user = await requireRetosManager();
+  await assertChallengeInScope(user, id);
+
   const challenge = await prisma.challenge.update({
     where: { id },
     data: { active: false },
@@ -86,6 +136,7 @@ export async function deleteChallenge(id: string) {
 // ── List challenges ─────────────────────────────────────────────────
 
 export async function getChallenges(activeOnly = true) {
+  await requireStaff();
   return prisma.challenge.findMany({
     where: activeOnly ? { active: true } : {},
     orderBy: { startsAt: "desc" },
@@ -102,6 +153,7 @@ export async function getChallenges(activeOnly = true) {
 // ── Get challenge detail ────────────────────────────────────────────
 
 export async function getChallenge(id: string) {
+  await requireStaff();
   return prisma.challenge.findUnique({
     where: { id },
     include: {
@@ -116,6 +168,9 @@ export async function getChallenge(id: string) {
 // ── Enroll member in challenge ──────────────────────────────────────
 
 export async function enrollMemberInChallenge(challengeId: string, memberId: string) {
+  const user = await requireRetosManager();
+  await assertChallengeInScope(user, challengeId);
+
   const progress = await prisma.challengeProgress.upsert({
     where: { challengeId_memberId: { challengeId, memberId } },
     update: {},
@@ -129,9 +184,11 @@ export async function enrollMemberInChallenge(challengeId: string, memberId: str
 // ── Enroll all active members of a sede ─────────────────────────────
 
 export async function enrollAllActiveMembers(challengeId: string) {
+  const user = await requireRetosManager();
   const challenge = await prisma.challenge.findUniqueOrThrow({
     where: { id: challengeId },
   });
+  assertChallengeSede(user, challenge.sede);
 
   const where: any = { status: { in: ["ACTIVE", "TRIAL"] } };
   if (challenge.sede) where.sede = challenge.sede;
@@ -152,96 +209,6 @@ export async function enrollAllActiveMembers(challengeId: string) {
   return enrolled;
 }
 
-// ── Attendance count for a member/challenge ─────────────────────────
-
-type AttendanceChallenge = {
-  ruleType: ChallengeRuleType;
-  ruleDays: number | null;
-  startsAt: Date;
-  endsAt: Date;
-};
-
-async function computeAttendanceCount(
-  challenge: AttendanceChallenge,
-  memberId: string,
-  now: Date,
-): Promise<number> {
-  if (challenge.ruleType === "TOTAL_CLASSES") {
-    // Count all attendance during challenge period
-    return prisma.attendance.count({
-      where: { memberId, recordedAt: { gte: challenge.startsAt, lte: challenge.endsAt } },
-    });
-  }
-
-  if (challenge.ruleType === "CLASSES_IN_DAYS" && challenge.ruleDays) {
-    // Count attendance in the last N days
-    const since = new Date(now);
-    since.setDate(since.getDate() - challenge.ruleDays);
-    return prisma.attendance.count({
-      where: { memberId, recordedAt: { gte: since, lte: now } },
-    });
-  }
-
-  if (challenge.ruleType === "CONSECUTIVE_CLASSES") {
-    // Count consecutive class days (no gaps > 2 days)
-    const attendances = await prisma.attendance.findMany({
-      where: { memberId, recordedAt: { gte: challenge.startsAt, lte: challenge.endsAt } },
-      orderBy: { recordedAt: "desc" },
-      include: { classSession: { select: { date: true } } },
-    });
-
-    const dates = [...new Set(
-      attendances.map((a) => a.classSession.date.toISOString().split("T")[0]),
-    )].sort().reverse();
-
-    let streak = 0;
-    for (let i = 0; i < dates.length; i++) {
-      if (i === 0) { streak = 1; continue; }
-      const curr = new Date(dates[i]);
-      const prev = new Date(dates[i - 1]);
-      const diff = (prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24);
-      if (diff <= 3) streak++; // allow 1-2 day gaps (weekends, rest days)
-      else break;
-    }
-    return streak;
-  }
-
-  return 0;
-}
-
-// ── Update progress from attendance (called after attendance registration) ──
-
-export async function updateChallengeProgress(memberId: string) {
-  const now = new Date();
-
-  // Find active attendance challenges where this member is enrolled and not done.
-  const enrollments = await prisma.challengeProgress.findMany({
-    where: {
-      memberId,
-      completed: false,
-      challenge: { active: true, startsAt: { lte: now }, endsAt: { gte: now } },
-    },
-    include: { challenge: true },
-  });
-
-  for (const enrollment of enrollments) {
-    const challenge = enrollment.challenge;
-    if (isMetricRule(challenge.ruleType)) continue; // metric rankings are computed live
-
-    const count = await computeAttendanceCount(challenge, memberId, now);
-    const target = challenge.ruleTarget ?? Number.POSITIVE_INFINITY;
-    const completed = count >= target;
-    await prisma.challengeProgress.update({
-      where: { id: enrollment.id },
-      data: {
-        currentCount: count,
-        completed,
-        completedAt: completed && !enrollment.completed ? now : enrollment.completedAt,
-      },
-    });
-  }
-}
-
 // ── Recompute a whole challenge (used on edit + manual "Recalcular") ─
 // Unlike updateChallengeProgress, this re-evaluates EVERY enrolled member,
 // including already-completed ones, so raising/lowering the target can promote
@@ -249,6 +216,12 @@ export async function updateChallengeProgress(memberId: string) {
 // for them beyond refreshing the page cache.
 
 export async function recomputeChallenge(challengeId: string) {
+  const user = await requireRetosManager();
+  await assertChallengeInScope(user, challengeId);
+  return recomputeChallengeCore(challengeId);
+}
+
+async function recomputeChallengeCore(challengeId: string) {
   const challenge = await prisma.challenge.findUniqueOrThrow({ where: { id: challengeId } });
   if (isMetricRule(challenge.ruleType)) {
     revalidatePath("/dashboard/retos");
@@ -280,6 +253,7 @@ export async function recomputeChallenge(challengeId: string) {
 // ── Get member's active challenges with progress ────────────────────
 
 export async function getMemberChallenges(memberId: string) {
+  await requireStaff();
   return prisma.challengeProgress.findMany({
     where: {
       memberId,
@@ -330,6 +304,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export async function getMetricLeaderboard(
   challenge: MetricChallenge,
 ): Promise<MetricLeaderboard> {
+  await requireStaff();
   const now = new Date();
   const start = challenge.startsAt;
   const end = challenge.endsAt < now ? challenge.endsAt : now;

@@ -27,6 +27,9 @@ export async function addMemberNote(data: {
 }
 
 export async function getMemberNotes(memberId: string) {
+  // Includes private (staff-only) notes — never for socios.
+  const user = await requireAuth();
+  if (user.role === "MEMBER") throw new Error("Sin permisos");
   return prisma.memberNote.findMany({
     where: { memberId },
     orderBy: { createdAt: "desc" },

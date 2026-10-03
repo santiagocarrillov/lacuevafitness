@@ -1,7 +1,17 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Sede, Prisma } from "@/generated/prisma/client";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
+import { Sede, Prisma, type User } from "@/generated/prisma/client";
+
+// Server actions are public POST endpoints: every export checks its caller.
+
+/** Segmentos: management tool (OWNER / ACCOUNTING / ADMIN). Scoped admins get their sede. */
+async function segmentSede(requested: Sede | undefined): Promise<Sede | undefined> {
+  const user: User = await requireAuth();
+  if (!can.viewSegments(user)) throw new Error("No autorizado");
+  return getSedeScope(user) ?? requested;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Member analytics — computed stats per member
@@ -31,6 +41,10 @@ export type MemberAnalytics = {
 };
 
 export async function getMemberAnalytics(memberId: string): Promise<MemberAnalytics> {
+  // Shown on the socio ficha to every staff member (same rule as getMember).
+  const user = await requireAuth();
+  if (!can.viewMembers(user)) throw new Error("No autorizado");
+
   const now = new Date();
   const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -253,6 +267,10 @@ export async function getSegmentMembers(
   segment: SegmentKey,
   sede?: Sede,
 ) {
+  return segmentMembersCore(segment, await segmentSede(sede));
+}
+
+async function segmentMembersCore(segment: SegmentKey, sede: Sede | undefined) {
   const now = new Date();
   const sedeFilter = sede ? { sede } : {};
 
@@ -389,6 +407,7 @@ export async function getSegmentMembers(
 }
 
 export async function getSegmentCounts(sede?: Sede) {
+  const effectiveSede = await segmentSede(sede);
   const segments: SegmentKey[] = [
     "low_attendance",
     "morning_members",
@@ -404,7 +423,7 @@ export async function getSegmentCounts(sede?: Sede) {
 
   const counts: Record<string, number> = {};
   for (const seg of segments) {
-    const result = await getSegmentMembers(seg, sede);
+    const result = await segmentMembersCore(seg, effectiveSede);
     counts[seg] = result.length;
   }
   return counts;

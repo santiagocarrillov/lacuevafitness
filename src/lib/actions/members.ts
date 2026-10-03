@@ -5,9 +5,42 @@ import { applyPlanToMember, linkMemberToLead } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { Sede, MemberStatus, MembershipState, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
 import { headers } from "next/headers";
-import { requireAuth, can } from "@/lib/auth";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
+import type { User } from "@/generated/prisma/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createPasswordRecovery, sendPortalInviteEmail } from "@/lib/account/recovery";
+
+// ── Guards ──────────────────────────────────────────────────────────
+// Server actions are public POST endpoints: every export checks its caller.
+
+/** Any staff member may read socio data (not socios themselves). */
+async function requireMemberViewer(): Promise<User> {
+  const user = await requireAuth();
+  if (!can.viewMembers(user)) throw new Error("No autorizado");
+  return user;
+}
+
+/** Front desk (OWNER / ACCOUNTING / ADMIN) writes socio records. */
+async function requireMemberManager(): Promise<User> {
+  const user = await requireAuth();
+  if (!can.manageMembers(user)) throw new Error("No autorizado");
+  return user;
+}
+
+/**
+ * Scoped admins only change socios who train at their sede — primary OR
+ * secondary, since a socio with a secondary sede is served at both counters.
+ */
+async function assertMemberInScope(user: User, memberId: string) {
+  const scope = getSedeScope(user);
+  if (!scope) return;
+  const m = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { sede: true, secondarySede: true },
+  });
+  if (!m) throw new Error("Socio no encontrado");
+  if (m.sede !== scope && m.secondarySede !== scope) throw new Error("No autorizado");
+}
 
 // ── List / Search ───────────────────────────────────────────────────
 
@@ -24,8 +57,11 @@ export async function getMembers({
   page?: number;
   pageSize?: number;
 }) {
+  const user = await requireMemberViewer();
+  const effectiveSede = getSedeScope(user) ?? sede;
+
   const where: any = {};
-  if (sede) where.sede = sede;
+  if (effectiveSede) where.sede = effectiveSede;
   if (status) where.status = status;
   // Hide ONLY the empty auto-provisioned preview stubs (created so a staff
   // member can open the socio app without a real ficha): linked to a staff user,
@@ -83,6 +119,9 @@ export async function getMembers({
 // ── Get single member ───────────────────────────────────────────────
 
 export async function getMember(id: string) {
+  // Not sede-scoped on purpose: the ficha is reachable across sedes (visitors
+  // registered from the other sede, the inbox, tasks), same as before.
+  await requireMemberViewer();
   return prisma.member.findUnique({
     where: { id },
     include: {
@@ -134,6 +173,12 @@ export async function createMember(data: {
   status?: MemberStatus;
   notes?: string;
 }) {
+  const user = await requireMemberManager();
+  const scope = getSedeScope(user);
+  if (scope && data.sede !== scope && data.secondarySede !== scope) {
+    throw new Error("Solo puedes registrar socios de tu sede.");
+  }
+
   // Pre-check email uniqueness for a friendly error
   if (data.email) {
     const existing = await prisma.member.findUnique({ where: { email: data.email } });
@@ -301,6 +346,9 @@ export async function updateMember(
 // ── Deactivate (churn) ──────────────────────────────────────────────
 
 export async function churnMember(id: string, reason?: string) {
+  const user = await requireMemberManager();
+  await assertMemberInScope(user, id);
+
   await prisma.member.update({
     where: { id },
     data: {
@@ -323,6 +371,9 @@ export async function churnMember(id: string, reason?: string) {
 // ── Reactivate ──────────────────────────────────────────────────────
 
 export async function reactivateMember(id: string) {
+  const user = await requireMemberManager();
+  await assertMemberInScope(user, id);
+
   await prisma.member.update({
     where: { id },
     data: {
@@ -343,6 +394,10 @@ export async function assignMembership(data: {
   planId: string;
   startsAt?: string;
 }) {
+  const user = await requireAuth();
+  if (!can.editMembership(user)) throw new Error("No autorizado");
+  await assertMemberInScope(user, data.memberId);
+
   const plan = await prisma.membershipPlan.findUniqueOrThrow({
     where: { id: data.planId },
   });
@@ -486,6 +541,7 @@ export async function renewMembership(data: {
 // ── Get membership plans ────────────────────────────────────────────
 
 export async function getMembershipPlans() {
+  await requireMemberViewer();
   return prisma.membershipPlan.findMany({
     where: { active: true },
     orderBy: { durationDays: "asc" },
@@ -495,6 +551,9 @@ export async function getMembershipPlans() {
 // ── Stats ───────────────────────────────────────────────────────────
 
 export async function getMemberStats(sede?: Sede) {
+  // Headline counts only. The socios page shows both sedes' totals to every
+  // staff member, so this is not sede-scoped (unlike the member list).
+  await requireMemberViewer();
   const sedeFilter = sede ? { sede } : {};
 
   const [total, active, trial, paused, churned] = await Promise.all([

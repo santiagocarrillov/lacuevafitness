@@ -18,6 +18,8 @@ export async function getSessionOverride(
   weekNumber: number,
   dayIndex: number,
 ): Promise<SessionOverrideData | null> {
+  // Programming content: any signed-in, active user (staff calendar + socio app).
+  await requireAuth();
   const row = await prisma.srxfitSessionOverride.findUnique({
     where: { weekNumber_dayIndex: { weekNumber, dayIndex } },
     include: { updatedBy: { select: { fullName: true } } },
@@ -63,6 +65,9 @@ export async function upsertSessionOverride(
 export async function getWeekOverrides(
   weekNumber: number,
 ): Promise<Record<number, SessionOverrideData>> {
+  // Used by the staff week editor AND the socio's "Hoy" (portal), so any
+  // signed-in, active user — staff or socio — may read it.
+  await requireAuth();
   const rows = await prisma.srxfitSessionOverride.findMany({
     where: { weekNumber },
     include: { updatedBy: { select: { fullName: true } } },
