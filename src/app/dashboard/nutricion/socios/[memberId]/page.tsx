@@ -35,11 +35,11 @@ export default async function MemberFollowUpPage({ params }: { params: Promise<{
               Editar plan →
             </Link>
           ) : (
-            <Link href={`/dashboard/nutricion/planes?socio=${data.member.id}`} className="font-medium hover:underline">
+            <Link href={`/dashboard/nutricion/planes/socio/nuevo?socio=${data.member.id}&volver=/dashboard/nutricion/socios/${data.member.id}`} className="font-medium hover:underline">
               Crear plan →
             </Link>
           )}
-          <Link href={`/dashboard/nutricion?nuevo=${data.member.id}`} className="font-medium hover:underline">
+          <Link href={`/dashboard/nutricion/citas/nueva?socio=${data.member.id}&volver=/dashboard/nutricion/socios/${data.member.id}`} className="font-medium hover:underline">
             Agendar cita →
           </Link>
         </div>

@@ -1,6 +1,6 @@
+import { redirect } from "next/navigation";
 import { requireAuth, getSedeScope } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { getAgenda, listNutritionStaff } from "@/lib/actions/nutrition-appointments";
+import { getAgenda } from "@/lib/actions/nutrition-appointments";
 import { addDays, mondayOf } from "@/lib/nutrition/appointments";
 import { ecuadorDateString } from "@/lib/timezone";
 import { AgendaView, type AgendaAppointment } from "./agenda-view";
@@ -18,6 +18,12 @@ export default async function NutricionAgendaPage({
   const user = await requireAuth();
   const params = await searchParams;
 
+  // Old "?nuevo=<memberId>" links (socio file) now open the booking screen.
+  if (params.nuevo) {
+    const sp = new URLSearchParams({ socio: params.nuevo, volver: `/dashboard/socios/${params.nuevo}` });
+    redirect(`/dashboard/nutricion/citas/nueva?${sp.toString()}`);
+  }
+
   const today = ecuadorDateString();
   const date = params.fecha && DATE_RE.test(params.fecha) ? params.fecha : today;
   const view = params.vista === "semana" ? "semana" : "dia";
@@ -28,16 +34,7 @@ export default async function NutricionAgendaPage({
   const from = view === "semana" ? mondayOf(date) : date;
   const to = view === "semana" ? addDays(from, 6) : date;
 
-  const [appointments, staff, prefillMember] = await Promise.all([
-    getAgenda(from, to, sede),
-    listNutritionStaff(),
-    params.nuevo
-      ? prisma.member.findUnique({
-          where: { id: params.nuevo },
-          select: { id: true, firstName: true, lastName: true, sede: true, status: true },
-        })
-      : Promise.resolve(null),
-  ]);
+  const appointments = await getAgenda(from, to, sede);
 
   const rows: AgendaAppointment[] = appointments.map((a) => ({
     id: a.id,
@@ -63,13 +60,6 @@ export default async function NutricionAgendaPage({
       sede={sede}
       sedeLocked={lockedSede !== null}
       appointments={rows}
-      staff={staff}
-      defaultStaffId={
-        user.role === "NUTRITIONIST"
-          ? user.id
-          : staff.find((s) => s.role === "NUTRITIONIST")?.id ?? user.id
-      }
-      prefillMember={prefillMember}
     />
   );
 }

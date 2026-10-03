@@ -159,7 +159,7 @@ export default async function NutricionCoberturaPage({
                       <td className="px-4 py-2 text-right">
                         {!r.nextScheduled && (
                           <Link
-                            href={`/dashboard/nutricion?nuevo=${r.memberId}`}
+                            href={`/dashboard/nutricion/citas/nueva?socio=${r.memberId}&volver=/dashboard/nutricion/cobertura`}
                             className="text-xs font-medium hover:underline"
                           >
                             Agendar →
