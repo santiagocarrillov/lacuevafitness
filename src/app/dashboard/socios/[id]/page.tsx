@@ -192,7 +192,7 @@ export default async function MemberDetailPage({
               Notificar
             </Link>
           )}
-          <MemberActions memberId={member.id} status={member.status} canAssignPlan={canEditMembership} />
+          <MemberActions memberId={member.id} status={member.status} canAssignPlan={canEditMembership} canChurn={can.manageMembers(user)} />
         </div>
       </header>
 
