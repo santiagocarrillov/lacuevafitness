@@ -142,10 +142,22 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
-**Última sesión (4 oct 2026, tarde):** PR #132 en producción — Contabilidad rediseñada estilo QuickBooks:
-módulos Inicio · Clientes · Proveedores · Trabajadores · Caja y Bancos · Empresa · Reportes (`(finanzas)/modules.ts`),
-portada con flujo de trabajo y tarjetas con gráficos, vista consolidada, directorio de proveedores, estados consolidados.
-Sin esquema. Siguiente: empresas en BD (para vender la app a otros gimnasios) y nómina — ver `docs/contabilidad-v2.md`.
+**Última sesión (4 oct 2026, tarde):** PRs #132–#138 en producción (main `b84180f`). Migraciones aplicadas:
+`20261004120000_payers_and_payment_void`, `20261004180000_suppliers`, `20261004220000_nomina` (+ seed del plan de cuentas).
+- **Contabilidad en módulos** estilo QuickBooks (`(finanzas)/modules.ts`): portada con flujo y gráficos, consolidado. Visión y fases: `docs/contabilidad-v2.md`.
+- **Pagos** (Clientes › Cobros de socios): filtros en la URL (`src/lib/payments/filters.ts`), una factura de membresía por socio y mes,
+  **pagadores** compartidos (`Payer`, factura conjunta de hermanos) y cobros **anulados** (status VOIDED), nunca borrados.
+- **Búsqueda sin tildes** en toda la app: `idsMatching` (`src/lib/text-search.ts`) en servidor, `textMatches` (`src/lib/text.ts`) en pantalla.
+- **Proveedores** (`Supplier`): cada gasto se enlaza solo por RUC o nombre; Gastos con filtros (`src/lib/expenses/filters.ts`) y antigüedad de cuentas por pagar.
+- **Nómina** (Trabajadores › Equipo / Roles de pago): reglas 2026 en `src/lib/payroll/rules.ts` (actualizar `RULES_BY_YEAR` cada enero),
+  pruebas en `scripts/test-nomina.ts`, asiento PAYROLL al aprobar el rol.
+
+**Próximo paso concreto:**
+- QA con login real de todo lo anterior; cargar el equipo (quién IESS vs factura) y generar el primer rol.
+- Siguientes módulos: Caja y Bancos (enlazar pago de sueldos y planilla con el banco), pagos a proveedores (varias facturas, parciales),
+  planilla IESS / décimos / utilidades / liquidaciones, empresas en BD para vender la app a otros gimnasios.
+- Sigue pendiente: firma .p12 + primer envío al SRI de pruebas; mensaje de `portalSignUp`.
+- Ver UI sin login: bypass local temporal descrito en la memoria de la sesión; revertirlo antes del commit.
 
 **Última sesión (3–4 oct 2026):** PRs #123–#130 en producción (main `96812c1`):
 - **Ficha única por persona** (socios y leads, `src/components/ficha/`, timeline en `src/lib/ficha/timeline.ts`) con pestaña WhatsApp (responder y plantillas), edición en línea de propiedades y segmentos (automáticos + listas manuales: tablas `Segment`/`SegmentEntry`, migración `20261004000000_segment_lists` ya aplicada).
