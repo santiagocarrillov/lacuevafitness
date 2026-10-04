@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Bell, ListChecks, MessageCircle, Phone, RefreshCw, StickyNote } from "lucide-react";
-import { requireAuth, can } from "@/lib/auth";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { getMember, getMembershipPlans } from "@/lib/actions/members";
 import { getMemberChallenges } from "@/lib/actions/challenges";
 import { getMemberAnalytics } from "@/lib/actions/analytics";
@@ -175,9 +175,13 @@ export default async function MemberDetailPage({
   // Most recent non-daily membership (active or lapsed) — the source for a
   // "Renovar" when the socio has no currently-valid membership.
   const lastMembership = member.memberships.find((m) => m.plan.billingCycle !== "ONE_TIME");
-  const canEditMembership = user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN";
+  // The ficha is readable across sedes, but an admin with a sede only changes
+  // socios who train there (primary or secondary) — same rule as the actions.
+  const scope = getSedeScope(user);
+  const inScope = !scope || member.sede === scope || member.secondarySede === scope;
+  const canEditMembership = (user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN") && inScope;
   // Front desk edits every field; other staff only fix contact data (same rule as updateMember).
-  const canManage = can.manageMembers(user);
+  const canManage = can.manageMembers(user) && inScope;
   const seesPayments = can.viewPayments(user);
   const latestLevel = member.trainingLevels[0];
   const latestBody = member.bodyCompositions[0];
@@ -207,9 +211,15 @@ export default async function MemberDetailPage({
         <Link href="/dashboard/socios" className="text-xs font-medium text-primary hover:underline">
           ‹ Socios
         </Link>
-        <Link href={`${base}/editar${can.manageMembers(user) ? "" : "?solo=contacto"}`} className="text-xs font-medium text-primary hover:underline">
-          {can.manageMembers(user) ? "Editar" : "Editar contacto"}
-        </Link>
+        {inScope ? (
+          <Link href={`${base}/editar${canManage ? "" : "?solo=contacto"}`} className="text-xs font-medium text-primary hover:underline">
+            {canManage ? "Editar" : "Editar contacto"}
+          </Link>
+        ) : (
+          <span className="text-xs text-muted-foreground" title="Solo quien atiende su sede puede editarlo">
+            Socio de otra sede
+          </span>
+        )}
       </div>
       <div className="px-4 pb-5 pt-4">
         <div className="flex items-start gap-3">
@@ -251,7 +261,7 @@ export default async function MemberDetailPage({
               title={member.phone ? undefined : "Sin teléfono en la ficha"}
             />
             <QuickAction href={newTaskHref(person, base)} label="Tarea" icon={<ListChecks className="size-4" />} />
-            {can.manageMembers(user) && <QuickAction href={`${base}/notificar`} label="Notificar" icon={<Bell className="size-4" />} />}
+            {canManage && <QuickAction href={`${base}/notificar`} label="Notificar" icon={<Bell className="size-4" />} />}
             {renewHref && (
               <QuickAction href={renewHref} label={lastMembership ? "Renovar" : "Plan"} icon={<RefreshCw className="size-4" />} />
             )}
@@ -270,7 +280,7 @@ export default async function MemberDetailPage({
               }
             />
           )}
-          <MemberActions memberId={member.id} status={member.status} canAssignPlan={false} canChurn={can.manageMembers(user)} />
+          <MemberActions memberId={member.id} status={member.status} canAssignPlan={false} canChurn={canManage} />
         </div>
       </div>
     </>
@@ -291,8 +301,9 @@ export default async function MemberDetailPage({
               kind: "email",
               href: member.email ? `mailto:${member.email}` : undefined,
               external: true,
+              readOnly: !inScope,
             },
-            { field: "phone", label: "Celular", value: member.phone ?? "", kind: "tel", href: telLink(member.phone), external: true },
+            { field: "phone", label: "Celular", value: member.phone ?? "", kind: "tel", href: telLink(member.phone), external: true, readOnly: !inScope },
             {
               field: "dateOfBirth",
               label: "Nacimiento",
@@ -335,7 +346,7 @@ export default async function MemberDetailPage({
                 { value: "FITNESS_CENTER", label: "Fitness Center" },
                 { value: "XTREME", label: "Xtreme" },
               ],
-              readOnly: !canManage,
+              readOnly: !canManage || !!scope,
             },
             {
               field: "secondarySede",

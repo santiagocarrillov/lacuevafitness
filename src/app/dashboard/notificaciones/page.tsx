@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireAuth, can } from "@/lib/auth";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { getPushAudience, pushConfigured } from "@/lib/actions/push";
 import { BroadcastForm } from "./broadcast-form";
 
@@ -30,9 +30,10 @@ export default async function NotificacionesPage() {
       <div className="rounded-md border p-3 text-sm text-muted-foreground">
         Audiencia suscrita: <strong className="text-foreground">{audience.total}</strong> socios ·
         Fitness Center {audience.fitness} · Xtreme {audience.xtreme}
+        {getSedeScope(user) && " · tus avisos llegan solo a los socios de tu sede"}
       </div>
 
-      <BroadcastForm audience={audience} />
+      <BroadcastForm audience={audience} lockedSede={getSedeScope(user)} />
     </div>
   );
 }

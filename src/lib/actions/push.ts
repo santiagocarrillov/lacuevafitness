@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ensureVapid, sendToSubscriptions, type PushPayload } from "@/lib/push/send";
-import { requireAuth, requireMember, can } from "@/lib/auth";
+import { requireAuth, requireMember, can, getSedeScope } from "@/lib/auth";
 import type { Sede } from "@/generated/prisma/client";
 
 // VAPID setup + delivery live in a plain module so cron jobs and system events
@@ -58,6 +58,12 @@ export async function sendPushToMember(memberId: string, payload: PushPayload) {
   if (!can.manageMembers(user)) throw new Error("Sin permisos");
   if (!payload.title?.trim() || !payload.body?.trim()) throw new Error("Título y mensaje requeridos.");
 
+  // Admins with a sede only notify socios who train there (primary or secondary).
+  const scope = getSedeScope(user);
+  if (scope) {
+    const m = await prisma.member.findUnique({ where: { id: memberId }, select: { sede: true, secondarySede: true } });
+    if (!m || (m.sede !== scope && m.secondarySede !== scope)) throw new Error("Este socio es de otra sede.");
+  }
   const subs = await prisma.pushSubscription.findMany({ where: { memberId } });
   return sendToSubscriptions(subs, payload);
 }
@@ -67,8 +73,10 @@ export async function sendPushBroadcast(payload: PushPayload & { sede?: Sede | n
   if (!can.manageMembers(user)) throw new Error("Sin permisos");
   if (!payload.title?.trim() || !payload.body?.trim()) throw new Error("Título y mensaje requeridos.");
 
+  // An admin with a sede only reaches the socios of that sede, whatever the form sent.
+  const sede = getSedeScope(user) ?? payload.sede ?? null;
   const subs = await prisma.pushSubscription.findMany({
-    where: payload.sede ? { member: { sede: payload.sede } } : {},
+    where: sede ? { member: { sede } } : {},
   });
   return sendToSubscriptions(subs, { title: payload.title, body: payload.body, url: payload.url });
 }
