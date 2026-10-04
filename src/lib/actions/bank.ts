@@ -63,13 +63,13 @@ export async function createBankAccount(fd: FormData) {
   await prisma.bankAccount.create({
     data: { sede, name, bank: FORMAT_LABELS[statementFormat], last4, kind, statementFormat },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 export async function deactivateBankAccount(id: string) {
   await requireEdit();
   await prisma.bankAccount.update({ where: { id }, data: { active: false } });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 // ── Import ──────────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ export async function importStatement(fd: FormData): Promise<ImportResult> {
   const autoApplied = await applyConfident(user.id, { accountId: account.id, importBatch, onlyRules: true });
 
   const times = st.lines.map((l) => l.postedAt.getTime());
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   return {
     format: st.format,
     total: st.lines.length,
@@ -163,7 +163,7 @@ export async function listClassified(accountId?: string) {
 export async function classifyLine(txnId: string, decision: Decision, remember?: { pattern: string }) {
   const user = await requireEdit();
   await prisma.$transaction((tx) => classifyInTx(tx, user.id, txnId, decision, remember));
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   revalidatePath("/dashboard/pagos");
 }
 
@@ -191,7 +191,7 @@ async function applyConfident(
 export async function applySafeSuggestions(accountId?: string): Promise<number> {
   const user = await requireEdit();
   const n = await applyConfident(user.id, { accountId });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   revalidatePath("/dashboard/pagos");
   return n;
 }
@@ -199,7 +199,7 @@ export async function applySafeSuggestions(accountId?: string): Promise<number> 
 export async function undoLine(txnId: string) {
   await requireEdit();
   await prisma.$transaction((tx) => undoInTx(tx, txnId));
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   revalidatePath("/dashboard/pagos");
 }
 
@@ -213,5 +213,5 @@ export async function listRules() {
 export async function deactivateRule(id: string) {
   await requireEdit();
   await prisma.bankRule.update({ where: { id }, data: { active: false } });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }

@@ -53,7 +53,7 @@ export async function importSriFiles(fd: FormData): Promise<SriOutcome[]> {
       });
     }
   }
-  revalidatePath("/dashboard/finanzas");
+  revalidatePath("/dashboard/finanzas", "layout");
   return out;
 }
 

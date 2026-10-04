@@ -2,50 +2,73 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { FINANCE_MODULES, activeModule } from "./modules";
 
-type Item = { label: string; path: string; tab?: string };
-
-const ITEMS: Item[] = [
-  { label: "Resumen", path: "/dashboard/finanzas", tab: "resumen" },
-  { label: "Facturación", path: "/dashboard/facturas" },
-  { label: "Gastos", path: "/dashboard/gastos" },
-  { label: "Banco", path: "/dashboard/finanzas", tab: "banco" },
-  { label: "Impuestos", path: "/dashboard/finanzas", tab: "impuestos" },
-  { label: "Aportes y préstamos", path: "/dashboard/finanzas", tab: "aportes" },
-  { label: "Otros ingresos", path: "/dashboard/finanzas", tab: "otros" },
-  { label: "Contabilidad", path: "/dashboard/contabilidad" },
-];
-
-/** Second-level navigation of the Finanzas menu. Keeps the selected month. */
+/**
+ * Navigation of the accounting app: module pills with a coloured icon (like
+ * Intuit's) and, under them, the screens of the module you're in. Keeps the
+ * selected month.
+ */
 export function FinanceNav() {
-  const pathname = usePathname();
+  const path = usePathname();
   const params = useSearchParams();
+  const loc = { path, params: new URLSearchParams(params.toString()) };
+  const current = activeModule(loc);
   const mes = params.get("mes");
-  const tab = params.get("tab") ?? "resumen";
-  const isActive = (i: Item) =>
-    i.tab ? pathname === i.path && tab === i.tab : pathname === i.path || pathname.startsWith(`${i.path}/`);
-  const href = (i: Item) => {
-    const q = new URLSearchParams();
-    if (i.tab && i.tab !== "resumen") q.set("tab", i.tab);
-    if (mes) q.set("mes", mes);
-    const s = q.toString();
-    return s ? `${i.path}?${s}` : i.path;
+  const withMonth = (href: string) => {
+    if (!mes || href.startsWith("/dashboard/pagos")) return href;
+    return `${href}${href.includes("?") ? "&" : "?"}mes=${mes}`;
   };
+
   return (
-    <nav aria-label="Finanzas" className="sticky top-12 z-20 border-b bg-background/95 backdrop-blur md:top-11">
-      <div className="flex gap-1 overflow-x-auto px-4 md:px-8">
-        {ITEMS.map((i) => (
-          <Link
-            key={i.label}
-            href={href(i)}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition ${
-              isActive(i) ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {i.label}
-          </Link>
-        ))}
+    <nav aria-label="Contabilidad" className="sticky top-12 z-20 border-b bg-white/95 backdrop-blur md:top-11">
+      <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 md:px-8 [scrollbar-width:none]">
+        {FINANCE_MODULES.map((m) => {
+          const on = current?.key === m.key;
+          const Icon = m.icon;
+          return (
+            <Link
+              key={m.key}
+              href={withMonth(m.href)}
+              aria-current={on ? "page" : undefined}
+              className={`group flex shrink-0 items-center gap-2 rounded-full border py-1 pl-1 pr-3.5 text-sm font-medium transition ${
+                on ? "border-transparent shadow-sm" : "border-border bg-white text-foreground/80 hover:border-foreground/30 hover:text-foreground"
+              }`}
+              style={on ? { backgroundColor: `${m.color}14`, borderColor: `${m.color}55`, color: m.color } : undefined}
+            >
+              <span
+                className="flex size-7 items-center justify-center rounded-full text-white transition group-hover:scale-105"
+                style={{ backgroundColor: m.color }}
+              >
+                <Icon className="size-4" strokeWidth={2.25} />
+              </span>
+              <span className={on ? "text-foreground" : ""}>{m.label}</span>
+            </Link>
+          );
+        })}
       </div>
+      {current && current.subs.length > 0 && (
+        <div className="flex gap-1 overflow-x-auto px-4 md:px-8 [scrollbar-width:none]">
+          {current.subs.map((s) => {
+            const on = s.active(loc);
+            const Icon = s.icon;
+            return (
+              <Link
+                key={s.label}
+                href={withMonth(s.href)}
+                aria-current={on ? "page" : undefined}
+                className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition ${
+                  on ? "font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+                style={on ? { borderColor: current.color } : undefined}
+              >
+                <Icon className="size-3.5" style={on ? { color: current.color } : undefined} />
+                {s.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </nav>
   );
 }

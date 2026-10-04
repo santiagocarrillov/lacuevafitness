@@ -1,13 +1,55 @@
 import type { Sede } from "@/generated/prisma/enums";
 import { getStatements } from "@/lib/actions/accounting";
 import type { TreeRow } from "@/lib/accounting/reports";
-import { ENTITIES, monthLabel } from "@/lib/finance/entities";
+import { ENTITIES, ENTITY_ORDER, monthLabel } from "@/lib/finance/entities";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Indent, money } from "./shared";
 import { mayorHref } from "./links";
 
-function Rows({ rows, maxDepth = 3, sede, desde, hasta }: { rows: TreeRow[]; maxDepth?: number; sede: Sede; desde: string; hasta: string }) {
+type Statements = Awaited<ReturnType<typeof getStatements>>;
+
+/**
+ * Both entities summed account by account (same chart codes). Accounts that
+ * share a code but not a name (each one's banks, equity) stay on their own
+ * rows. No intercompany eliminations: the two companies don't trade with each
+ * other today.
+ */
+async function consolidated(asOf: string): Promise<Statements> {
+  const all = await Promise.all(ENTITY_ORDER.map((s) => getStatements(s, asOf)));
+  const merge = (pick: (s: Statements) => TreeRow[]) => {
+    const m = new Map<string, TreeRow>();
+    for (const st of all)
+      for (const r of pick(st)) {
+        const k = `${r.code}|${r.postable ? r.name : ""}`;
+        const cur = m.get(k);
+        if (!cur) m.set(k, { ...r, id: k });
+        else {
+          cur.openingCents += r.openingCents;
+          cur.debitCents += r.debitCents;
+          cur.creditCents += r.creditCents;
+          cur.closingCents += r.closingCents;
+        }
+      }
+    return [...m.values()].sort((a, b) => a.code.localeCompare(b.code, "en", { numeric: true }) || a.name.localeCompare(b.name));
+  };
+  const add = (f: (s: Statements) => number) => all.reduce((a, s) => a + f(s), 0);
+  return {
+    ...all[0],
+    balance: merge((s) => s.balance),
+    income: merge((s) => s.income),
+    resultCents: add((s) => s.resultCents),
+    totals: {
+      assets: add((s) => s.totals.assets),
+      liabilities: add((s) => s.totals.liabilities),
+      equity: add((s) => s.totals.equity),
+      check: add((s) => s.totals.check),
+    },
+    loans: all.flatMap((s, i) => s.loans.map((l) => ({ ...l, party: `${l.party} · ${ENTITIES[ENTITY_ORDER[i]].name}` }))),
+  };
+}
+
+function Rows({ rows, maxDepth = 3, sede, desde, hasta }: { rows: TreeRow[]; maxDepth?: number; sede: Sede | null; desde: string; hasta: string }) {
   return (
     <>
       {rows
@@ -17,7 +59,7 @@ function Rows({ rows, maxDepth = 3, sede, desde, hasta }: { rows: TreeRow[]; max
             <td className="py-1 pr-3">
               <Indent depth={r.depth} bold={!r.postable}>
                 <span className="text-xs text-muted-foreground tabular-nums mr-2">{r.code}</span>
-                {r.postable ? (
+                {r.postable && sede ? (
                   <Link href={mayorHref(sede, r.id, desde, hasta)} className="hover:underline">{r.name}</Link>
                 ) : (
                   r.name
@@ -25,7 +67,7 @@ function Rows({ rows, maxDepth = 3, sede, desde, hasta }: { rows: TreeRow[]; max
               </Indent>
             </td>
             <td className={`py-1 pl-3 text-right tabular-nums whitespace-nowrap ${!r.postable ? "font-semibold" : ""}`}>
-              {r.postable ? (
+              {r.postable && sede ? (
                 <Link href={mayorHref(sede, r.id, desde, hasta)} className="hover:underline" title="Ver el mayor de la cuenta">
                   {money(r.closingCents)}
                 </Link>
@@ -39,8 +81,10 @@ function Rows({ rows, maxDepth = 3, sede, desde, hasta }: { rows: TreeRow[]; max
   );
 }
 
-export async function EstadosTab({ sede, asOf, ym }: { sede: Sede; asOf: string; ym: string }) {
-  const s = await getStatements(sede, asOf);
+/** `sede` null = consolidated (figures don't drill down: open one company for that). */
+export async function EstadosTab({ sede, asOf, ym }: { sede: Sede | null; asOf: string; ym: string }) {
+  const s = sede ? await getStatements(sede, asOf) : await consolidated(asOf);
+  const who = sede ? ENTITIES[sede].legalName : `Consolidado · ${ENTITY_ORDER.map((x) => ENTITIES[x].name).join(" + ")}`;
   const section = (type: TreeRow["type"]) => s.balance.filter((r) => r.type === type);
   const range = { sede, desde: `${asOf.slice(0, 4)}-01-01`, hasta: asOf };
 
@@ -58,7 +102,7 @@ export async function EstadosTab({ sede, asOf, ym }: { sede: Sede; asOf: string;
         <Card>
           <CardHeader>
             <CardTitle>Estado de situación financiera</CardTitle>
-            <CardDescription>{ENTITIES[sede].legalName} · al {asOf}</CardDescription>
+            <CardDescription>{who} · al {asOf}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -83,7 +127,7 @@ export async function EstadosTab({ sede, asOf, ym }: { sede: Sede; asOf: string;
           <Card>
             <CardHeader>
               <CardTitle>Estado de resultados</CardTitle>
-              <CardDescription className="capitalize">Del 1 de enero al cierre de {monthLabel(ym)}</CardDescription>
+              <CardDescription className="first-letter:uppercase">Del 1 de enero al cierre de {monthLabel(ym)}</CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">

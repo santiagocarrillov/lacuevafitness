@@ -49,7 +49,7 @@ function EntityCard({ m, ivaAccountId, prevYm }: { m: IvaMonth; ivaAccountId?: s
           <tr><td colSpan={3} className="pt-3 pb-1 text-xs font-semibold uppercase text-muted-foreground">Resumen</td></tr>
           <Row c="499" label="Total impuesto a liquidar este mes" value={m.sales.ivaCents} />
           <Row c="564" label="Crédito tributario aplicable (factor 1: todo lo vendido es gravado)" value={m.creditApplied564} />
-          <Row c="605" label="Saldo de crédito tributario del mes anterior" value={m.credit605} href={prevYm ? `/dashboard/finanzas?tab=impuestos&mes=${prevYm}` : undefined} />
+          <Row c="605" label="Saldo de crédito tributario del mes anterior" value={m.credit605} href={prevYm ? `/dashboard/finanzas/impuestos?mes=${prevYm}` : undefined} />
           <Row c="601 · 699" label="IVA a pagar" value={m.toPay} strong />
           <Row c="615" label="Saldo de crédito tributario para el próximo mes" value={m.carry615} />
         </tbody>

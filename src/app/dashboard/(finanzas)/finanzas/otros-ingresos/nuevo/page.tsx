@@ -13,7 +13,7 @@ export default async function NuevoOtroIngresoPage({ searchParams }: { searchPar
   const ym = /^\d{4}-\d{2}$/.test(mes ?? "") ? mes : undefined;
   return (
     <FormPage title="Otro ingreso" description="Ventas de Gatorade y productos, reembolsos y otros ingresos que no son membresías.">
-      <OtherIncomeForm defaultDate={ym && ym < ecuadorDateString().slice(0, 7) ? `${ym}-01` : undefined} backHref={`/dashboard/finanzas?tab=otros${ym ? `&mes=${ym}` : ""}`} />
+      <OtherIncomeForm defaultDate={ym && ym < ecuadorDateString().slice(0, 7) ? `${ym}-01` : undefined} backHref={`/dashboard/finanzas/otros-ingresos${ym ? `?mes=${ym}` : ""}`} />
     </FormPage>
   );
 }

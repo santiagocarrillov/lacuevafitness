@@ -111,7 +111,9 @@ Los admins ven los mismos campos al registrar un pago.
   (`dashboard/back-button.tsx`); (3) los formularios de captura son **pantallas** con su ruta (`/nuevo`,
   `/[id]`, contenedor `(finanzas)/form-page.tsx`), no ventanas emergentes — solo confirmaciones cortas en
   diálogo; (4) Finanzas, Facturación, Gastos y Contabilidad viven en el grupo de rutas
-  `src/app/dashboard/(finanzas)/` bajo **un solo menú** con barra de secciones (`finance-nav.tsx`).
+  `src/app/dashboard/(finanzas)/` bajo **un solo menú**, organizado en módulos estilo QuickBooks (Inicio · Clientes ·
+  Proveedores · Trabajadores · Caja y Bancos · Empresa · Reportes) definidos en `(finanzas)/modules.ts`; fondo blanco.
+  Visión de producto y fases: `docs/contabilidad-v2.md`.
 - **Ficha única por persona (3 oct 2026)**: lead y socio usan la misma ficha estilo HubSpot de 3 columnas
   (`src/components/ficha/`): identidad + acciones rápidas | resumen + pestañas + línea de tiempo unificada
   (`src/lib/ficha/timeline.ts`, todo con su enlace) | lo asociado. `/dashboard/leads/[id]` redirige a la
@@ -132,6 +134,7 @@ Los admins ven los mismos campos al registrar un pago.
 | Gastos con líneas + lectura del comprobante por IA (admins sin ver nómina) | `docs/gastos-modulo3.md` + `src/lib/expenses/` + `src/lib/actions/expenses.ts` |
 | Impuestos: borrador del 104 (IVA) y ATS de Xtreme | `docs/impuestos.md` + `src/lib/taxes/` |
 | Facturación electrónica (emisión directa al SRI) | `docs/facturacion-sri.md` + `src/lib/invoicing/` + `src/lib/actions/invoicing.ts` |
+| Contabilidad: módulos, portada y plan multiempresa | `docs/contabilidad-v2.md` + `src/app/dashboard/(finanzas)/modules.ts` |
 | Contabilidad (libro diario, reemplaza QuickBooks) | `docs/contabilidad-libro-diario.md` + `src/lib/accounting/` — los reportes leen SOLO del libro diario |
 | Auth / permisos | `src/lib/auth.ts` |
 

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
 import { ecuadorDateString } from "@/lib/timezone";
 import type { Sede } from "@/generated/prisma/enums";
-import { ENTITIES, ENTITY_ORDER, monthLabel, monthRangeUtc, shiftMonth } from "@/lib/finance/entities";
+import { ENTITIES, ENTITY_ORDER, monthLabel, monthRangeUtc } from "@/lib/finance/entities";
+import { EntityPills, MonthNav, PageHeader } from "../page-header";
 import { getAccounts, getLockedThrough, syncAccounting } from "@/lib/actions/accounting";
 import { PeriodControls } from "./period-controls";
 import { DiarioTab } from "./diario-tab";
@@ -38,6 +38,8 @@ export default async function ContabilidadPage({
 
   const params = await searchParams;
   const tab: Tab = TABS.some((t) => t.key === params.tab) ? (params.tab as Tab) : "estados";
+  // Only the statements can be consolidated; every other screen is one company's books.
+  const consolidated = tab === "estados" && params.entidad === "CONSOLIDADO";
   const sede: Sede = params.entidad === "FITNESS_CENTER" ? "FITNESS_CENTER" : "XTREME";
   const thisMonth = ecuadorDateString().slice(0, 7);
   const ym = /^\d{4}-\d{2}$/.test(params.mes ?? "") ? params.mes! : thisMonth;
@@ -50,63 +52,58 @@ export default async function ContabilidadPage({
   const rangeFrom = isDay(params.desde) ? params.desde! : from;
   const rangeTo = isDay(params.hasta) ? params.hasta! : to;
 
+  const entidad = consolidated ? "CONSOLIDADO" : sede;
   const href = (u: Record<string, string>) =>
-    `/dashboard/contabilidad?${new URLSearchParams({ tab, mes: ym, entidad: sede, ...(params.cuenta ? { cuenta: params.cuenta } : {}), ...u }).toString()}`;
+    `/dashboard/contabilidad?${new URLSearchParams({ tab, mes: ym, entidad, ...(params.cuenta ? { cuenta: params.cuenta } : {}), ...u }).toString()}`;
 
   const needsAccounts = tab === "nuevo" || tab === "mayor" || tab === "plan";
+  const skipSync = tab === "plan" || tab === "nuevo";
   // Documents post themselves: bring the journal up to date before any report.
-  const [accounts, sync, locked] = await Promise.all([
+  const [accounts, syncs, locked] = await Promise.all([
     needsAccounts ? getAccounts(sede) : Promise.resolve([]),
-    tab === "plan" || tab === "nuevo" ? Promise.resolve(null) : syncAccounting(sede),
+    skipSync ? Promise.resolve([]) : Promise.all((consolidated ? ENTITY_ORDER : [sede]).map((s) => syncAccounting(s))),
     getLockedThrough(sede),
   ]);
+  const sync = syncs.length
+    ? {
+        created: syncs.reduce((a, x) => a + x.created, 0),
+        voided: syncs.reduce((a, x) => a + x.voided, 0),
+        locked: syncs.flatMap((x) => x.locked),
+        errors: syncs.flatMap((x) => x.errors),
+      }
+    : null;
   const monthEnded = to < ecuadorDateString();
   const canClose = canEdit && monthEnded && (!locked || locked < to);
+  const title = TABS.find((t) => t.key === tab)!.label;
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Contabilidad</h1>
-          <p className="text-sm text-muted-foreground">
-            Libro diario de partida doble · {ENTITIES[sede].legalName}
-            {ENTITIES[sede].ruc && ` · RUC ${ENTITIES[sede].ruc}`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-1">
-            {ENTITY_ORDER.map((s) => (
-              <Link
-                key={s}
-                href={href({ entidad: s, cuenta: "" })}
-                className={`rounded-full border px-3 py-1 text-xs ${s === sede ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
-              >
-                {ENTITIES[s].name}
-              </Link>
-            ))}
-          </div>
-          <nav className="flex items-center gap-1 text-sm" aria-label="Mes">
-            <Link href={href({ mes: shiftMonth(ym, -1) })} className="rounded-md border px-2.5 py-1.5 hover:bg-muted">←</Link>
-            <span className="min-w-32 text-center font-medium capitalize">{monthLabel(ym)}</span>
-            <Link
-              href={href({ mes: shiftMonth(ym, 1) })}
-              aria-disabled={ym >= thisMonth}
-              className={`rounded-md border px-2.5 py-1.5 hover:bg-muted ${ym >= thisMonth ? "pointer-events-none opacity-40" : ""}`}
-            >
-              →
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
+      <PageHeader
+        title={title}
+        subtitle={
+          consolidated
+            ? `Consolidado · ${ENTITY_ORDER.map((s) => ENTITIES[s].name).join(" + ")} · sin eliminaciones entre empresas`
+            : `Libro diario de partida doble · ${ENTITIES[sede].legalName}${ENTITIES[sede].ruc ? ` · RUC ${ENTITIES[sede].ruc}` : ""}`
+        }
+      >
+        <EntityPills
+          view={consolidated ? "ALL" : sede}
+          consolidated={tab === "estados"}
+          href={(v) => href({ entidad: v === "ALL" ? "CONSOLIDADO" : v, cuenta: "" })}
+        />
+        <MonthNav ym={ym} thisMonth={thisMonth} href={(m) => href({ mes: m })} />
+      </PageHeader>
 
-      <PeriodControls
-        sede={sede}
-        ym={ym}
-        monthName={monthLabel(ym)}
-        lockedThrough={locked}
-        canClose={canClose}
-        isOwner={user.role === "OWNER"}
-      />
+      {!consolidated && (
+        <PeriodControls
+          sede={sede}
+          ym={ym}
+          monthName={monthLabel(ym)}
+          lockedThrough={locked}
+          canClose={canClose}
+          isOwner={user.role === "OWNER"}
+        />
+      )}
 
       {sync && (sync.created > 0 || sync.voided > 0 || sync.locked.length > 0 || sync.errors.length > 0) && (
         <div className={`rounded-md border p-3 text-xs space-y-1 ${sync.errors.length || sync.locked.length ? "border-amber-300 bg-amber-50 text-amber-900" : "border-sky-200 bg-sky-50 text-sky-900"}`}>
@@ -123,21 +120,7 @@ export default async function ContabilidadPage({
         </div>
       )}
 
-      <div className="border-b flex gap-1 overflow-x-auto">
-        {TABS.filter((t) => t.key !== "nuevo" || canEdit).map((t) => (
-          <Link
-            key={t.key}
-            href={href({ tab: t.key })}
-            className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 whitespace-nowrap transition ${
-              tab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
-
-      {tab === "estados" && <EstadosTab sede={sede} asOf={to} ym={ym} />}
+      {tab === "estados" && <EstadosTab sede={consolidated ? null : sede} asOf={to} ym={ym} />}
       {tab === "activos" && <ActivosTab sede={sede} canEdit={canEdit} />}
       {tab === "diario" && <DiarioTab sede={sede} from={from} to={to} canEdit={canEdit} />}
       {tab === "nuevo" && canEdit && (

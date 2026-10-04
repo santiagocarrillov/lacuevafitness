@@ -38,7 +38,7 @@ function buildLines(st: EntityStatement[], ym: string): Line[] {
   const lines: Line[] = [
     { label: "Ingresos", values: [], kind: "section" },
     { label: "Membresías confirmadas", values: v((s) => s.membershipsConfirmedCents), link: (sede) => contab(sede, "estados") },
-    { label: "Membresías sin conciliar con el banco", values: v((s) => s.membershipsUnreconciledCents), kind: "warn", link: () => "/dashboard/finanzas?tab=banco" },
+    { label: "Membresías sin conciliar con el banco", values: v((s) => s.membershipsUnreconciledCents), kind: "warn", link: () => "/dashboard/finanzas/banco" },
   ];
   if (st.some((s) => s.unassignedDepositsCents)) {
     lines.push({ label: "Depósitos sin asignar a un socio", values: v((s) => s.unassignedDepositsCents), kind: "warn", link: () => "/dashboard/pagos" });
@@ -47,7 +47,7 @@ function buildLines(st: EntityStatement[], ym: string): Line[] {
     lines.push({
       label: OTHER_INCOME_LABELS[c],
       values: v((s) => s.otherIncome.find((o) => o.category === c)?.cents ?? 0),
-      link: () => `/dashboard/finanzas?tab=otros&mes=${ym}`,
+      link: () => `/dashboard/finanzas/otros-ingresos?mes=${ym}`,
     });
   }
   lines.push({ label: "Total ingresos", values: v((s) => s.incomeCents), kind: "total", link: (sede) => contab(sede, "estados") });
@@ -66,8 +66,8 @@ function buildLines(st: EntityStatement[], ym: string): Line[] {
   lines.push({ label: "Resultado del mes", values: v((s) => s.resultCents), kind: "result", link: (sede) => contab(sede, "estados") });
 
   lines.push({ label: "Dinero de los dueños", values: [], kind: "section" });
-  lines.push({ label: "Aportes y préstamos recibidos", values: v((s) => s.capitalInCents), link: () => `/dashboard/finanzas?tab=aportes&mes=${ym}` });
-  lines.push({ label: "Devoluciones y retiros", values: v((s) => s.capitalOutCents), link: () => `/dashboard/finanzas?tab=aportes&mes=${ym}` });
+  lines.push({ label: "Aportes y préstamos recibidos", values: v((s) => s.capitalInCents), link: () => `/dashboard/finanzas/aportes?mes=${ym}` });
+  lines.push({ label: "Devoluciones y retiros", values: v((s) => s.capitalOutCents), link: () => `/dashboard/finanzas/aportes?mes=${ym}` });
   lines.push({ label: "Cuentas por pagar (todas las fechas)", values: v((s) => s.payablesCents), kind: "muted", link: (sede) => `/dashboard/gastos?ver=porpagar${ent(sede)}` });
   return lines;
 }
@@ -189,7 +189,7 @@ export async function ResumenTab({ ym }: { ym: string }) {
                 return (
                   <tr key={r.ym} className={`border-b last:border-0 ${r.ym === ym ? "bg-accent" : ""}`}>
                     <td className="py-1.5 pr-4 capitalize">
-                      <Link href={`/dashboard/finanzas?tab=resumen&mes=${r.ym}`} className="hover:underline">
+                      <Link href={`/dashboard/finanzas/reportes/resultados?mes=${r.ym}`} className="hover:underline">
                         {monthLabel(r.ym)}
                       </Link>
                     </td>
@@ -219,7 +219,7 @@ export async function ResumenTab({ ym }: { ym: string }) {
           {balances.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Todavía no hay aportes registrados.{" "}
-              <Link href={`/dashboard/finanzas?tab=aportes&mes=${ym}`} className="text-primary hover:underline">
+              <Link href={`/dashboard/finanzas/aportes?mes=${ym}`} className="text-primary hover:underline">
                 Registrar el primero
               </Link>
             </p>

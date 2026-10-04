@@ -24,7 +24,7 @@ export async function BancoTab({ accountId, canEdit }: { accountId?: string; can
     listRules(),
   ]);
   const safe = inbox.filter((l) => l.suggestion?.confident).length;
-  const link = (id?: string) => `/dashboard/finanzas?tab=banco${id ? `&cuenta=${id}` : ""}`;
+  const link = (id?: string) => `/dashboard/finanzas/banco${id ? `?cuenta=${id}` : ""}`;
 
   return (
     <div className="space-y-6">

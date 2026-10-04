@@ -188,7 +188,7 @@ export async function createExpense(fd: FormData): Promise<{ id: string }> {
       reviewedById: user.id,
     },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
   return { id: expense.id };
 }
 
@@ -201,7 +201,7 @@ export async function markExpensePaid(id: string, paidAt: string, method: Expens
     where: { id, voidedAt: null },
     data: { status: "PAID", paidAt: parseDay(paidAt, "Fecha de pago"), paymentMethod: method },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 export async function voidExpense(id: string, reason: string) {
@@ -214,7 +214,7 @@ export async function voidExpense(id: string, reason: string) {
     where: { id, voidedAt: null },
     data: { voidedAt: new Date(), voidReason: reason.trim() },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 export async function getExpenseReceiptUrl(id: string): Promise<string | null> {
@@ -262,7 +262,7 @@ export async function createCapitalMovement(fd: FormData): Promise<void> {
       createdById: user.id,
     },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 export async function voidCapitalMovement(id: string) {
@@ -270,7 +270,7 @@ export async function voidCapitalMovement(id: string) {
   const c = await prisma.capitalMovement.findUniqueOrThrow({ where: { id }, select: { sede: true, date: true } });
   await assertOpen(prisma, c.sede, c.date);
   await prisma.capitalMovement.update({ where: { id, voidedAt: null }, data: { voidedAt: new Date() } });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 // ── Other income ────────────────────────────────────────────────────────────
@@ -303,7 +303,7 @@ export async function createOtherIncome(fd: FormData): Promise<void> {
       createdById: user.id,
     },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 export async function voidOtherIncome(id: string) {
@@ -311,7 +311,7 @@ export async function voidOtherIncome(id: string) {
   const o = await prisma.otherIncome.findUniqueOrThrow({ where: { id }, select: { sede: true, date: true } });
   await assertOpen(prisma, o.sede, o.date);
   await prisma.otherIncome.update({ where: { id, voidedAt: null }, data: { voidedAt: new Date() } });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
 
 // ── Review ──────────────────────────────────────────────────────────────────
@@ -329,5 +329,5 @@ export async function updateExpenseCategory(id: string, category: ExpenseCategor
     where: { id, voidedAt: null },
     data: { category, isPrivate: PRIVATE_CATEGORIES.includes(category), ...(autoNote ? { notes: null } : {}) },
   });
-  revalidatePath(PATH);
+  revalidatePath(PATH, "layout");
 }
