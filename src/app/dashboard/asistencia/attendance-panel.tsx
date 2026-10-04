@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -91,11 +92,7 @@ export function AttendancePanel({
 
   const filtered = members.filter((m) => {
     if (attendedIds.has(m.id)) return false;
-    const q = search.toLowerCase();
-    return (
-      m.firstName.toLowerCase().includes(q) ||
-      m.lastName.toLowerCase().includes(q)
-    );
+    return textMatches(`${m.firstName} ${m.lastName}`, search);
   });
 
   async function handleAddMember(memberId: string) {

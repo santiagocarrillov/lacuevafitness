@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
@@ -64,11 +65,8 @@ export function Timeline({
   const [limit, setLimit] = useState(60);
 
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
     return items.filter(
-      (i) =>
-        !hidden.has(i.kind) &&
-        (!needle || `${i.title} ${i.body ?? ""} ${i.by ?? ""} ${(i.details ?? []).join(" ")}`.toLowerCase().includes(needle)),
+      (i) => !hidden.has(i.kind) && textMatches(`${i.title} ${i.body ?? ""} ${i.by ?? ""} ${(i.details ?? []).join(" ")}`, q),
     );
   }, [items, hidden, q]);
 

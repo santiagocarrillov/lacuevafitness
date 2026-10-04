@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { applyPlanToMember, linkMemberToLead } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
@@ -119,12 +120,9 @@ export async function getMembers({
     attendance: { none: {} },
   };
   if (search) {
-    where.OR = [
-      { firstName: { contains: search, mode: "insensitive" } },
-      { lastName: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { phone: { contains: search, mode: "insensitive" } },
-    ];
+    // Accent- and case-insensitive, every word in any field ("maria rojas").
+    const ids = await idsMatching(SEARCH_SOURCES.member, search);
+    if (ids) where.id = { in: ids };
   }
 
   const thirtyDaysAgo = new Date();

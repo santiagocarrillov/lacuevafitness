@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireMember } from "@/lib/auth";
@@ -114,7 +115,7 @@ export async function searchDiaryItems(q: string): Promise<DiaryHit[]> {
     prisma.recipe.findMany({
       where: {
         active: true,
-        title: { contains: q.trim(), mode: "insensitive" },
+        id: { in: (await idsMatching(SEARCH_SOURCES.recipe, q, { minLength: 2 })) ?? [] },
         OR: [{ status: "PUBLISHED" }, { authorMemberId: member.id }],
       },
       select: RECIPE_SELECT,

@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,8 +15,7 @@ export function PayerPicker({ memberId, memberName, payers, after }: { memberId:
   const [q, setQ] = useState("");
   const [pending, start] = useTransition();
   const shown = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return (t ? payers.filter((p) => `${p.name} ${p.taxId} ${p.members.join(" ")}`.toLowerCase().includes(t)) : payers).slice(0, 8);
+    return payers.filter((p) => textMatches(`${p.name} ${p.taxId} ${p.members.join(" ")}`, q)).slice(0, 8);
   }, [q, payers]);
   if (payers.length === 0) return null;
   return (

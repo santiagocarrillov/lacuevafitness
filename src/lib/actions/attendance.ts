@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Sede, MembershipState, type User } from "@/generated/prisma/client";
@@ -155,13 +156,11 @@ export async function searchMembersAllSedes(query: string) {
   if (user.role === "MEMBER") throw new Error("Sin permisos");
   const q = query.trim();
   if (q.length < 2) return [];
+  const ids = (await idsMatching(SEARCH_SOURCES.memberName, q)) ?? [];
   return prisma.member.findMany({
     where: {
       status: { in: TRAINING_BASE },
-      OR: [
-        { firstName: { contains: q, mode: "insensitive" } },
-        { lastName: { contains: q, mode: "insensitive" } },
-      ],
+      id: { in: ids },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     take: 15,

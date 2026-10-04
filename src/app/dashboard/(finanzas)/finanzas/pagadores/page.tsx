@@ -5,6 +5,7 @@ import { requireAuth, can } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { fmtMoney } from "@/lib/finance/entities";
 import { TAX_ID_LABELS } from "@/lib/invoicing/core";
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { PageHeader } from "../../page-header";
 
 export const dynamic = "force-dynamic";
@@ -15,16 +16,12 @@ export default async function PagadoresPage({ searchParams }: { searchParams: Pr
   const q = ((await searchParams).q ?? "").trim();
   const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
 
+  // Accent-insensitive: by the payer's name/ID or by a member they pay for.
+  const [payerIds, memberIds] = q
+    ? await Promise.all([idsMatching(SEARCH_SOURCES.payer, q), idsMatching(SEARCH_SOURCES.memberName, q)])
+    : [null, null];
   const payers = await prisma.payer.findMany({
-    where: q
-      ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { taxId: { contains: q } },
-            { members: { some: { OR: [{ firstName: { contains: q, mode: "insensitive" } }, { lastName: { contains: q, mode: "insensitive" } }] } } },
-          ],
-        }
-      : {},
+    where: q ? { OR: [{ id: { in: payerIds ?? [] } }, { members: { some: { id: { in: memberIds ?? [] } } } }] } : {},
     orderBy: { name: "asc" },
     include: {
       members: { select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } },

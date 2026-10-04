@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
@@ -39,7 +40,7 @@ export async function listRecipes(filter: RecipeListFilter = "publicadas", q?: s
     ...(statuses ? { status: { in: statuses } } : {}),
     // A socio's PRIVATE recipe is theirs alone; staff drafts have no member author.
     ...(filter === "borradores" ? { authorMemberId: null } : {}),
-    ...(q?.trim() ? { title: { contains: q.trim(), mode: "insensitive" as const } } : {}),
+    ...(q?.trim() ? { id: { in: (await idsMatching(SEARCH_SOURCES.recipe, q)) ?? [] } } : {}),
   };
   const [rows, counts] = await Promise.all([
     prisma.recipe.findMany({

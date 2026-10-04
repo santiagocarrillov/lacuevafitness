@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
@@ -412,7 +413,7 @@ export async function searchRecipesForPlan(q: string) {
   return prisma.recipe.findMany({
     where: {
       active: true,
-      title: { contains: query, mode: "insensitive" },
+      id: { in: (await idsMatching(SEARCH_SOURCES.recipe, query)) ?? [] },
       OR: [{ status: "PUBLISHED" }, { authorMemberId: null }],
     },
     orderBy: { title: "asc" },

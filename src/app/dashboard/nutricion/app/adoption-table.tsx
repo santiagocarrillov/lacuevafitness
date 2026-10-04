@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -177,7 +178,7 @@ export function AdoptionTable({ rows, sede, sedeLocked }: { rows: AdoptionRow[];
   const visible = rows.filter(
     (r) =>
       (filter === "pendientes" ? r.state !== "app" : r.state === filter) &&
-      (!q.trim() || `${r.name} ${r.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())),
+      textMatches(`${r.name} ${r.email ?? ""}`, q),
   );
 
   return (
