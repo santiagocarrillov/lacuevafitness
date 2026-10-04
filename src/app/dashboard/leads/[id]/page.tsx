@@ -21,6 +21,8 @@ import {
 } from "@/components/ficha/layout";
 import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
 import { EditablePropList } from "@/components/ficha/editable-props";
+import { SegmentsCard } from "@/components/ficha/segments-card";
+import { getPersonSegments, listSegments } from "@/lib/actions/segment-lists";
 import { getConversationThread } from "@/lib/actions/comunicacion";
 import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 import { Timeline } from "@/components/ficha/timeline";
@@ -71,7 +73,13 @@ export default async function LeadDetailPage({
   if (!lead) return notFound();
   if (lead.member) redirect(`/dashboard/socios/${lead.member.id}`);
 
-  const [tasks, staff] = await Promise.all([getPersonTasks({ kind: "lead", id }, 50), getStaffUsers()]);
+  const seesSegments = can.viewSegments(user);
+  const [tasks, staff, personSegments, segmentOptions] = await Promise.all([
+    getPersonTasks({ kind: "lead", id }, 50),
+    getStaffUsers(),
+    seesSegments ? getPersonSegments({ kind: "lead", id }) : Promise.resolve([]),
+    seesSegments ? listSegments() : Promise.resolve([]),
+  ]);
   // La actividad se carga siempre: la última entrada alimenta el resumen de arriba.
   const [timeline, waThread] = await Promise.all([
     loadPersonTimeline(user, { leadId: lead.id }, tasks.closed),
@@ -286,6 +294,11 @@ export default async function LeadDetailPage({
       >
         <PersonTasks open={tasks.open} today={ecuadorDateString()} />
       </FichaSection>
+      {seesSegments && (
+        <FichaSection title="Segmentos" count={personSegments.length}>
+          <SegmentsCard person={{ kind: "lead", id: lead.id }} auto={[]} lists={personSegments} options={segmentOptions} />
+        </FichaSection>
+      )}
       <FichaSection title="WhatsApp">
         <WhatsappSummary
           conversation={lead.conversation}

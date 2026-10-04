@@ -45,6 +45,8 @@ model User {
   attendanceRecords       Attendance[]            @relation("AttendanceRecordedBy")
   coachConfirmations      CoachConfirmation[]
   leadsOwned              Lead[]                  @relation("LeadOwner")
+  segmentsCreated         Segment[]               @relation("SegmentCreatedBy")
+  segmentEntriesAdded     SegmentEntry[]          @relation("SegmentEntryAddedBy")
   leadInteractions        LeadInteraction[]
   dailyIndicators         DailyIndicators[]
   evaluationsAsCoach      Evaluation[]            @relation("EvaluationCoach")
@@ -140,6 +142,7 @@ model Member {
   foodsCreated          Food[]                    @relation("FoodCreatedByMember")
   recipesAuthored       Recipe[]                  @relation("RecipeAuthorMember")
   staffTasks            StaffTask[]
+  segmentEntries        SegmentEntry[]
 
   @@index([sede, status])
   @@index([lastName, firstName])
@@ -401,10 +404,11 @@ model Lead {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  interactions LeadInteraction[]
-  member       Member?
-  conversation Conversation?
-  staffTasks   StaffTask[]
+  interactions   LeadInteraction[]
+  member         Member?
+  conversation   Conversation?
+  staffTasks     StaffTask[]
+  segmentEntries SegmentEntry[]
 
   @@index([sede, stage])
   @@index([source])
@@ -2010,4 +2014,45 @@ model InvoiceLine {
 
   @@index([invoiceId])
   @@index([membershipId])
+}
+
+/// Lista manual de personas armada por el staff ("Segment memberships" de
+/// HubSpot): "Convenio Banco X", "Interesados en nutrición", "Embajadores".
+/// Los segmentos automáticos (riesgo, horario, por vencer…) se calculan en
+/// `actions/analytics.ts` y no viven aquí. Nunca se borra: se archiva.
+model Segment {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  sede        Sede? // null = ambas sedes
+  createdById String?
+  createdBy   User?     @relation("SegmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  entries SegmentEntry[]
+
+  @@index([archivedAt])
+}
+
+/// Una persona dentro de una lista. Es de un lead O de un socio (CHECK en la
+/// BD, igual que Conversation). Cuando el lead pasa a socio, su entrada sigue
+/// valiendo: la ficha del socio lee también las de su lead.
+model SegmentEntry {
+  id        String   @id @default(cuid())
+  segmentId String
+  segment   Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  addedById String?
+  addedBy   User?    @relation("SegmentEntryAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@unique([segmentId, leadId])
+  @@unique([segmentId, memberId])
+  @@index([leadId])
+  @@index([memberId])
 }

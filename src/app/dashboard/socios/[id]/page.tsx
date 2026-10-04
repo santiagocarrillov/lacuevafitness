@@ -45,6 +45,9 @@ import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
 import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
 import { EditablePropList } from "@/components/ficha/editable-props";
+import { SegmentsCard } from "@/components/ficha/segments-card";
+import { getMemberAutoSegments, getPersonSegments, listSegments } from "@/lib/actions/segment-lists";
+import { SEGMENT_INFO } from "@/lib/segments/auto";
 import { getConversationThread } from "@/lib/actions/comunicacion";
 import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 
@@ -148,6 +151,15 @@ export default async function MemberDetailPage({
     canSchedule ? getMemberAppointments(id) : Promise.resolve([]),
   ]);
   if (!member) return notFound();
+
+  const seesSegments = can.viewSegments(user);
+  const [autoSegments, personSegments, segmentOptions] = seesSegments
+    ? await Promise.all([
+        getMemberAutoSegments(member.id),
+        getPersonSegments({ kind: "member", id: member.id }, member.leadId),
+        listSegments(),
+      ])
+    : [[], [], []];
 
   const name = `${member.firstName} ${member.lastName}`.trim();
   const base = `/dashboard/socios/${member.id}`;
@@ -779,6 +791,17 @@ export default async function MemberDetailPage({
                 {member.phone ? "Todavía no hay conversación." : "Sin teléfono en la ficha."}
               </p>
             }
+          />
+        </FichaSection>
+      )}
+
+      {seesSegments && (
+        <FichaSection title="Segmentos" count={autoSegments.length + personSegments.length}>
+          <SegmentsCard
+            person={{ kind: "member", id: member.id }}
+            auto={autoSegments.map((k) => ({ key: k, ...SEGMENT_INFO[k] }))}
+            lists={personSegments}
+            options={segmentOptions}
           />
         </FichaSection>
       )}
