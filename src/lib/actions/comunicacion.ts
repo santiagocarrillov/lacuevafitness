@@ -15,7 +15,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { sendTemplate, sendText } from "@/lib/whatsapp/client";
-import { FICHA_TEMPLATES, TEMPLATE_LANGUAGE, renderTemplate, templateName } from "@/lib/whatsapp/templates";
+import { FICHA_TEMPLATES, TEMPLATE_LANGUAGE, fichaTemplatePreviews, renderTemplate, templateName } from "@/lib/whatsapp/templates";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import { MEMBER_OWNED_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import { contactOf, phoneKey } from "@/lib/whatsapp/contact";
@@ -514,6 +514,142 @@ export async function sendFichaTemplate(conversationId: string, name: string): P
   }
 }
 
+export type ContactSummary = {
+  kind: "lead" | "member";
+  leadId: string | null;
+  memberId: string | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  sede: Sede;
+  createdAt: string;
+  source: string | null;
+  adHeadline: string | null;
+  trialScheduledAt: string | null;
+  membership: { plan: string; endsAt: string; active: boolean } | null;
+  lastAttendanceAt: string | null;
+  openTasks: number;
+  notes: { id: string; text: string; by: string | null; at: string }[];
+};
+
+/**
+ * La tarjeta de la derecha del inbox: lo esencial de la persona sin salir del
+ * chat (cómo llegó, su plan, cuándo vino, las últimas notas). La ficha completa
+ * queda a un click.
+ */
+export async function getContactSummary(conversationId: string): Promise<ContactSummary | null> {
+  await requireInboxAccess();
+  const c = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: {
+      sede: true,
+      lead: {
+        select: {
+          id: true, firstName: true, lastName: true, phone: true, email: true, createdAt: true, source: true,
+          adHeadline: true, trialScheduledAt: true, member: { select: { id: true } },
+        },
+      },
+      memberId: true,
+    },
+  });
+  if (!c) return null;
+  // A lead that already became a socio is shown as the socio.
+  const memberId = c.memberId ?? c.lead?.member?.id ?? null;
+  const leadId = c.lead?.id ?? (memberId ? (await prisma.member.findUnique({ where: { id: memberId }, select: { leadId: true } }))?.leadId ?? null : null);
+
+  const [member, lead, interactions, notes, openTasks] = await Promise.all([
+    memberId
+      ? prisma.member.findUnique({
+          where: { id: memberId },
+          select: {
+            firstName: true, lastName: true, phone: true, email: true, sede: true, joinedAt: true,
+            memberships: { orderBy: { endsAt: "desc" }, take: 1, select: { endsAt: true, state: true, plan: { select: { name: true } } } },
+            attendance: { orderBy: { recordedAt: "desc" }, take: 1, select: { recordedAt: true } },
+          },
+        })
+      : null,
+    leadId && !c.lead
+      ? prisma.lead.findUnique({ where: { id: leadId }, select: { source: true, adHeadline: true, createdAt: true } })
+      : null,
+    leadId
+      ? prisma.leadInteraction.findMany({
+          where: { leadId },
+          orderBy: { occurredAt: "desc" },
+          take: 5,
+          select: { id: true, summary: true, occurredAt: true, user: { select: { fullName: true } } },
+        })
+      : [],
+    memberId
+      ? prisma.memberNote.findMany({
+          where: { memberId },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { id: true, content: true, createdAt: true, author: { select: { fullName: true } } },
+        })
+      : [],
+    prisma.staffTask.count({
+      where: {
+        status: { in: ["TODO", "IN_PROGRESS", "WAITING"] },
+        OR: [...(memberId ? [{ memberId }] : []), ...(leadId ? [{ leadId }] : [])],
+      },
+    }),
+  ]);
+
+  const m = member?.memberships[0];
+  const allNotes = [
+    ...notes.map((n) => ({ id: `n-${n.id}`, text: n.content, by: n.author?.fullName ?? null, at: n.createdAt })),
+    ...interactions.map((i) => ({ id: `i-${i.id}`, text: i.summary, by: i.user?.fullName ?? null, at: i.occurredAt })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 5)
+    .map((n) => ({ ...n, at: n.at.toISOString() }));
+
+  const l = c.lead;
+  return {
+    kind: memberId ? "member" : "lead",
+    leadId,
+    memberId,
+    name: member ? `${member.firstName} ${member.lastName}`.trim() : `${l?.firstName ?? ""} ${l?.lastName ?? ""}`.trim(),
+    phone: member?.phone ?? l?.phone ?? null,
+    email: member?.email ?? l?.email ?? null,
+    sede: member?.sede ?? c.sede,
+    createdAt: (member?.joinedAt ?? l?.createdAt ?? lead?.createdAt ?? new Date()).toISOString(),
+    source: l?.source ?? lead?.source ?? null,
+    adHeadline: l?.adHeadline ?? lead?.adHeadline ?? null,
+    trialScheduledAt: l?.trialScheduledAt?.toISOString() ?? null,
+    membership: m ? { plan: m.plan.name, endsAt: m.endsAt.toISOString(), active: m.state === "ACTIVE" && m.endsAt >= new Date() } : null,
+    lastAttendanceAt: member?.attendance[0]?.recordedAt.toISOString() ?? null,
+    openTasks,
+    notes: allNotes,
+  };
+}
+
+/**
+ * Nota interna desde el chat ("Note" de los inbox tipo CRM): no se manda por
+ * WhatsApp, queda en la ficha — como nota del socio o como contacto del lead.
+ */
+export async function addConversationNote(conversationId: string, text: string): Promise<SendReplyResult> {
+  const user = await requireInboxAccess();
+  const body = text.trim().slice(0, 4000);
+  if (!body) return { ok: false, error: "La nota está vacía." };
+  const c = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { memberId: true, leadId: true, lead: { select: { member: { select: { id: true } } } } },
+  });
+  if (!c) return { ok: false, error: "Conversación no encontrada." };
+  const memberId = c.memberId ?? c.lead?.member?.id ?? null;
+  if (memberId) {
+    await prisma.memberNote.create({ data: { memberId, authorId: user.id, content: body } });
+    revalidatePath(`/dashboard/socios/${memberId}`);
+  } else if (c.leadId) {
+    await prisma.leadInteraction.create({ data: { leadId: c.leadId, userId: user.id, channel: "WHATSAPP", summary: body } });
+    revalidatePath(`/dashboard/leads/${c.leadId}`);
+  } else {
+    return { ok: false, error: "Esta conversación no tiene ficha." };
+  }
+  return { ok: true };
+}
+
 export type ConversationSearchResult = {
   /** Ids de los mensajes que coinciden, del más reciente al más viejo. */
   messageIds: string[];
@@ -601,6 +737,8 @@ export type ThreadData = {
   /** Hay mensajes anteriores al primero cargado. */
   hasOlder: boolean;
   messages: ThreadMessage[];
+  /** Approved templates that can be sent now (only when the 24h window is closed). */
+  templates: { name: string; label: string; preview: string }[];
 };
 
 /** Nombres del staff para los mensajes enviados a mano (el resto no los necesita). */
@@ -706,6 +844,8 @@ export async function getConversationThread(
       })
     : null;
   const inboundMs = conversation.lastInboundAt ? new Date(conversation.lastInboundAt).getTime() : 0;
+  const windowOpen = inboundMs > 0 && Date.now() - inboundMs < WINDOW_MS;
+  const who = conversation.member ?? conversation.lead;
 
   return {
     conversationId: conversation.id,
@@ -720,7 +860,8 @@ export async function getConversationThread(
     botResumeAt: conversation.botResumeAt ? conversation.botResumeAt.toISOString() : null,
     ownerUserId: conversation.lead?.ownerUserId ?? null,
     ownerName: conversation.lead?.owner?.fullName ?? null,
-    windowOpen: inboundMs > 0 && Date.now() - inboundMs < WINDOW_MS,
+    windowOpen,
+    templates: windowOpen ? [] : fichaTemplatePreviews(conversation.memberId ? "member" : "lead", who?.firstName ?? null, who?.lastName),
     memberStatus: contact.memberStatus ?? memberOfLead?.status ?? null,
     anchorMessageId: anchor?.id ?? null,
     hasOlder,

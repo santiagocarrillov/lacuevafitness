@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export default async function ComunicacionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string }>;
+  searchParams: Promise<{ c?: string; vista?: string }>;
 }) {
-  const { c: openId } = await searchParams;
+  const { c: openId, vista } = await searchParams;
   const user = await requireAuth();
   if (!can.manageLeads(user)) redirect("/dashboard?forbidden=1");
 
@@ -21,12 +21,12 @@ export default async function ComunicacionPage({
   ]);
 
   return (
-    <div className="h-[calc(100dvh-3rem)] md:h-[calc(100dvh-2.75rem)] flex flex-col">
-      <header className="px-4 md:px-6 py-3 border-b border-border shrink-0 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold">Comunicación</h1>
-          <p className="text-xs text-muted-foreground">
-            Inbox compartido de WhatsApp — leads de ambas sedes. Toma el control cuando quieras; el agente sigue el resto.
+    <div className="h-[calc(100dvh-3rem)] md:h-[calc(100dvh-2.75rem)] flex flex-col bg-card">
+      <header className="px-4 md:px-6 py-3 border-b border-border shrink-0 flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-semibold">WhatsApp</h1>
+          <p className="hidden text-xs text-muted-foreground sm:block">
+            Inbox compartido de ambas sedes · el agente IA responde y tú tomas el control cuando quieras.
           </p>
         </div>
         {user.role === "OWNER" && (
@@ -43,6 +43,7 @@ export default async function ComunicacionPage({
         staff={staff}
         currentUserId={user.id}
         initialOpenId={openId ?? null}
+        initialView={vista === "tablero" ? "tablero" : "lista"}
       />
     </div>
   );

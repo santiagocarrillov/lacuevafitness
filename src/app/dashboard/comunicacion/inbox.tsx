@@ -14,6 +14,8 @@ import {
   searchInbox,
   searchConversation,
   openMemberConversation,
+  addConversationNote,
+  sendFichaTemplate,
   type ConversationRow,
   type ThreadData,
   type InboxFilter,
@@ -24,16 +26,14 @@ import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsap
 import { isSearchable } from "@/lib/whatsapp/search";
 import { InboxSearchResults } from "./inbox-search";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Columns3, List, ListPlus, Search, Send, StickyNote, X } from "lucide-react";
+import { Board } from "./board";
+import { ContactPanel } from "./contact-panel";
+import { Avatar, BotChip, ConversationCard, StageChip } from "./ui";
 import { Highlight } from "./highlight";
-import { SEDE_LABEL, dayLabel, timeShort } from "./format";
-import {
-  LEAD_STAGES,
-  MEMBER_OWNED_STAGES,
-  MEMBER_STATUS_COLOR,
-  MEMBER_STATUS_LABEL,
-  STAGE_COLOR,
-  STAGE_LABEL,
-} from "@/lib/leads/stages";
+import { dayLabel, timeShort } from "./format";
+import { LEAD_STAGES } from "@/lib/leads/stages";
 
 const FILTERS: Array<{ key: InboxFilter; label: string }> = [
   { key: "all", label: "Todas" },
@@ -120,6 +120,8 @@ type Props = {
   currentUserId: string;
   /** Conversación a abrir al entrar (`?c=`), p. ej. desde una tarea del Resumen. */
   initialOpenId?: string | null;
+  /** "lista" (chat) o "tablero" (columnas por etapa), desde `?vista=`. */
+  initialView?: "lista" | "tablero";
 };
 
 export function Inbox({
@@ -127,7 +129,17 @@ export function Inbox({
   staff,
   currentUserId,
   initialOpenId = null,
+  initialView = "lista",
 }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
+  const [view, setView] = useState<"lista" | "tablero">(initialView);
+  /** Composer: reply on WhatsApp, or an internal note that lands on the ficha. */
+  const [mode, setMode] = useState<"reply" | "note">("reply");
+  const [note, setNote] = useState("");
+  /** Bumped after actions so the contact card reloads. */
+  const [panelKey, setPanelKey] = useState(0);
   const [filter, setFilter] = useState<InboxFilter>("all");
   /** Cuántas esperan a una persona — se pinta en la pestaña para que no pasen desapercibidas. */
   const [waiting, setWaiting] = useState(0);
@@ -412,547 +424,506 @@ export function Inbox({
     }
   }
 
+  function switchView(next: "lista" | "tablero") {
+    setView(next);
+    const params = new URLSearchParams(sp.toString());
+    if (next === "tablero") params.set("vista", "tablero");
+    else params.delete("vista");
+    router.replace(params.toString() ? `${pathname}?${params}` : pathname, { scroll: false });
+  }
+
+  async function onSaveNote() {
+    if (!thread || !note.trim() || sending) return;
+    setSending(true);
+    setError(null);
+    const res = await addConversationNote(thread.conversationId, note);
+    setSending(false);
+    if (res.ok) {
+      setNote("");
+      setPanelKey((k) => k + 1);
+    } else setError(res.error);
+  }
+
+  async function onSendTemplate(name: string, label: string) {
+    if (!thread || sending) return;
+    if (!confirm(`¿Enviar la plantilla “${label}” por WhatsApp?`)) return;
+    setSending(true);
+    setError(null);
+    const res = await sendFichaTemplate(thread.conversationId, name);
+    setSending(false);
+    if (res.ok) {
+      await refreshThread(thread.conversationId, null);
+      await refreshList(filterRef.current);
+    } else setError(res.error);
+  }
+
   const hitPosition = useMemo(
     () => (hits.length === 0 ? "" : `${hitIndex + 1} de ${hits.length}${hitsTruncated ? "+" : ""}`),
     [hitIndex, hits.length, hitsTruncated],
   );
 
+  const toolbar = (
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2 md:px-4">
+      <div className="inline-flex rounded-lg border border-border bg-muted/60 p-0.5" role="tablist" aria-label="Vista">
+        {(
+          [
+            { key: "lista", label: "Chats", icon: List },
+            { key: "tablero", label: "Tablero", icon: Columns3 },
+          ] as const
+        ).map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            role="tab"
+            aria-selected={view === v.key}
+            onClick={() => switchView(v.key)}
+            className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition ${
+              view === v.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <v.icon className="size-3.5" /> {v.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1 overflow-x-auto">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`inline-flex h-7 items-center whitespace-nowrap rounded-full px-3 text-xs font-medium transition ${
+              filter === f.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            {f.label}
+            {f.key === "waiting" && waiting > 0 && (
+              <span className={`ml-1.5 rounded-full px-1.5 text-[10px] font-semibold ${filter === f.key ? "bg-white text-primary" : "bg-emerald-500 text-white"}`}>
+                {waiting}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        {shiftNotice && <span className="hidden text-[11px] text-teal-700 lg:inline">{shiftNotice}</span>}
+        <select
+          value=""
+          disabled={pending}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v) onEndShift(v as ResumePreset);
+          }}
+          title="Fin de turno: devolver al bot todas las conversaciones que tienes en control"
+          className="h-7 rounded-md border border-border bg-card px-2 text-xs"
+        >
+          <option value="">Fin de turno…</option>
+          {RESUME_PRESETS.map((r) => (
+            <option key={r.value} value={r.value}>
+              Devolver al bot: {r.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  if (view === "tablero") {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {toolbar}
+        <Board
+          conversations={conversations}
+          pending={pending}
+          onOpen={(id) => {
+            switchView("lista");
+            openConversation(id);
+          }}
+          onMove={(leadId, stage) => onStageChange(leadId, stage)}
+        />
+        {stageNotice && <p className="shrink-0 border-t border-border bg-amber-50 px-4 py-1.5 text-[11px] text-amber-900">{stageNotice}</p>}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 min-h-0 flex">
-      {/* List pane */}
-      <div
-        className={`w-full md:w-80 lg:w-96 border-r border-border flex flex-col min-h-0 ${
-          selectedId ? "hidden md:flex" : "flex"
-        }`}
-      >
-        {/* Buscador global */}
-        <div className="p-2 border-b border-border shrink-0">
-          <div className="relative">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
-              🔍
-            </span>
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setQuery("");
-              }}
-              placeholder="Buscar nombre, teléfono o mensaje…"
-              aria-label="Buscar en todas las conversaciones"
-              className="w-full text-xs border border-border rounded-md pl-8 pr-8 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-search-cancel-button]:hidden"
-            />
-            {searching$ && (
-              <button
-                onClick={() => setQuery("")}
-                aria-label="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm leading-none"
-              >
-                ×
-              </button>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {toolbar}
+      <div className="flex min-h-0 flex-1">
+        {/* List pane */}
+        <div className={`w-full flex-col border-r border-border bg-card md:w-80 lg:w-96 min-h-0 ${selectedId ? "hidden md:flex" : "flex"}`}>
+          <div className="shrink-0 border-b border-border p-2.5">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setQuery("");
+                }}
+                placeholder="Buscar nombre, teléfono o mensaje…"
+                aria-label="Buscar en todas las conversaciones"
+                className="h-9 w-full rounded-lg border border-border bg-muted/40 pl-8 pr-8 text-sm outline-none focus:border-primary focus:bg-card [&::-webkit-search-cancel-button]:hidden"
+              />
+              {searching$ && (
+                <button
+                  onClick={() => setQuery("")}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {searching$ ? (
+              <InboxSearchResults
+                query={query}
+                result={searchResult}
+                loading={searching}
+                selectedId={selectedId}
+                onOpenChat={(id) => openConversation(id)}
+                onOpenMessage={(id, messageId) => openConversation(id, messageId)}
+                onWriteMember={(memberId) => {
+                  startTransition(async () => {
+                    const res = await openMemberConversation(memberId);
+                    if (!res.ok) {
+                      setStageNotice(res.error);
+                      return;
+                    }
+                    setQuery("");
+                    await refreshList(filterRef.current);
+                    openConversation(res.conversationId);
+                  });
+                }}
+              />
+            ) : (
+              <>
+                {conversations.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">No hay conversaciones en este filtro.</p>}
+                {conversations.map((c) => (
+                  <ConversationCard key={c.id} c={c} selected={selectedId === c.id} onClick={() => openConversation(c.id)} />
+                ))}
+              </>
             )}
           </div>
         </div>
 
-        {/* Con búsqueda activa las pestañas estorban: los resultados ya son el filtro. */}
-        {!searching$ && (
-          <>
-            <div className="flex gap-1 p-2 border-b border-border shrink-0">
-              {FILTERS.map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilter(f.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                    filter === f.key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
-                  }`}
-                >
-                  {f.label}
-                  {f.key === "waiting" && waiting > 0 && (
-                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      {waiting}
-                    </span>
-                  )}
-                </button>
-              ))}
+        {/* Thread pane */}
+        <div className={`min-h-0 flex-1 flex-col bg-card ${selectedId ? "flex" : "hidden md:flex"}`}>
+          {!thread ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 bg-muted/40 text-sm text-muted-foreground">
+              {selectedId ? "Cargando…" : (
+                <>
+                  <span className="flex size-12 items-center justify-center rounded-full bg-card shadow-sm">
+                    <List className="size-5" />
+                  </span>
+                  Elige una conversación
+                </>
+              )}
             </div>
-            {/* End of shift — hand back everything this user took over today. */}
-            <div className="px-2 py-2 border-b border-border shrink-0 space-y-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-muted-foreground shrink-0">Fin de turno:</span>
-                <select
-                  value=""
-                  disabled={pending}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v) onEndShift(v as ResumePreset);
-                  }}
-                  title="Devolver al bot todas mis conversaciones en control humano"
-                  className="flex-1 text-xs border border-border rounded-md px-2 py-1 bg-background"
-                >
-                  <option value="">Devolver mis conversaciones al bot…</option>
-                  {RESUME_PRESETS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {shiftNotice && <p className="text-[11px] text-sky-700 px-0.5">{shiftNotice}</p>}
-            </div>
-          </>
-        )}
-
-        <div className="flex-1 overflow-y-auto">
-          {searching$ ? (
-            <InboxSearchResults
-              query={query}
-              result={searchResult}
-              loading={searching}
-              selectedId={selectedId}
-              onOpenChat={(id) => openConversation(id)}
-              onOpenMessage={(id, messageId) => openConversation(id, messageId)}
-              onWriteMember={(memberId) => {
-                startTransition(async () => {
-                  const res = await openMemberConversation(memberId);
-                  if (!res.ok) {
-                    setStageNotice(res.error);
-                    return;
-                  }
-                  setQuery("");
-                  await refreshList(filterRef.current);
-                  openConversation(res.conversationId);
-                });
-              }}
-            />
           ) : (
             <>
-              {conversations.length === 0 && (
-                <p className="p-4 text-sm text-muted-foreground">No hay conversaciones en este filtro.</p>
-              )}
-              {conversations.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => openConversation(c.id)}
-                  className={`w-full text-left px-3 py-3 border-b border-border/60 hover:bg-accent/40 transition ${
-                    selectedId === c.id ? "bg-accent/60" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sm truncate flex items-center gap-1.5">
-                      {c.needsAttention && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
-                      {c.contactName}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{timeShort(c.lastInboundAt)}</span>
+              {/* Thread header */}
+              <div className="flex shrink-0 items-center gap-3 border-b border-border px-3 py-2.5 md:px-4">
+                <button onClick={() => setSelectedId(null)} className="-ml-1 rounded-md p-1 text-muted-foreground hover:bg-muted md:hidden" aria-label="Volver">
+                  <ArrowLeft className="size-4" />
+                </button>
+                <Avatar name={thread.contactName} size={36} />
+                <div className="min-w-0 flex-1">
+                  {fichaHref(thread) ? (
+                    <Link href={fichaHref(thread)!} title="Abrir su ficha" className="block truncate text-sm font-semibold hover:underline">
+                      {thread.contactName}
+                    </Link>
+                  ) : (
+                    <p className="truncate text-sm font-semibold">{thread.contactName}</p>
+                  )}
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    {thread.contactPhone && <span className="mr-1">{thread.contactPhone}</span>}
+                    <StageChip c={thread} />
+                    <BotChip c={thread} />
                   </div>
-                  <p
-                    className={`text-xs truncate mt-0.5 ${
-                      c.lastMessageFailed ? "text-red-600 font-medium" : "text-muted-foreground"
-                    }`}
-                  >
-                    {c.lastMessageFailed ? "⚠ No entregado · " : c.lastMessageDirection === "OUTBOUND" ? "↩ " : ""}
-                    {c.lastMessageBody ?? "—"}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      {SEDE_LABEL[c.sede] ?? c.sede}
-                    </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      {c.stage
-                        ? STAGE_LABEL[c.stage]
-                        : c.memberStatus
-                          ? `👤 ${MEMBER_STATUS_LABEL[c.memberStatus]}`
-                          : "—"}
-                    </span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        c.botPaused ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
-                      }`}
-                    >
-                      {c.botPaused
-                        ? c.botResumeAt
-                          ? `🙋 → 🤖 ${formatResumeAt(c.botResumeAt)}`
-                          : "🙋 Humano"
-                        : "🤖 Bot"}
-                    </span>
-                    {c.ownerName && (
-                      <span className="text-[10px] text-muted-foreground truncate">· {c.ownerName}</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Thread pane */}
-      <div className={`flex-1 flex flex-col min-h-0 ${selectedId ? "flex" : "hidden md:flex"}`}>
-        {!thread ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-            {selectedId ? "Cargando…" : "Selecciona una conversación"}
-          </div>
-        ) : (
-          <>
-            {/* Thread header */}
-            <div className="px-4 py-3 border-b border-border shrink-0 flex items-center justify-between gap-2 flex-wrap">
-              <div className="min-w-0">
-                <button
-                  onClick={() => setSelectedId(null)}
-                  className="md:hidden text-xs text-muted-foreground mb-1"
-                >
-                  ← Volver
-                </button>
-                {fichaHref(thread) ? (
-                  <Link
-                    href={fichaHref(thread)!}
-                    title="Abrir su ficha"
-                    className="block font-semibold text-sm truncate hover:underline"
-                  >
-                    {thread.contactName}
-                  </Link>
-                ) : (
-                  <p className="font-semibold text-sm truncate">{thread.contactName}</p>
-                )}
-                <p className="text-xs text-muted-foreground truncate">
-                  {SEDE_LABEL[thread.sede] ?? thread.sede}
-                  {thread.stage ? ` · ${STAGE_LABEL[thread.stage]}` : ""}
-                  {thread.contactPhone ? ` · ${thread.contactPhone}` : ""}
-                </p>
-                {thread.botPaused && thread.botResumeAt && (
-                  <p className="text-[11px] text-sky-700">
-                    🤖 El bot la retoma el {formatResumeAt(thread.botResumeAt)}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={newTaskHref(thread)}
-                  title="Crear una tarea sobre esta persona"
-                  className="text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-accent"
-                >
-                  + Tarea
-                </Link>
-                <button
-                  onClick={() => {
-                    if (threadSearchOpen) {
-                      closeThreadSearch();
-                    } else {
-                      setThreadSearchOpen(true);
-                      setTimeout(() => threadSearchInputRef.current?.focus(), 0);
-                    }
-                  }}
-                  aria-label="Buscar en esta conversación"
-                  title="Buscar en esta conversación"
-                  className={`text-sm px-2.5 py-1.5 rounded-md border transition ${
-                    threadSearchOpen
-                      ? "border-border bg-accent"
-                      : "border-transparent hover:bg-accent/60"
-                  }`}
-                >
-                  🔍
-                </button>
-                {/* Ciclo de vida. Con socio creado esto es un estado de solo lectura:
-                    la verdad la manda Member.status, nunca las dos a la vez. */}
-                {thread.memberStatus || !thread.leadId ? (
-                  <span
-                    title="Es socia: su estado se cambia en su ficha de socio"
-                    className={`text-xs px-2 py-1.5 rounded-md border ${
-                      thread.memberStatus ? MEMBER_STATUS_COLOR[thread.memberStatus] : ""
-                    }`}
-                  >
-                    {thread.memberStatus ? MEMBER_STATUS_LABEL[thread.memberStatus] : "Socio"}
-                  </span>
-                ) : (
-                  <select
-                    value={thread.stage ?? "NEW"}
-                    disabled={pending}
-                    onChange={(e) => onStageChange(thread.leadId!, e.target.value)}
-                    title="Etapa del embudo"
-                    className={`text-xs rounded-md border px-2 py-1.5 ${
-                      thread.stage ? STAGE_COLOR[thread.stage] : ""
-                    }`}
-                  >
-                    {LEAD_STAGES.map((st) => (
-                      <option
-                        key={st}
-                        value={st}
-                        disabled={MEMBER_OWNED_STAGES.includes(st)}
-                      >
-                        {STAGE_LABEL[st]}
-                        {MEMBER_OWNED_STAGES.includes(st) ? " (desde Socios)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <select
-                  value={thread.ownerUserId ?? "unassigned"}
-                  disabled={pending || !thread.leadId}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    const leadId = thread.leadId;
-                    if (!leadId) return;
-                    withRefresh(() => assignConversation(leadId, v === "unassigned" ? null : v));
-                  }}
-                  className="text-xs border border-border rounded-md px-2 py-1.5 bg-background max-w-[9rem]"
-                >
-                  <option value="unassigned">Sin asignar</option>
-                  {!staff.some((s) => s.id === currentUserId) && <option value={currentUserId}>Asignarme a mí</option>}
-                  {staff.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.id === currentUserId ? `${s.name} (yo)` : s.name}
-                    </option>
-                  ))}
-                </select>
-                {thread.botPaused ? (
-                  <div className="flex items-center gap-1.5">
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {/* Below xl the contact card is hidden: keep the key control here. */}
+                  {thread.botPaused ? (
                     <button
                       onClick={() => withRefresh(() => resumeBot(thread.conversationId))}
                       disabled={pending}
-                      className="text-xs font-medium px-3 py-1.5 rounded-md bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
+                      className="h-8 rounded-md bg-teal-600 px-3 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50 xl:hidden"
                     >
                       Devolver al bot
                     </button>
-                    {/* Hand it back later — the Friday-afternoon case: nobody is here
-                        until Monday, but the lead may write on Saturday. */}
-                    <select
-                      value=""
+                  ) : (
+                    <button
+                      onClick={() => withRefresh(() => takeOverConversation(thread.conversationId))}
                       disabled={pending}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (!v) return;
-                        withRefresh(() => scheduleBotResume(thread.conversationId, v as ResumePreset));
-                      }}
-                      title="Programar la devolución al bot"
-                      className="text-xs border border-border rounded-md px-2 py-1.5 bg-background"
+                      className="h-8 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 xl:hidden"
                     >
-                      <option value="">⏱ Devolver…</option>
-                      {RESUME_PRESETS.filter((r) => r.value !== "now").map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
+                      Tomar control
+                    </button>
+                  )}
+                  <Link
+                    href={newTaskHref(thread)}
+                    title="Crear una tarea sobre esta persona"
+                    className="inline-flex size-8 items-center justify-center rounded-md border border-border hover:bg-muted"
+                  >
+                    <ListPlus className="size-4" />
+                  </Link>
                   <button
-                    onClick={() => withRefresh(() => takeOverConversation(thread.conversationId))}
-                    disabled={pending}
-                    className="text-xs font-medium px-3 py-1.5 rounded-md bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
-                  >
-                    Tomar control
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {stageNotice && (
-              <p className="px-4 py-1.5 text-[11px] text-amber-900 bg-amber-50 border-b border-border shrink-0">
-                {stageNotice}
-              </p>
-            )}
-
-            {/* Buscar dentro de esta conversación */}
-            {threadSearchOpen && (
-              <div className="px-4 py-2 border-b border-border shrink-0 flex items-center gap-2 bg-muted/30">
-                <input
-                  ref={threadSearchInputRef}
-                  type="search"
-                  value={threadQuery}
-                  onChange={(e) => setThreadQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") closeThreadSearch();
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      goToHit(e.shiftKey ? hitIndex - 1 : hitIndex + 1);
-                    }
-                  }}
-                  placeholder="Buscar en este chat…"
-                  aria-label="Buscar en este chat"
-                  className="flex-1 text-xs border border-border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-search-cancel-button]:hidden"
-                />
-                <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 min-w-[4.5rem] text-right">
-                  {isSearchable(threadQuery)
-                    ? hits.length === 0
-                      ? "sin resultados"
-                      : hitPosition
-                    : ""}
-                </span>
-                {/* ↑ va a mensajes más nuevos, ↓ a más viejos: los hits llegan del más reciente al más antiguo. */}
-                <button
-                  onClick={() => goToHit(hitIndex - 1)}
-                  disabled={hits.length === 0}
-                  aria-label="Coincidencia más reciente"
-                  title="Más reciente"
-                  className="text-xs px-2 py-1 rounded border border-border hover:bg-accent disabled:opacity-40"
-                >
-                  ↑
-                </button>
-                <button
-                  onClick={() => goToHit(hitIndex + 1)}
-                  disabled={hits.length === 0}
-                  aria-label="Coincidencia más antigua"
-                  title="Más antigua"
-                  className="text-xs px-2 py-1 rounded border border-border hover:bg-accent disabled:opacity-40"
-                >
-                  ↓
-                </button>
-                <button
-                  onClick={closeThreadSearch}
-                  aria-label="Cerrar búsqueda"
-                  className="text-sm px-2 py-1 text-muted-foreground hover:text-foreground"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            {/* Estás leyendo historia vieja: dilo y ofrece la salida. */}
-            {anchorId && (
-              <div className="px-4 py-1.5 border-b border-border shrink-0 flex items-center justify-between gap-2 bg-amber-50 text-amber-900">
-                <span className="text-[11px]">
-                  Mostrando mensajes anteriores{thread.anchorMessageId ? "" : " (el mensaje ya no existe)"}.
-                </span>
-                <button
-                  onClick={goToLatest}
-                  className="text-[11px] font-medium underline shrink-0"
-                >
-                  Ir al final ↓
-                </button>
-              </div>
-            )}
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-muted/20">
-              {thread.hasOlder && (
-                <p className="text-center text-[10px] text-muted-foreground py-1">
-                  Hay mensajes más antiguos que no caben aquí — búscalos con 🔍.
-                </p>
-              )}
-              {thread.messages.map((m, i) => {
-                const prev = thread.messages[i - 1];
-                const showDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
-                const outbound = m.direction === "OUTBOUND";
-                const failed = outbound && m.sendStatus === "FAILED";
-                const focused = m.id === focusId;
-                return (
-                  <div
-                    key={m.id}
-                    ref={(el) => {
-                      if (el) messageRefs.current.set(m.id, el);
-                      else messageRefs.current.delete(m.id);
-                    }}
-                  >
-                    {showDay && (
-                      <div className="text-center my-3">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                          {dayLabel(m.createdAt)}
-                        </span>
-                      </div>
-                    )}
-                    <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
-                          focused ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-background " : ""
-                        }${
-                          failed
-                            ? "bg-red-50 border-2 border-red-400"
-                            : !outbound
-                              ? "bg-background border border-border"
-                              : m.isBot
-                                ? "bg-sky-50 border border-sky-200"
-                                : "bg-emerald-50 border border-emerald-200"
-                        }`}
-                      >
-                        <p className="text-[10px] text-muted-foreground mb-0.5">{m.senderLabel}</p>
-                        {m.mediaKind && m.mediaUrl ? (
-                          <>
-                            {/* Placeholder bodies ("[nota de voz]") are redundant next to the player. */}
-                            {!/^\[[a-zá-ú ]+\]$/i.test(m.body.trim()) && (
-                              <Highlight text={m.body} query={threadQuery} />
-                            )}
-                            <MediaAttachment
-                              url={m.mediaUrl}
-                              kind={m.mediaKind}
-                              mimeType={m.mediaMimeType}
-                              voice={m.mediaVoice}
-                            />
-                          </>
-                        ) : (
-                          <Highlight text={m.body} query={threadQuery} />
-                        )}
-                        {failed && (
-                          <details className="mt-1.5 border-t border-red-300 pt-1.5">
-                            <summary
-                              className="cursor-pointer text-[11px] font-semibold text-red-700 list-none"
-                              title={m.sendError ?? "WhatsApp rechazó el envío."}
-                            >
-                              ⚠ No entregado — el cliente NO recibió este mensaje
-                            </summary>
-                            <p className="mt-1 text-[10px] font-mono text-red-700 whitespace-pre-wrap break-all">
-                              {m.sendError ?? "Sin detalle del error."}
-                            </p>
-                            {m.sendAttemptedAt && (
-                              <p className="text-[10px] text-red-700/80">
-                                Intento: {timeShort(m.sendAttemptedAt)}
-                              </p>
-                            )}
-                          </details>
-                        )}
-                        <span className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground mt-1">
-                          <Link
-                            href={newTaskHref(thread, m.id)}
-                            title="Crear una tarea a partir de este mensaje"
-                            className="opacity-60 hover:opacity-100 hover:text-foreground"
-                          >
-                            + tarea
-                          </Link>
-                          {timeShort(m.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={threadEndRef} />
-            </div>
-
-            {/* Composer */}
-            <div className="border-t border-border p-3 shrink-0">
-              {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
-              {!thread.windowOpen ? (
-                <p className="text-xs text-muted-foreground bg-muted rounded-md px-3 py-2">
-                  ⏳ Fuera de la ventana de 24h de WhatsApp. Para reabrir esta conversación se necesita una plantilla aprobada (próximamente en cadencias de seguimiento).
-                </p>
-              ) : (
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                        e.preventDefault();
-                        onSend();
+                    onClick={() => {
+                      if (threadSearchOpen) {
+                        closeThreadSearch();
+                      } else {
+                        setThreadSearchOpen(true);
+                        setTimeout(() => threadSearchInputRef.current?.focus(), 0);
                       }
                     }}
-                    rows={2}
-                    placeholder={
-                      thread.botPaused
-                        ? "Escribe tu respuesta…"
-                        : "Escribe para tomar el control (el bot se pausa al enviar)…"
-                    }
-                    className="flex-1 resize-none border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <button
-                    onClick={onSend}
-                    disabled={sending || !reply.trim()}
-                    className="px-4 py-2 rounded-md bg-foreground text-background text-sm font-medium disabled:opacity-40"
+                    aria-label="Buscar en esta conversación"
+                    title="Buscar en esta conversación"
+                    className={`inline-flex size-8 items-center justify-center rounded-md border transition ${
+                      threadSearchOpen ? "border-primary bg-muted" : "border-border hover:bg-muted"
+                    }`}
                   >
-                    {sending ? "Enviando…" : "Enviar"}
+                    <Search className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              {stageNotice && <p className="shrink-0 border-b border-border bg-amber-50 px-4 py-1.5 text-[11px] text-amber-900">{stageNotice}</p>}
+
+              {/* Buscar dentro de esta conversación */}
+              {threadSearchOpen && (
+                <div className="flex shrink-0 items-center gap-2 border-b border-border bg-muted/40 px-4 py-2">
+                  <input
+                    ref={threadSearchInputRef}
+                    type="search"
+                    value={threadQuery}
+                    onChange={(e) => setThreadQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") closeThreadSearch();
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        goToHit(e.shiftKey ? hitIndex - 1 : hitIndex + 1);
+                      }
+                    }}
+                    placeholder="Buscar en este chat…"
+                    aria-label="Buscar en este chat"
+                    className="h-8 flex-1 rounded-md border border-border bg-card px-3 text-xs outline-none focus:border-primary [&::-webkit-search-cancel-button]:hidden"
+                  />
+                  <span className="min-w-[4.5rem] shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                    {isSearchable(threadQuery) ? (hits.length === 0 ? "sin resultados" : hitPosition) : ""}
+                  </span>
+                  {/* ↑ va a mensajes más nuevos, ↓ a más viejos: los hits llegan del más reciente al más antiguo. */}
+                  <button onClick={() => goToHit(hitIndex - 1)} disabled={hits.length === 0} aria-label="Coincidencia más reciente" title="Más reciente" className="rounded border border-border bg-card px-2 py-1 text-xs hover:bg-muted disabled:opacity-40">
+                    ↑
+                  </button>
+                  <button onClick={() => goToHit(hitIndex + 1)} disabled={hits.length === 0} aria-label="Coincidencia más antigua" title="Más antigua" className="rounded border border-border bg-card px-2 py-1 text-xs hover:bg-muted disabled:opacity-40">
+                    ↓
+                  </button>
+                  <button onClick={closeThreadSearch} aria-label="Cerrar búsqueda" className="px-1 text-muted-foreground hover:text-foreground">
+                    <X className="size-4" />
                   </button>
                 </div>
               )}
-            </div>
-          </>
+
+              {/* Estás leyendo historia vieja: dilo y ofrece la salida. */}
+              {anchorId && (
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-amber-50 px-4 py-1.5 text-amber-900">
+                  <span className="text-[11px]">Mostrando mensajes anteriores{thread.anchorMessageId ? "" : " (el mensaje ya no existe)"}.</span>
+                  <button onClick={goToLatest} className="shrink-0 text-[11px] font-medium underline">
+                    Ir al final ↓
+                  </button>
+                </div>
+              )}
+
+              {/* Messages */}
+              <div className="flex-1 space-y-2 overflow-y-auto bg-muted/40 px-4 py-4 md:px-6">
+                {thread.hasOlder && <p className="py-1 text-center text-[10px] text-muted-foreground">Hay mensajes más antiguos que no caben aquí — búscalos con la lupa.</p>}
+                {thread.messages.map((m, i) => {
+                  const prev = thread.messages[i - 1];
+                  const showDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
+                  const outbound = m.direction === "OUTBOUND";
+                  const failed = outbound && m.sendStatus === "FAILED";
+                  const focused = m.id === focusId;
+                  const staffOut = outbound && !m.isBot && !failed;
+                  return (
+                    <div
+                      key={m.id}
+                      ref={(el) => {
+                        if (el) messageRefs.current.set(m.id, el);
+                        else messageRefs.current.delete(m.id);
+                      }}
+                    >
+                      {showDay && (
+                        <div className="my-3 text-center">
+                          <span className="rounded-full bg-card px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm">{dayLabel(m.createdAt)}</span>
+                        </div>
+                      )}
+                      <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
+                        <div
+                          className={`max-w-[78%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
+                            focused ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-background " : ""
+                          }${
+                            failed
+                              ? "border-2 border-red-400 bg-red-50"
+                              : !outbound
+                                ? "rounded-tl-sm border border-border bg-card"
+                                : m.isBot
+                                  ? "rounded-tr-sm border border-teal-200 bg-teal-50"
+                                  : "rounded-tr-sm bg-primary text-primary-foreground"
+                          }`}
+                        >
+                          <p className={`mb-0.5 text-[10px] font-medium ${staffOut ? "text-primary-foreground/70" : m.isBot ? "text-teal-700" : "text-muted-foreground"}`}>
+                            {m.senderLabel}
+                          </p>
+                          {m.mediaKind && m.mediaUrl ? (
+                            <>
+                              {/* Placeholder bodies ("[nota de voz]") are redundant next to the player. */}
+                              {!/^\[[a-zá-ú ]+\]$/i.test(m.body.trim()) && <Highlight text={m.body} query={threadQuery} />}
+                              <MediaAttachment url={m.mediaUrl} kind={m.mediaKind} mimeType={m.mediaMimeType} voice={m.mediaVoice} />
+                            </>
+                          ) : (
+                            <Highlight text={m.body} query={threadQuery} />
+                          )}
+                          {failed && (
+                            <details className="mt-1.5 border-t border-red-300 pt-1.5">
+                              <summary className="cursor-pointer list-none text-[11px] font-semibold text-red-700" title={m.sendError ?? "WhatsApp rechazó el envío."}>
+                                ⚠ No entregado — el cliente NO recibió este mensaje
+                              </summary>
+                              <p className="mt-1 whitespace-pre-wrap break-all font-mono text-[10px] text-red-700">{m.sendError ?? "Sin detalle del error."}</p>
+                              {m.sendAttemptedAt && <p className="text-[10px] text-red-700/80">Intento: {timeShort(m.sendAttemptedAt)}</p>}
+                            </details>
+                          )}
+                          <span className={`mt-1 flex items-center justify-end gap-2 text-[10px] ${staffOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                            <Link href={newTaskHref(thread, m.id)} title="Crear una tarea a partir de este mensaje" className="opacity-60 hover:opacity-100">
+                              + tarea
+                            </Link>
+                            {timeShort(m.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={threadEndRef} />
+              </div>
+
+              {/* Composer: reply on WhatsApp, or an internal note */}
+              <div className="shrink-0 border-t border-border bg-card">
+                <div className="flex gap-4 border-b border-border px-4 text-xs font-medium">
+                  {(
+                    [
+                      { key: "reply", label: "Responder" },
+                      { key: "note", label: "Nota interna" },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => {
+                        setMode(t.key);
+                        setError(null);
+                      }}
+                      className={`-mb-px border-b-2 py-2 ${mode === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="p-3">
+                  {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
+                  {mode === "note" ? (
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            onSaveNote();
+                          }
+                        }}
+                        rows={2}
+                        placeholder="Nota para el equipo: no se manda por WhatsApp, queda en su ficha."
+                        className="flex-1 resize-none rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm outline-none focus:border-amber-400"
+                      />
+                      <button
+                        onClick={onSaveNote}
+                        disabled={sending || !note.trim()}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-4 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-40"
+                      >
+                        <StickyNote className="size-4" /> Guardar
+                      </button>
+                    </div>
+                  ) : !thread.windowOpen ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        No ha escrito en las últimas 24h: WhatsApp solo deja mandar una plantilla aprobada. Cuando responda, se abre la ventana.
+                      </p>
+                      {thread.templates.map((t) => (
+                        <div key={t.name} className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{t.label}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{t.preview}</p>
+                          </div>
+                          <button
+                            onClick={() => onSendTemplate(t.name, t.label)}
+                            disabled={sending}
+                            className="h-8 shrink-0 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                          >
+                            Enviar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={reply}
+                        onChange={(e) => setReply(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            onSend();
+                          }
+                        }}
+                        rows={2}
+                        placeholder={
+                          thread.botPaused
+                            ? "Escribe por WhatsApp… (Enter envía, Shift+Enter nueva línea)"
+                            : "Escribe para tomar el control (el bot se pausa al enviar)…"
+                        }
+                        className="flex-1 resize-none rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm outline-none focus:border-primary focus:bg-card"
+                      />
+                      <button
+                        onClick={onSend}
+                        disabled={sending || !reply.trim()}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                      >
+                        <Send className="size-4" /> {sending ? "Enviando…" : "Enviar"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {thread && (
+          <ContactPanel
+            thread={thread}
+            refreshKey={panelKey}
+            staff={staff}
+            currentUserId={currentUserId}
+            pending={pending}
+            onStage={(leadId, stage) => onStageChange(leadId, stage)}
+            onAssign={(leadId, userId) => withRefresh(() => assignConversation(leadId, userId))}
+            onTakeOver={() => withRefresh(() => takeOverConversation(thread.conversationId))}
+            onResume={() => withRefresh(() => resumeBot(thread.conversationId))}
+            onSchedule={(preset) => withRefresh(() => scheduleBotResume(thread.conversationId, preset))}
+          />
         )}
       </div>
     </div>
