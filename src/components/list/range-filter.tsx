@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarRange, Check, ChevronDown } from "lucide-react";
-import { RANGE_PRESETS } from "@/lib/payments/filters";
+import { RANGE_PRESETS } from "@/lib/date-range";
 
 const fmt = (ymd: string) =>
   new Date(`${ymd}T12:00:00Z`).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });

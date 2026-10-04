@@ -44,7 +44,7 @@ const FAMILIES: Family[] = [
     reports: [
       { title: "Gastos por categoría", detail: "Todos los gastos del mes con filtros por empresa, categoría y documento.", href: "/dashboard/gastos" },
       { title: "Compras por proveedor", detail: "Cuánto se le compró a cada proveedor en el año.", href: "/dashboard/finanzas/proveedores" },
-      { title: "Cuentas por pagar", detail: "Lo que se debe a proveedores, con vencimiento.", href: "/dashboard/gastos?ver=porpagar" },
+      { title: "Antigüedad de cuentas por pagar", detail: "Lo que se debe por proveedor: por vencer, 1–30, 31–60, 61–90 y más de 90 días.", href: "/dashboard/gastos?ver=porpagar" },
       { title: "Activos fijos y depreciación", detail: "Registro de activos y su depreciación mensual.", href: "/dashboard/contabilidad?tab=activos" },
     ],
   },

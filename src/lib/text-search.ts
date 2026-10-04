@@ -35,6 +35,12 @@ export const SEARCH_SOURCES = {
   lead: table("Lead", ["firstName", "lastName", "email", "phone"]),
   payer: table("Payer", ["name", "taxId", "email"]),
   recipe: table("Recipe", ["title"]),
+  supplier: table("Supplier", ["name", "tradeName", "taxId", "email", "contactName"]),
+  expense: {
+    from: `"Expense" e LEFT JOIN "Supplier" s ON s."id" = e."supplierId"`,
+    id: `e."id"`,
+    columns: [`e."supplierName"`, `e."supplierRuc"`, `e."description"`, `e."documentNumber"`, `e."notes"`, `s."tradeName"`],
+  },
   payment: {
     from: `"Payment" p LEFT JOIN "Member" m ON m."id" = p."memberId" LEFT JOIN "Invoice" i ON i."id" = p."invoiceId" LEFT JOIN "Payer" y ON y."id" = p."payerId"`,
     id: `p."id"`,

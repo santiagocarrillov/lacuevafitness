@@ -1,194 +1,267 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CalendarClock, CircleCheck, FileInput, FileText, HandCoins, Hourglass, Plus, Receipt, Scale, X } from "lucide-react";
 import { requireAuth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { ecuadorDateString } from "@/lib/timezone";
-import { countPendingReview, listExpensesScoped } from "@/lib/actions/expenses";
-import { DOC_TYPE_LABELS, ENTITIES, EXPENSE_CATEGORY_LABELS, monthLabel, shiftMonth } from "@/lib/finance/entities";
-import type { ExpenseCategory, ExpenseDocType, Sede } from "@/generated/prisma/enums";
-import { fmtUsd } from "@/lib/invoicing/core";
-import { buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { countPendingReview, listExpensesFiltered } from "@/lib/actions/expenses";
+import { DOC_TYPE_LABELS, ENTITIES, ENTITY_ORDER, EXPENSE_CATEGORY_LABELS, fmtMoney } from "@/lib/finance/entities";
+import { parseExpenseFilters } from "@/lib/expenses/filters";
+import { daysOverdue, payablesAging } from "@/lib/finance/suppliers";
+import { FilterBar, Pager, type FilterDef } from "@/components/list/filter-bar";
+import { RangeFilter } from "@/components/list/range-filter";
+import { PageHeader } from "../page-header";
+import { Panel, Stat } from "../blocks";
+import { AgingBar, AgingTable } from "../finanzas/proveedores/aging";
 import { expenseScope } from "./shared";
 import { ExpenseRowActions } from "./row-actions";
 
 export const dynamic = "force-dynamic";
 
-type Params = { mes?: string; ver?: string; entidad?: string; categoria?: string; doc?: string };
+const ORANGE = "#d97e0a";
+const SEDE_SHORT: Record<string, string> = { FITNESS_CENTER: "Fitness", XTREME: "Xtreme" };
+
+const AGE_LABELS: Record<string, string> = {
+  current: "Por vencer",
+  d30: "Vencido 1–30 días",
+  d60: "Vencido 31–60 días",
+  d90: "Vencido 61–90 días",
+  older: "Vencido más de 90 días",
+  vencido: "Vencido",
+};
+
+type Params = Record<string, string | undefined>;
 
 export default async function GastosPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireAuth();
   const scope = await expenseScope(user);
   if (!scope) redirect("/dashboard?forbidden=1");
   const params = await searchParams;
-  const thisMonth = ecuadorDateString().slice(0, 7);
-  const ym = /^\d{4}-\d{2}$/.test(params.mes ?? "") ? params.mes! : thisMonth;
-  const pendingOnly = params.ver === "revisar" && scope.full;
-  const payablesOnly = params.ver === "porpagar";
-  const sede = scope.full && (params.entidad === "XTREME" || params.entidad === "FITNESS_CENTER") ? (params.entidad as Sede) : undefined;
-  const category = params.categoria && params.categoria in EXPENSE_CATEGORY_LABELS ? (params.categoria as ExpenseCategory) : undefined;
-  const docType = params.doc && params.doc in DOC_TYPE_LABELS ? (params.doc as ExpenseDocType) : undefined;
-  const [rows, pending, payables] = await Promise.all([
-    listExpensesScoped(ym, { pendingReview: pendingOnly, payables: payablesOnly, sede, category, docType }),
+  const today = ecuadorDateString();
+  const f = parseExpenseFilters(params, scope.full ? null : scope.sedes[0]);
+
+  const [list, pendingReview, aging, supplier] = await Promise.all([
+    listExpensesFiltered(f),
     countPendingReview(),
-    payablesOnly ? Promise.resolve(0) : listExpensesScoped(ym, { payables: true }).then((r) => r.length),
+    f.view === "porpagar" && scope.full
+      ? payablesAging(
+          {
+            ...(f.sede ? { sede: f.sede } : {}),
+            ...(f.proveedor ? { supplierId: f.proveedor } : {}),
+            ...(f.categorias.length ? { category: { in: f.categorias } } : {}),
+          },
+          today,
+        )
+      : null,
+    f.proveedor ? prisma.supplier.findUnique({ where: { id: f.proveedor }, select: { id: true, name: true, tradeName: true } }) : null,
   ]);
-  const live = rows.filter((r) => !r.voidedAt);
-  const total = live.reduce((a, r) => a + r.amountCents, 0);
-  const keep: Record<string, string> = {
-    mes: ym,
-    ...(params.ver ? { ver: params.ver } : {}),
-    ...(sede ? { entidad: sede } : {}),
-    ...(category ? { categoria: category } : {}),
-    ...(docType ? { doc: docType } : {}),
+
+  const href = (patch: Record<string, string | null>) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v && k !== "page") q.set(k, v);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) q.set(k, v);
+      else q.delete(k);
+    }
+    return `/dashboard/gastos${q.size ? `?${q}` : ""}`;
   };
-  const href = (u: Record<string, string>) => {
-    const q = new URLSearchParams({ ...keep, ...u });
-    for (const [k, v] of [...q.entries()]) if (!v) q.delete(k);
-    return `/dashboard/gastos?${q}`;
-  };
-  const filters: { label: string; clear: Record<string, string> }[] = [];
-  if (sede) filters.push({ label: ENTITIES[sede].name, clear: { entidad: "" } });
-  if (category) filters.push({ label: EXPENSE_CATEGORY_LABELS[category], clear: { categoria: "" } });
-  if (docType) filters.push({ label: DOC_TYPE_LABELS[docType], clear: { doc: "" } });
+
+  const filters: FilterDef[] = [
+    { name: "categoria", title: "Categoría", multi: true, options: Object.entries(EXPENSE_CATEGORY_LABELS).filter(([k]) => scope.full || (k !== "PAYROLL" && k !== "COACH_FEES")).map(([value, label]) => ({ value, label })) },
+    { name: "doc", title: "Documento", options: Object.entries(DOC_TYPE_LABELS).map(([value, label]) => ({ value, label })) },
+    ...(f.view === "todos"
+      ? [{ name: "estado", title: "Estado", options: [{ value: "pagado", label: "Pagado" }, { value: "porpagar", label: "Por pagar" }, { value: "vencido", label: "Vencido" }, { value: "anulado", label: "Anulados" }] }]
+      : []),
+  ];
+
+  const title = f.view === "porpagar" ? "Cuentas por pagar" : f.view === "revisar" ? "Gastos por revisar" : "Gastos";
+  const subtitle =
+    f.view === "porpagar"
+      ? "Lo que se debe a proveedores, de todas las fechas, ordenado por vencimiento."
+      : f.view === "revisar"
+        ? "Lo que registraron los admins y todavía no revisa contabilidad."
+        : scope.full
+          ? "Todo lo que se compra o se paga, con su comprobante. Cada gasto queda enlazado a su proveedor."
+          : `Compras y pagos de ${ENTITIES[scope.sedes[0]].name}: caja chica, insumos, bebidas, arreglos y más. Sube la foto del comprobante.`;
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-6xl">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Gastos</h1>
-          <p className="text-sm text-muted-foreground">
-            {scope.full
-              ? "Todo lo que se compra o se paga, con su comprobante. Lo que registran los admins queda por revisar."
-              : `Compras y pagos de ${ENTITIES[scope.sedes[0]].name}: caja chica, insumos, bebidas, arreglos y más. Sube la foto del comprobante.`}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {scope.full && <Link href="/dashboard/gastos/importar-sri" className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted">Facturas del SRI</Link>}
-          <Link href="/dashboard/gastos/nuevo" className={buttonVariants()}>
-            Registrar gasto
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
+      <PageHeader title={title} subtitle={subtitle}>
+        {scope.full && (
+          <Link href="/dashboard/gastos/importar-sri" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3.5 text-sm font-medium hover:border-stone-500">
+            <FileInput className="size-4" /> Facturas del SRI
           </Link>
-        </div>
-      </header>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {pendingOnly || payablesOnly ? (
-          <h2 className="text-sm font-semibold">{pendingOnly ? "Por revisar" : "Cuentas por pagar (todas las fechas)"}</h2>
-        ) : (
-          <nav className="flex items-center gap-1 text-sm" aria-label="Mes">
-            <Link href={href({ mes: shiftMonth(ym, -1) })} className="rounded-md border px-2.5 py-1.5 hover:bg-muted">←</Link>
-            <span className="min-w-36 text-center font-medium capitalize">{monthLabel(ym)}</span>
-            <Link
-              href={href({ mes: shiftMonth(ym, 1) })}
-              aria-disabled={ym >= thisMonth}
-              className={`rounded-md border px-2.5 py-1.5 hover:bg-muted ${ym >= thisMonth ? "pointer-events-none opacity-40" : ""}`}
-            >
-              →
-            </Link>
-          </nav>
         )}
-        <div className="flex items-center gap-3 text-sm">
-          {scope.full && pending > 0 && !pendingOnly && (
-            <Link href="/dashboard/gastos?ver=revisar" className="font-medium text-amber-700 hover:underline dark:text-amber-300">
-              {pending} por revisar
-            </Link>
-          )}
-          {payables > 0 && (
-            <Link href="/dashboard/gastos?ver=porpagar" className="font-medium text-amber-700 hover:underline dark:text-amber-300">
-              {payables} por pagar
-            </Link>
-          )}
-          {(pendingOnly || payablesOnly) && (
-            <Link href={`/dashboard/gastos?mes=${ym}`} className="text-primary hover:underline">Ver por mes</Link>
-          )}
-          <span className="text-muted-foreground">{live.length} gastos · {fmtUsd(total)}</span>
-        </div>
+        <Link
+          href={`/dashboard/gastos/nuevo${f.proveedor ? `?proveedor=${f.proveedor}` : ""}`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-white shadow-sm hover:opacity-90"
+          style={{ backgroundColor: ORANGE }}
+        >
+          <Plus className="size-4" /> Registrar gasto
+        </Link>
+      </PageHeader>
+
+      <div className="flex flex-wrap items-center gap-3">
+        {f.view === "todos" && <RangeFilter desde={f.desde} hasta={f.hasta} rango={f.rango} />}
+        {scope.full && (
+          <div className="flex rounded-full border bg-stone-50 p-0.5 text-xs" role="tablist" aria-label="Empresa">
+            {[null, ...ENTITY_ORDER].map((s) => (
+              <Link
+                key={s ?? "todas"}
+                href={href({ entidad: s })}
+                role="tab"
+                aria-selected={f.sede === s}
+                className={`rounded-full px-3 py-1.5 font-medium transition ${f.sede === s ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {s ? SEDE_SHORT[s] : "Las dos empresas"}
+              </Link>
+            ))}
+          </div>
+        )}
+        {supplier && (
+          <Link href={href({ proveedor: null })} className="inline-flex items-center gap-1 rounded-full border border-[#d97e0a]/40 bg-[#d97e0a]/10 px-3 py-1 text-xs font-medium text-[#8a5206]">
+            Proveedor: {supplier.tradeName ?? supplier.name} <X className="size-3" />
+          </Link>
+        )}
+        {f.antiguedad && (
+          <Link href={href({ antiguedad: null })} className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-800">
+            {AGE_LABELS[f.antiguedad]} <X className="size-3" />
+          </Link>
+        )}
       </div>
 
-      {filters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">Filtro:</span>
-          {filters.map((f) => (
-            <Link key={f.label} href={href(f.clear)} className="rounded-full border px-2.5 py-0.5 hover:bg-muted">
-              {f.label} ✕
-            </Link>
-          ))}
+      {f.view === "porpagar" && aging ? (
+        <Panel title="Antigüedad por proveedor" aside={<span className="tabular-nums">{fmtMoney(aging.total, { decimals: true })}</span>}>
+          <div className="space-y-5">
+            <AgingBar aging={aging} href={(b) => href({ antiguedad: b })} />
+            <AgingTable aging={aging} supplierHref={(id) => `/dashboard/finanzas/proveedores/${id}`} />
+          </div>
+        </Panel>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label={f.view === "revisar" ? "Por revisar" : "Gastos del período"} value={fmtMoney(list.amountCents)} sub={`${list.count} documentos`} icon={Receipt} color={ORANGE} />
+          <Stat label="Con factura (deducible)" value={fmtMoney(list.deductibleCents)} sub="Facturas y liquidaciones con RUC" href={href({ doc: "FACTURA" })} icon={FileText} color="#2f6fb0" />
+          <Stat
+            label="Por pagar"
+            value={fmtMoney(list.payableCents)}
+            sub={list.overdueCount ? `${list.overdueCount} vencidos · ${fmtMoney(list.overdueCents)}` : `${list.payableCount} documentos`}
+            href={`/dashboard/gastos?ver=porpagar${f.sede ? `&entidad=${f.sede}` : ""}`}
+            icon={HandCoins}
+            color={list.overdueCount ? "#e5533f" : "#0f9f8f"}
+          />
+          {scope.full && (
+            <Stat label="Por revisar" value={String(pendingReview)} sub="Registrados por los admins" href="/dashboard/gastos?ver=revisar" icon={Scale} color={pendingReview ? "#6b4fb5" : "#0f9f8f"} />
+          )}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 font-medium">Fecha</th>
-              <th className="px-3 py-2 font-medium">Proveedor</th>
-              <th className="px-3 py-2 font-medium">Detalle</th>
-              {scope.full && <th className="px-3 py-2 font-medium">Entidad</th>}
-              <th className="px-3 py-2 text-right font-medium">Total</th>
-              <th className="px-3 py-2 font-medium">Registró</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className={`border-t align-top ${r.voidedAt ? "text-muted-foreground line-through" : ""}`}>
-                <td className="whitespace-nowrap px-3 py-2">{r.date.toISOString().slice(0, 10)}</td>
-                <td className="px-3 py-2">
-                  <Link href={`/dashboard/gastos/${r.id}`} className="text-primary hover:underline">{r.supplierName ?? "—"}</Link>
-                  <p className="text-xs text-muted-foreground">
-                    <Link href={href({ doc: r.documentType })} className="hover:underline">{DOC_TYPE_LABELS[r.documentType]}</Link>
-                    {r.documentNumber ? ` ${r.documentNumber}` : ""}{r.receiptPath ? " · 📎" : ""}
-                  </p>
-                </td>
-                <td className="px-3 py-2">
-                  {r.lines.length ? (
-                    r.lines.map((l) => (
-                      <p key={l.id} className="text-xs">
-                        <span className="text-muted-foreground">{l.account.name}:</span> {l.description}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-xs">{r.description}</p>
-                  )}
-                </td>
-                {scope.full && (
-                  <td className="px-3 py-2 text-xs">
-                    <Link href={href({ entidad: r.sede })} className="hover:underline">{ENTITIES[r.sede].name}</Link>
-                    {r.isPrivate ? " · 🔒" : ""}
-                  </td>
-                )}
-                <td className="px-3 py-2 text-right tabular-nums">
-                  {fmtUsd(r.amountCents)}
-                  {r.status === "PENDING" && (
-                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
-                      por pagar{r.dueDate ? ` · vence ${r.dueDate.toISOString().slice(0, 10)}` : ""}
-                    </p>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.createdByName ?? "Automático"}
-                  {!r.reviewedAt && !r.voidedAt && <Badge variant="outline" className="ml-1">por revisar</Badge>}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {!r.voidedAt && (
-                    <ExpenseRowActions
-                      id={r.id}
-                      canReview={scope.full && !r.reviewedAt}
-                      canVoid={scope.full || (r.createdById === user.id && !r.reviewedAt)}
-                    />
-                  )}
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
-                  {pendingOnly ? "No hay gastos por revisar." : payablesOnly ? "No hay cuentas por pagar." : "No hay gastos con este filtro."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <section className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <FilterBar filters={filters} searchPlaceholder="Proveedor, detalle o número de documento…" />
+        {list.rows.length === 0 ? (
+          <p className="p-8 text-center text-sm text-muted-foreground">
+            {f.view === "revisar" ? "No hay gastos por revisar." : f.view === "porpagar" ? "No hay cuentas por pagar." : "No hay gastos con estos filtros."}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-stone-50/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-2.5 font-medium">{f.view === "porpagar" ? "Vence" : "Fecha"}</th>
+                  <th className="px-3 py-2.5 font-medium">Proveedor</th>
+                  <th className="hidden px-3 py-2.5 font-medium md:table-cell">Detalle</th>
+                  {scope.full && <th className="hidden px-3 py-2.5 font-medium xl:table-cell">Empresa</th>}
+                  <th className="px-3 py-2.5 font-medium">Estado</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Total</th>
+                  <th className="hidden px-3 py-2.5 font-medium lg:table-cell">Registró</th>
+                  <th className="px-4 py-2.5" aria-label="Acciones" />
+                </tr>
+              </thead>
+              <tbody>
+                {list.rows.map((r) => {
+                  const late = r.status === "PENDING" && !r.voidedAt ? daysOverdue(r, today) : 0;
+                  const name = r.supplier ? r.supplier.tradeName ?? r.supplier.name : r.supplierName ?? "—";
+                  const shown = f.view === "porpagar" ? r.dueDate ?? r.date : r.date;
+                  return (
+                    <tr key={r.id} className={`border-b align-top last:border-0 hover:bg-stone-50 ${r.voidedAt ? "text-muted-foreground" : ""}`}>
+                      <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-muted-foreground">{shown.toISOString().slice(0, 10)}</td>
+                      <td className="px-3 py-2.5">
+                        {r.supplier ? (
+                          <Link href={`/dashboard/finanzas/proveedores/${r.supplier.id}`} className={`font-medium hover:underline ${r.voidedAt ? "line-through" : ""}`}>{name}</Link>
+                        ) : (
+                          <span className="font-medium">{name}</span>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          <Link href={`/dashboard/gastos/${r.id}`} className="hover:underline">
+                            {DOC_TYPE_LABELS[r.documentType]}
+                            {r.documentNumber ? ` ${r.documentNumber}` : ""}
+                          </Link>
+                          {r.receiptPath ? " · 📎" : ""}
+                        </p>
+                      </td>
+                      <td className="hidden px-3 py-2.5 md:table-cell">
+                        <Link href={`/dashboard/gastos/${r.id}`} className="block hover:underline">
+                          {r.lines.length ? (
+                            r.lines.slice(0, 3).map((l) => (
+                              <p key={l.id} className="text-xs">
+                                <span className="text-muted-foreground">{l.account.name}:</span> {l.description}
+                              </p>
+                            ))
+                          ) : (
+                            <p className="text-xs">{r.description}</p>
+                          )}
+                        </Link>
+                      </td>
+                      {scope.full && (
+                        <td className="hidden px-3 py-2.5 text-xs text-muted-foreground xl:table-cell">
+                          {SEDE_SHORT[r.sede]}
+                          {r.isPrivate ? " · 🔒" : ""}
+                        </td>
+                      )}
+                      <td className="px-3 py-2.5">
+                        {r.voidedAt ? (
+                          <span className="text-xs text-red-700" title={r.voidReason ?? undefined}>Anulado</span>
+                        ) : r.status === "PAID" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                            <CircleCheck className="size-3" /> Pagado
+                          </span>
+                        ) : late > 0 ? (
+                          <Link href={`/dashboard/gastos/${r.id}`} className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800 ring-1 ring-inset ring-red-200">
+                            <CalendarClock className="size-3" /> Vencido {late} d
+                          </Link>
+                        ) : (
+                          <Link href={`/dashboard/gastos/${r.id}`} className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+                            <Hourglass className="size-3" /> Por pagar
+                          </Link>
+                        )}
+                      </td>
+                      <td className={`px-3 py-2.5 text-right font-medium tabular-nums ${r.voidedAt ? "line-through" : ""}`}>{fmtMoney(r.amountCents, { decimals: true })}</td>
+                      <td className="hidden px-3 py-2.5 text-xs text-muted-foreground lg:table-cell">
+                        {r.createdByName ?? "Automático"}
+                        {!r.reviewedAt && !r.voidedAt && <span className="ml-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-800">por revisar</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          {r.status === "PENDING" && !r.voidedAt && scope.full && (
+                            <Link href={`/dashboard/gastos/${r.id}`} className="rounded-full border border-[#2f6fb0]/40 px-2 py-0.5 text-xs font-medium text-[#2f6fb0] hover:bg-[#2f6fb0]/10">
+                              Pagar
+                            </Link>
+                          )}
+                          {!r.voidedAt && (
+                            <ExpenseRowActions id={r.id} canReview={scope.full && !r.reviewedAt} canVoid={scope.full || (r.createdById === user.id && !r.reviewedAt)} />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="border-t">
+          <Pager page={list.page} totalPages={list.totalPages} total={list.total} noun="gastos" />
+        </div>
+      </section>
     </div>
   );
 }

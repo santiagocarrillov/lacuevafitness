@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,9 +17,13 @@ import type { ExpenseDocType, ExpensePayMethod, Sede } from "@/generated/prisma/
 type Account = { code: string; name: string };
 type Line = { key: number; accountCode: string; description: string; subtotal: string; ivaRate: number; iva: string; ivaTouched: boolean };
 
+/** A supplier of the directory, for the picker. */
+export type SupplierOpt = { id: string; name: string; tradeName: string | null; taxId: string | null; defaultAccountCode: string | null; paymentTermsDays: number | null };
+
 export type EditorExpense = {
   id: string;
   sede: Sede;
+  supplierId: string | null;
   supplierName: string | null;
   supplierRuc: string | null;
   documentType: ExpenseDocType;
@@ -57,20 +62,28 @@ export function ExpenseEditor({
   initial,
   today,
   isAdmin,
+  suppliers = [],
+  presetSupplierId = null,
 }: {
   sedes: Sede[];
   accounts: Record<Sede, Account[]>;
   initial: EditorExpense | null;
   today: string;
   isAdmin: boolean;
+  suppliers?: SupplierOpt[];
+  /** "Registrar gasto" from a supplier's page. */
+  presetSupplierId?: string | null;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [reading, setReading] = useState(false);
 
   const [sede, setSede] = useState<Sede>(initial?.sede ?? sedes[0]);
-  const [supplierName, setSupplierName] = useState(initial?.supplierName ?? "");
-  const [supplierRuc, setSupplierRuc] = useState(initial?.supplierRuc ?? "");
+  const preset = suppliers.find((x) => x.id === presetSupplierId) ?? null;
+  const [supplierId, setSupplierId] = useState<string | null>(initial?.supplierId ?? preset?.id ?? null);
+  const [supplierName, setSupplierName] = useState(initial?.supplierName ?? preset?.name ?? "");
+  const [supplierRuc, setSupplierRuc] = useState(initial?.supplierRuc ?? preset?.taxId ?? "");
+  const [supplierOpen, setSupplierOpen] = useState(false);
   const [documentType, setDocumentType] = useState<ExpenseDocType>(initial?.documentType ?? "FACTURA");
   const [documentNumber, setDocumentNumber] = useState(initial?.documentNumber ?? "");
   const [accessKey, setAccessKey] = useState(initial?.sriAccessKey ?? "");
@@ -87,7 +100,8 @@ export function ExpenseEditor({
 
   const acctList = accounts[sede] ?? [];
   const defaultAccount = acctList.find((a) => a.code === "5.3.05")?.code ?? acctList[0]?.code ?? "";
-  const blank = (): Line => ({ key: nextKey++, accountCode: defaultAccount, description: "", subtotal: "", ivaRate: 15, iva: "", ivaTouched: false });
+  const presetAccount = preset?.defaultAccountCode && acctList.some((a) => a.code === preset.defaultAccountCode) ? preset.defaultAccountCode : null;
+  const blank = (): Line => ({ key: nextKey++, accountCode: presetAccount ?? defaultAccount, description: "", subtotal: "", ivaRate: 15, iva: "", ivaTouched: false });
   const [lines, setLines] = useState<Line[]>(
     initial?.lines.length
       ? initial.lines.map((l) => ({ key: nextKey++, accountCode: l.accountCode, description: l.description, subtotal: dollars(l.subtotalCents), ivaRate: l.ivaRate, iva: dollars(l.ivaCents), ivaTouched: true }))
@@ -137,7 +151,10 @@ export function ExpenseEditor({
       const r = await readReceiptAction(fd);
       setReceiptPath(r.receiptPath);
       const x = r.reading;
-      if (x.supplierName) setSupplierName(x.supplierName);
+      if (x.supplierName) {
+        setSupplierName(x.supplierName);
+        setSupplierId(null);
+      }
       if (x.supplierRuc) setSupplierRuc(x.supplierRuc);
       setDocumentType(x.documentType);
       if (x.documentNumber) setDocumentNumber(x.documentNumber);
@@ -170,6 +187,28 @@ export function ExpenseEditor({
     }
   }
 
+  const supplierMatches = useMemo(
+    () => (supplierId ? [] : suppliers.filter((x) => textMatches(`${x.name} ${x.tradeName ?? ""} ${x.taxId ?? ""}`, supplierName)).slice(0, 6)),
+    [supplierName, supplierId, suppliers],
+  );
+
+  function pickSupplier(x: SupplierOpt) {
+    setSupplierId(x.id);
+    setSupplierName(x.name);
+    setSupplierRuc(x.taxId ?? "");
+    setSupplierOpen(false);
+    // Its usual account on lines nobody has filled yet, and the due date from its terms.
+    if (x.defaultAccountCode && acctList.some((a) => a.code === x.defaultAccountCode)) {
+      setLines((ls) => ls.map((l) => (!l.description && !l.subtotal ? { ...l, accountCode: x.defaultAccountCode! } : l)));
+    }
+    if (x.paymentTermsDays != null && x.paymentTermsDays > 0) {
+      setPaid(false);
+      const due = new Date(`${date}T00:00:00Z`);
+      due.setUTCDate(due.getUTCDate() + x.paymentTermsDays);
+      setDueDate(due.toISOString().slice(0, 10));
+    }
+  }
+
   function submit() {
     if (!allOk) return toast.error("Revisa los montos de las líneas.");
     start(async () => {
@@ -177,6 +216,7 @@ export function ExpenseEditor({
         await saveExpense({
           id: initial?.id,
           sede,
+          supplierId,
           supplierName,
           supplierRuc,
           documentType,
@@ -198,7 +238,7 @@ export function ExpenseEditor({
           })),
         });
         toast.success(isAdmin ? "Gasto registrado: queda por revisar" : "Gasto guardado");
-        router.push(`/dashboard/gastos?mes=${date.slice(0, 7)}`);
+        router.push(presetSupplierId ? `/dashboard/finanzas/proveedores/${presetSupplierId}` : `/dashboard/gastos?mes=${date.slice(0, 7)}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "No se pudo guardar.");
       }
@@ -220,11 +260,43 @@ export function ExpenseEditor({
                 ))}
               </select>
             </Field>
-            <Field label="Proveedor" className="sm:col-span-2">
-              <Input className="h-8" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Megamaxi, Kywi, ferretería…" />
+            <Field label="Proveedor" className="relative sm:col-span-2">
+              <Input
+                className="h-8"
+                value={supplierName}
+                onChange={(e) => {
+                  setSupplierName(e.target.value);
+                  setSupplierId(null);
+                  setSupplierOpen(true);
+                }}
+                onFocus={() => setSupplierOpen(true)}
+                onBlur={() => setTimeout(() => setSupplierOpen(false), 150)}
+                placeholder="Megamaxi, Kywi, ferretería…"
+              />
+              {supplierOpen && supplierMatches.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover shadow-md">
+                  {supplierMatches.map((x) => (
+                    <button key={x.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickSupplier(x)} className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
+                      <span className="truncate">{x.tradeName ?? x.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{x.taxId ?? "sin RUC"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                {supplierId ? "Del directorio de proveedores." : supplierName.trim() ? "Proveedor nuevo: se agrega solo al directorio." : "Escribe para buscar en el directorio."}
+              </p>
             </Field>
             <Field label="RUC / cédula del proveedor">
-              <Input className="h-8" inputMode="numeric" value={supplierRuc} onChange={(e) => setSupplierRuc(e.target.value.replace(/\D/g, ""))} />
+              <Input
+                className="h-8"
+                inputMode="numeric"
+                value={supplierRuc}
+                onChange={(e) => {
+                  setSupplierRuc(e.target.value.replace(/\D/g, ""));
+                  setSupplierId(null);
+                }}
+              />
             </Field>
             <Field label="Documento">
               <select className={selectCls} value={documentType} onChange={(e) => setDocumentType(e.target.value as ExpenseDocType)}>

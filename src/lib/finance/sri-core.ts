@@ -3,6 +3,7 @@
 // came from the bank (no invoice yet) is attached to it instead of creating a
 // second record; the bank inbox does the same in the other direction.
 
+import { resolveSupplier } from "@/lib/finance/suppliers";
 import { PRIVATE_CATEGORIES } from "@/lib/expenses/core";
 import { prisma } from "@/lib/prisma";
 import type { ExpenseCategory, ExpensePayMethod, Prisma, Sede } from "@/generated/prisma/client";
@@ -83,7 +84,10 @@ export async function importSriDocument(
   }
   const docType = doc.codDoc === "03" ? "LIQUIDACION_COMPRA" : "FACTURA";
   const { category, learned } = await guessCategory(db, doc);
+  // The supplier directory learns from every XML (found or created by RUC).
+  const supplierId = await resolveSupplier(db, { name: doc.issuerName, taxId: doc.issuerRuc });
   const docFields = {
+    supplierId,
     supplierName: doc.issuerName,
     supplierRuc: doc.issuerRuc,
     documentType: docType,

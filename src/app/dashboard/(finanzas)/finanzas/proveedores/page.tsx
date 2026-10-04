@@ -1,20 +1,21 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarClock, HandCoins, Receipt, Truck } from "lucide-react";
+import { CalendarClock, HandCoins, Plus, Receipt, Search, Truck } from "lucide-react";
 import { requireAuth, can } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { ENTITIES, ENTITY_ORDER, EXPENSE_CATEGORY_LABELS, fmtMoney } from "@/lib/finance/entities";
 import { parseEntityView, type EntityView } from "@/lib/finance/home";
-import { listSuppliers } from "@/lib/finance/suppliers";
+import { payablesAging, supplierStats } from "@/lib/finance/suppliers";
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { ecuadorDateString } from "@/lib/timezone";
 import { EntityPills, PageHeader } from "../../page-header";
 import { BarList, Panel, Stat } from "../../blocks";
+import { AgingBar } from "./aging";
 
 export const dynamic = "force-dynamic";
 
 const ORANGE = "#d97e0a";
 
-export default async function ProveedoresPage({ searchParams }: { searchParams: Promise<{ anio?: string; entidad?: string }> }) {
+export default async function ProveedoresPage({ searchParams }: { searchParams: Promise<{ anio?: string; entidad?: string; q?: string }> }) {
   const user = await requireAuth();
   if (!can.viewFinancials(user)) redirect("/dashboard?forbidden=1");
   const params = await searchParams;
@@ -23,28 +24,28 @@ export default async function ProveedoresPage({ searchParams }: { searchParams: 
   const year = /^\d{4}$/.test(params.anio ?? "") && Number(params.anio) <= thisYear ? Number(params.anio) : thisYear;
   const view = parseEntityView(params.entidad);
   const sedes = view === "ALL" ? ENTITY_ORDER : [view];
-  const href = (u: { anio?: number; entidad?: EntityView }) => {
-    const q = new URLSearchParams({ anio: String(u.anio ?? year) });
+  const q = (params.q ?? "").trim();
+  const href = (u: { anio?: number; entidad?: EntityView; q?: string }) => {
+    const p = new URLSearchParams({ anio: String(u.anio ?? year) });
     const e = u.entidad ?? view;
-    if (e !== "ALL") q.set("entidad", e);
-    return `/dashboard/finanzas/proveedores?${q}`;
+    if (e !== "ALL") p.set("entidad", e);
+    const qq = u.q ?? q;
+    if (qq) p.set("q", qq);
+    return `/dashboard/finanzas/proveedores?${p}`;
   };
 
-  const [suppliers, payables] = await Promise.all([
-    listSuppliers(sedes, year),
-    prisma.expense.findMany({
-      where: { sede: { in: sedes }, voidedAt: null, status: "PENDING" },
-      select: { amountCents: true, dueDate: true },
-    }),
+  const ids = q ? await idsMatching(SEARCH_SOURCES.supplier, q) : null;
+  const [suppliers, aging] = await Promise.all([
+    supplierStats({ sedes, year, today, ids }),
+    payablesAging({ sede: { in: sedes }, isPrivate: false }, today),
   ]);
   const yearCents = suppliers.reduce((a, s) => a + s.yearCents, 0);
-  const payableCents = payables.reduce((a, p) => a + p.amountCents, 0);
-  const overdue = payables.filter((p) => p.dueDate && p.dueDate.toISOString().slice(0, 10) < today);
-  const withRuc = suppliers.filter((s) => s.ruc).length;
+  const withRuc = suppliers.filter((s) => s.taxId).length;
+  const porPagar = (bucket?: string | null) => `/dashboard/gastos?ver=porpagar${view !== "ALL" ? `&entidad=${view}` : ""}${bucket ? `&antiguedad=${bucket}` : ""}`;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
-      <PageHeader title="Proveedores" subtitle={`A quién le compra la empresa, cuánto en ${year} y qué se le debe. Sueldos y honorarios de coaches están en Trabajadores.`}>
+      <PageHeader title="Proveedores" subtitle={`A quién le compra la empresa, cuánto en ${year} y qué se le debe. Cada gasto agrega su proveedor solo; sueldos y coaches están en Trabajadores.`}>
         <EntityPills view={view} href={(v) => href({ entidad: v })} />
         <nav className="flex items-center gap-1 text-sm" aria-label="Año">
           {[thisYear - 1, thisYear].map((y) => (
@@ -53,64 +54,80 @@ export default async function ProveedoresPage({ searchParams }: { searchParams: 
             </Link>
           ))}
         </nav>
+        <Link href="/dashboard/finanzas/proveedores/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: ORANGE }}>
+          <Plus className="size-4" /> Proveedor
+        </Link>
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={`Compras ${year}`} value={fmtMoney(yearCents)} sub={`${suppliers.length} proveedores`} href={`/dashboard/gastos`} icon={Receipt} color={ORANGE} />
-        <Stat label="Por pagar" value={fmtMoney(payableCents)} sub={`${payables.length} documentos`} href="/dashboard/gastos?ver=porpagar" icon={HandCoins} color="#2f6fb0" />
+        <Stat label={`Compras ${year}`} value={fmtMoney(yearCents)} sub={`${suppliers.filter((s) => s.yearCents).length} proveedores con compras`} href="/dashboard/gastos?rango=anio" icon={Receipt} color={ORANGE} />
+        <Stat label="Por pagar" value={fmtMoney(aging.total)} sub={`${aging.count} documentos`} href={porPagar()} icon={HandCoins} color="#2f6fb0" />
         <Stat
-          label="Vencidas"
-          value={String(overdue.length)}
-          sub={overdue.length ? fmtMoney(overdue.reduce((a, p) => a + p.amountCents, 0)) : "Nada vencido"}
-          href="/dashboard/gastos?ver=porpagar"
+          label="Vencido"
+          value={fmtMoney(aging.total - aging.totals.current)}
+          sub={aging.overdueCount ? `${aging.overdueCount} documentos vencidos` : "Nada vencido"}
+          href={porPagar("vencido")}
           icon={CalendarClock}
-          color={overdue.length ? "#e5533f" : "#0f9f8f"}
+          color={aging.overdueCount ? "#e5533f" : "#0f9f8f"}
         />
-        <Stat label="Con RUC (deducibles)" value={`${withRuc} de ${suppliers.length}`} sub="Los demás: notas de venta o sin documento" icon={Truck} color="#6b4fb5" />
+        <Stat label="Con RUC" value={`${withRuc} de ${suppliers.length}`} sub="Los demás: tiendas sin factura" icon={Truck} color="#6b4fb5" />
       </div>
 
+      <Panel title="Antigüedad de lo que se debe" aside={<Link href={porPagar()} className="text-[#2f6fb0] hover:underline">Ver cuentas por pagar ›</Link>}>
+        <AgingBar aging={aging} href={(b) => porPagar(b)} />
+      </Panel>
+
       <div className="grid gap-5 lg:grid-cols-3">
-        <Panel title="Directorio" className="lg:col-span-2" aside={<Link href="/dashboard/gastos/nuevo" className="text-[#2f6fb0] hover:underline">+ Registrar gasto</Link>}>
+        <section className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:col-span-2">
+          <form className="flex items-center gap-2 border-b px-4 py-2.5" action="/dashboard/finanzas/proveedores">
+            <Search className="size-4 text-muted-foreground" />
+            <input type="hidden" name="anio" value={year} />
+            {view !== "ALL" && <input type="hidden" name="entidad" value={view} />}
+            <input name="q" defaultValue={q} placeholder="Buscar por nombre, RUC o contacto…" className="h-8 flex-1 bg-transparent text-sm outline-none" />
+          </form>
           {suppliers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin gastos registrados en {year}. Llegan de los XML del SRI y del extracto del banco.</p>
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              {q ? "Ningún proveedor coincide." : "Todavía no hay proveedores. Se agregan solos al registrar gastos o al importar las facturas del SRI."}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <th className="py-2 pr-3 font-medium">Proveedor</th>
-                    <th className="hidden py-2 pr-3 font-medium md:table-cell">Rubro</th>
-                    <th className="py-2 pr-3 text-right font-medium">Docs</th>
-                    <th className="py-2 pr-3 text-right font-medium">Compras {year}</th>
-                    <th className="py-2 text-right font-medium">Por pagar</th>
+                  <tr className="border-b bg-stone-50/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-2.5 font-medium">Proveedor</th>
+                    <th className="hidden px-3 py-2.5 font-medium md:table-cell">Rubro</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Compras {year}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Por pagar</th>
                   </tr>
                 </thead>
                 <tbody>
                   {suppliers.map((s) => (
-                    <tr key={s.key} className="border-b last:border-0 hover:bg-stone-50">
-                      <td className="py-2 pr-3">
-                        <Link href={`/dashboard/finanzas/proveedores/${s.key}`} className="font-medium hover:underline">{s.name}</Link>
+                    <tr key={s.id} className="border-b last:border-0 hover:bg-stone-50">
+                      <td className="px-4 py-2.5">
+                        <Link href={`/dashboard/finanzas/proveedores/${s.id}`} className="font-medium hover:underline">{s.tradeName ?? s.name}</Link>
                         <p className="text-xs text-muted-foreground">
-                          {s.ruc ? `RUC ${s.ruc}` : "Sin RUC"}
-                          {view === "ALL" && ` · ${s.sedes.map((x) => ENTITIES[x].name.replace("La Cueva ", "")).join(", ")}`}
+                          {s.taxId ? `RUC ${s.taxId}` : "Sin RUC"}
+                          {view === "ALL" && s.sedes.length > 0 && ` · ${s.sedes.map((x) => ENTITIES[x].name.replace("La Cueva ", "")).join(", ")}`}
                         </p>
                       </td>
-                      <td className="hidden py-2 pr-3 text-muted-foreground md:table-cell">{EXPENSE_CATEGORY_LABELS[s.topCategory]}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{s.docs}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums font-medium">{fmtMoney(s.yearCents)}</td>
-                      <td className={`py-2 text-right tabular-nums ${s.payableCents ? "text-amber-700" : "text-muted-foreground"}`}>{s.payableCents ? fmtMoney(s.payableCents) : "—"}</td>
+                      <td className="hidden px-3 py-2.5 text-muted-foreground md:table-cell">{s.topCategory ? EXPENSE_CATEGORY_LABELS[s.topCategory] : "—"}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">{s.yearCents ? fmtMoney(s.yearCents) : "—"}</td>
+                      <td className={`px-4 py-2.5 text-right tabular-nums ${s.overdueCents ? "font-medium text-red-700" : s.payableCents ? "text-amber-700" : "text-muted-foreground"}`}>
+                        {s.payableCents ? fmtMoney(s.payableCents) : "—"}
+                        {s.overdueCents > 0 && <span className="block text-[11px]">vencido {fmtMoney(s.overdueCents)}</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </Panel>
+        </section>
         <Panel title={`Principales proveedores ${year}`}>
           <BarList
-            rows={suppliers.slice(0, 8).map((s) => ({ label: s.name, cents: s.yearCents, href: `/dashboard/finanzas/proveedores/${s.key}` }))}
+            rows={suppliers.filter((s) => s.yearCents).slice(0, 8).map((s) => ({ label: s.tradeName ?? s.name, cents: s.yearCents, href: `/dashboard/finanzas/proveedores/${s.id}` }))}
             color={ORANGE}
-            empty="Sin compras."
+            empty="Sin compras este año."
           />
         </Panel>
       </div>
