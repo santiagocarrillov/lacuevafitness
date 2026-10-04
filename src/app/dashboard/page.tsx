@@ -133,6 +133,7 @@ export default async function DashboardHome() {
           <FunnelCard
             funnel={funnel}
             href={canReports ? "/dashboard/reportes?tab=comercial" : "/dashboard/leads"}
+            leadsHref={can.manageLeads(user) ? "/dashboard/leads" : undefined}
           />
         )}
         <SrxfitCard

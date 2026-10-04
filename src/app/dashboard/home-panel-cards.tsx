@@ -6,12 +6,18 @@ function pct(n: number, of: number) {
   return of > 0 ? Math.round((n / of) * 100) : 0;
 }
 
-export function FunnelCard({ funnel, href }: { funnel: FunnelPanel; href: string }) {
+/**
+ * Each number opens the list of those leads (Santiago, 4 oct 2026): `leadsHref`
+ * is the Leads list; the filters reproduce the funnel's cut (created this month,
+ * counted in every stage passed).
+ */
+export function FunnelCard({ funnel, href, leadsHref }: { funnel: FunnelPanel; href: string; leadsHref?: string }) {
+  const to = (p: Record<string, string>) => (leadsHref ? `${leadsHref}?${new URLSearchParams(p)}` : undefined);
   const steps = [
-    { label: "Leads nuevos", value: funnel.leads },
-    { label: "Agendaron evaluación", value: funnel.scheduled },
-    { label: "Asistieron", value: funnel.evaluated },
-    { label: "Convertidos", value: funnel.converted },
+    { label: "Leads nuevos", value: funnel.leads, href: to({ creado: "mes" }) },
+    { label: "Agendaron evaluación", value: funnel.scheduled, href: to({ creado: "mes", embudo: "agendaron" }) },
+    { label: "Asistieron", value: funnel.evaluated, href: to({ creado: "mes", embudo: "asistieron" }) },
+    { label: "Convertidos", value: funnel.converted, href: to({ creado: "mes", embudo: "convertidos" }) },
   ];
   return (
     <Card className="h-full">
@@ -29,9 +35,21 @@ export function FunnelCard({ funnel, href }: { funnel: FunnelPanel; href: string
           {steps.map((s, i) => (
             <li key={s.label} className="space-y-1">
               <div className="flex items-baseline justify-between text-sm">
-                <span>{s.label}</span>
+                {s.href ? (
+                  <Link href={s.href} className="hover:underline">
+                    {s.label}
+                  </Link>
+                ) : (
+                  <span>{s.label}</span>
+                )}
                 <span className="tabular-nums">
-                  <span className="font-semibold">{s.value}</span>
+                  {s.href ? (
+                    <Link href={s.href} className="font-semibold underline-offset-2 hover:underline" title={`Ver los ${s.value} leads`}>
+                      {s.value}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold">{s.value}</span>
+                  )}
                   {i > 0 && (
                     <span className="ml-1.5 text-xs text-muted-foreground">{pct(s.value, funnel.leads)}%</span>
                   )}
@@ -47,8 +65,26 @@ export function FunnelCard({ funnel, href }: { funnel: FunnelPanel; href: string
           ))}
         </ul>
         <p className="text-xs text-muted-foreground">
-          Hoy: {funnel.newToday} lead{funnel.newToday === 1 ? "" : "s"} nuevo{funnel.newToday === 1 ? "" : "s"} ·{" "}
-          {funnel.evaluationsToday} evaluaci{funnel.evaluationsToday === 1 ? "ón agendada" : "ones agendadas"}
+          Hoy:{" "}
+          {leadsHref ? (
+            <Link href={to({ creado: "hoy" })!} className="hover:underline">
+              {funnel.newToday} lead{funnel.newToday === 1 ? "" : "s"} nuevo{funnel.newToday === 1 ? "" : "s"}
+            </Link>
+          ) : (
+            <>
+              {funnel.newToday} lead{funnel.newToday === 1 ? "" : "s"} nuevo{funnel.newToday === 1 ? "" : "s"}
+            </>
+          )}{" "}
+          ·{" "}
+          {leadsHref ? (
+            <Link href={to({ evaluacion: "hoy" })!} className="hover:underline">
+              {funnel.evaluationsToday} evaluaci{funnel.evaluationsToday === 1 ? "ón agendada" : "ones agendadas"}
+            </Link>
+          ) : (
+            <>
+              {funnel.evaluationsToday} evaluaci{funnel.evaluationsToday === 1 ? "ón agendada" : "ones agendadas"}
+            </>
+          )}
         </p>
       </CardContent>
     </Card>

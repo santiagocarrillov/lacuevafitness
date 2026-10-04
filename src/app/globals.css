@@ -78,14 +78,15 @@
   --chart-4: #f5a623;
   --chart-5: #ff6b5a;
   --radius: 0.625rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0b0b0b;
-  --sidebar-primary: #0b0b0b;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0ede4;
-  --sidebar-accent-foreground: #0b0b0b;
-  --sidebar-border: #e6e3dc;
-  --sidebar-ring: #1b1f23;
+  /* Menú lateral en grafito (oct 2026): se separa del resto de la pantalla, como HubSpot. */
+  --sidebar: #1d1d1b;
+  --sidebar-foreground: #ece9e2;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #0b0b0b;
+  --sidebar-accent: #34332f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2f2e2b;
+  --sidebar-ring: #8c8a83;
 }
 
 .dark {
