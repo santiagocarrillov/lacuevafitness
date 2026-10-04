@@ -86,7 +86,7 @@ registran en la entidad que los pagó y, si se quiere, se reparten solo en la vi
 |---|---|
 | **1a** ✅ | Schema (todo lo anterior) + Gastos + Aportes + Otros ingresos + Resumen por entidad (ingresos confirmados vs sin conciliar). Lógica en `src/lib/finance/queries.ts`; prueba de solo lectura `npm run test:finanzas`. |
 | **1b** ✅ | Banco: importadores de los 3 formatos (`src/lib/finance/bank-parsers.ts`), bandeja con sugerencias (`bank-suggest.ts`: comisiones, SRI, IESS, Gatorade, dueños, pagos de socios por monto+nombre, uno que paga por dos, Pagoplux neto de comisión), clasificación con **deshacer exacto** (`appliedJson`) y reglas aprendidas. Un gasto del banco se enlaza a uno ya registrado (por pagar / SRI) del mismo monto en vez de duplicarlo. Pruebas: `npm run test:banco` (incluye clasificar/deshacer contra la BD real dentro de una transacción revertida). |
-| **1c** ✅ | Facturas recibidas del SRI: se suben los XML autorizados (del correo o de SRI en Línea), se crea el gasto con IVA, proveedor y número, o se **enlaza al débito del banco** del mismo monto. La entidad sale del RUC/cédula del comprador. La categoría se aprende por RUC del proveedor. El reporte TXT de "recibidos" se usa como control de faltantes, leyendo solo las claves de acceso (no depende de sus columnas). XML guardado en el bucket privado. `npm run test:sri`. |
+| **1c** ✅ | Facturas recibidas del SRI: se suben los XML autorizados (del correo o de SRI en Línea), se crea el gasto con IVA, proveedor y número, o se **enlaza al débito del banco** del mismo monto. La entidad sale del RUC/cédula del comprador. La categoría se aprende por RUC del proveedor. El reporte TXT de "recibidos" se usa como control de faltantes, leyendo solo las claves de acceso (no depende de sus columnas). XML guardado en el bucket privado. `npm run test:sri`. **Importación masiva (5 oct 2026):** se suben uno o varios TXT, la app muestra lo que falta (con casillas para dejar fuera las compras personales del RUC de Santiago) y trae cada XML del web service de producción del SRI por su clave, de 8 en 8 (`importSriKeys`). Prueba real de solo lectura: `npx tsx --env-file=.env scripts/test-sri-recibidas.ts`. |
 | **Saldos iniciales** ✅ | Plan de cuentas y saldos al 31-dic-2025 de Xtreme desde los **EEFF firmados** (cuadran al centavo: activo 20.009,93 = pasivo 95.141,54 + patrimonio −75.131,61). Pestaña Balance: saldo inicial + lo que la app registra en el año (banco por el último estado de cuenta, préstamos de accionistas por persona, aportes, cuentas por pagar, resultado del año); lo que no tiene datos se queda en su saldo inicial y la "diferencia por cuadrar" lo muestra. `npm run test:balance`, `npm run db:seed:saldos-xtreme -- --write`. |
 | **1d** | Histórico de QuickBooks (enero–septiembre 2026, ambas empresas) + desglose de los préstamos de accionistas por persona, para comparar un mes en paralelo antes de cancelarlo. |
 
@@ -94,9 +94,10 @@ registran en la entidad que los pagó y, si se quiere, se reparten solo en la vi
 
 - **Ecuafact**: tiene API REST (plan Corporativo). Emitir la factura automáticamente al
   confirmarse un pago. Requiere cotizar el plan y credenciales.
-- **SRI**: el web service público de autorización (`AutorizacionComprobantesOffline`) devolvió
-  0 comprobantes para una clave real (1 oct 2026), así que no se depende de él. Pendiente:
-  notas de crédito, resumen para el formulario 104 y ATS, y traer los XML del correo solos.
+- **SRI**: el web service público de autorización (`AutorizacionComprobantesOffline`, producción
+  cel.sri.gob.ec) SÍ devuelve facturas recibidas por su clave (verificado 4 oct 2026 con una
+  factura real del Banco del Austro; el 1 oct se había probado mal). Pendiente: notas de crédito
+  recibidas (codDoc 04, hoy se rechazan).
 - **Préstamos bancarios**: separar capital (no es gasto) de intereses (gasto) en cada cuota.
 
 ## Fase 3

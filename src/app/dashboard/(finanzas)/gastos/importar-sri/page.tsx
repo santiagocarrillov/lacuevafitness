@@ -12,7 +12,7 @@ export default async function ImportarSriPage() {
     <FormPage
       wide
       title="Facturas recibidas del SRI"
-      description="Sube los XML (del correo o de SRI en Línea › Comprobantes electrónicos recibidos). Cada factura queda como gasto con su IVA; si ya entró el débito del banco por el mismo monto, se enlaza a ese gasto."
+      description="Cada factura queda como gasto con su IVA y su proveedor; si ya entró el débito del banco por el mismo monto, se enlaza a ese gasto. Subir lo mismo dos veces no duplica nada."
     >
       <SriImportPanel />
     </FormPage>
