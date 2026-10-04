@@ -114,6 +114,9 @@ model Member {
   // a consumidor final (≤ $50 con IVA).
   taxIdType                 TaxIdType?
   taxId                     String?
+  // Quien paga y recibe la factura por este socio (si no es él mismo).
+  payerId                   String?
+  payer                     Payer?        @relation(fields: [payerId], references: [id])
   createdAt                 DateTime      @default(now())
   updatedAt                 DateTime      @updatedAt
 
@@ -146,6 +149,7 @@ model Member {
 
   @@index([sede, status])
   @@index([lastName, firstName])
+  @@index([payerId])
 }
 
 enum BillingCycle {
@@ -225,6 +229,7 @@ enum PaymentStatus {
   SUCCEEDED
   FAILED
   REFUNDED
+  VOIDED // anulado (4 oct 2026): nunca se borra; motivo, quién y cuándo en voided*
 }
 
 model Payment {
@@ -259,10 +264,18 @@ model Payment {
   sede                  Sede
   recordedByUserId      String?
   notes                 String?
+  // Quien paga cuando no es el socio (papá que paga por el hijo).
+  payerId               String?
+  payer                 Payer?           @relation(fields: [payerId], references: [id])
+  // Anulación (status VOIDED): queda en el historial con su motivo.
+  voidedAt              DateTime?
+  voidReason            String?
+  voidedById            String?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
   @@index([sede, paidAt])
+  @@index([payerId])
   @@index([status])
   @@index([isPoolEntry, status])
   @@index([bankTransactionId])
@@ -1965,6 +1978,9 @@ model Invoice {
   buyerEmail          String?
   buyerAddress        String?
   buyerPhone          String?
+  // Pagador registrado al que se facturó (puede cubrir a varios socios).
+  payerId             String?
+  payer               Payer?         @relation(fields: [payerId], references: [id])
   subtotalCents       Int // sin IVA
   ivaCents            Int
   totalCents          Int
@@ -1989,7 +2005,30 @@ model Invoice {
   @@unique([emissionPointId, sequential])
   @@index([sede, issueDate])
   @@index([memberId])
+  @@index([payerId])
   @@index([status])
+}
+
+// Quien paga por uno o varios socios y recibe su factura (4 oct 2026): p. ej.
+// una mamá que paga por sus dos hijos. Sus datos nunca van a la ficha del socio.
+model Payer {
+  id        String    @id @default(cuid())
+  name      String // nombre o razón social para la factura
+  taxIdType TaxIdType
+  taxId     String
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  members  Member[]
+  payments Payment[]
+  invoices Invoice[]
+
+  @@unique([taxIdType, taxId])
 }
 
 model InvoiceLine {

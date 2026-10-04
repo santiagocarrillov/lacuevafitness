@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updatePayment, deletePayment } from "@/lib/actions/payments";
+import { updatePayment } from "@/lib/actions/payments";
+import { VoidPaymentButton } from "./void-button";
 
 type Payment = {
   id: string;
@@ -62,19 +63,6 @@ export function EditPaymentForm({ payment, backHref }: { payment: Payment; backH
     notes: payment.notes ?? "",
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
-
-  function handleDelete() {
-    if (!confirm("¿Eliminar este pago? Esta acción no se puede deshacer.")) return;
-    startTransition(async () => {
-      try {
-        await deletePayment(payment.id);
-        toast.success("Pago eliminado.");
-        done();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Error al eliminar.");
-      }
-    });
-  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -149,10 +137,7 @@ export function EditPaymentForm({ payment, backHref }: { payment: Payment; backH
             <Input value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
           <div className="flex items-center justify-between gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={handleDelete} disabled={isPending}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10">
-              Eliminar pago
-            </Button>
+            <VoidPaymentButton id={payment.id} what="este cobro" after={backHref} variant="button" />
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={done}>Cancelar</Button>
               <Button type="submit" disabled={isPending}>

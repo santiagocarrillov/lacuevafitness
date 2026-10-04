@@ -7,9 +7,6 @@ import {
   getPendingMemberPayments,
   getPaymentSummary,
   listPayments,
-  deletePoolEntry,
-  deletePendingPayment,
-  deletePayment,
 } from "@/lib/actions/payments";
 import { ENTITIES, ENTITY_ORDER, fmtMoney } from "@/lib/finance/entities";
 import { formatDocNumber } from "@/lib/invoicing/core";
@@ -19,7 +16,7 @@ import { FilterBar, Pager, type FilterDef } from "@/components/list/filter-bar";
 import { PageHeader } from "../(finanzas)/page-header";
 import { Panel, Stat } from "../(finanzas)/blocks";
 import { PoolEntryForm } from "./pool-form";
-import { DeleteButton } from "./delete-button";
+import { VoidPaymentButton } from "./void-button";
 import { RangeFilter } from "./range-filter";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +28,7 @@ const STATUS: Record<string, { label: string; cls: string; icon: LucideIcon }> =
   SUCCEEDED: { label: "Confirmado", cls: "bg-emerald-50 text-emerald-800 ring-emerald-200", icon: CircleCheck },
   FAILED: { label: "Fallido", cls: "bg-red-50 text-red-800 ring-red-200", icon: Clock3 },
   REFUNDED: { label: "Reembolsado", cls: "bg-stone-100 text-stone-600 ring-stone-200", icon: Clock3 },
+  VOIDED: { label: "Anulado", cls: "bg-stone-100 text-stone-500 ring-stone-200 line-through", icon: Lock },
 };
 
 const SEDE_SHORT: Record<string, string> = { FITNESS_CENTER: "Fitness", XTREME: "Xtreme" };
@@ -46,7 +44,7 @@ type Tab = "pagos" | "sin-asignar" | "ingresar";
 type Params = Record<string, string | undefined>;
 
 const FILTERS: FilterDef[] = [
-  { name: "estado", title: "Estado", options: [{ value: "confirmado", label: "Confirmado" }, { value: "pendiente", label: "Sin depositar" }] },
+  { name: "estado", title: "Estado", options: [{ value: "confirmado", label: "Confirmado" }, { value: "pendiente", label: "Sin depositar" }, { value: "anulado", label: "Anulados" }] },
   { name: "metodo", title: "Forma de pago", multi: true, options: Object.entries(METHOD_LABELS).map(([value, label]) => ({ value, label })) },
   { name: "factura", title: "Factura", options: [{ value: "con", label: "Facturado" }, { value: "sin", label: "Sin factura" }] },
   { name: "banco", title: "Banco", options: [{ value: "conciliado", label: "Conciliado" }, { value: "sin", label: "Sin conciliar" }] },
@@ -225,9 +223,14 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                               {p.membership?.plan?.name ?? "Sin membresía"}
                               {billedOther && <> · factura a <span className="text-foreground">{billedOther}</span></>}
                             </p>
+                            {p.status === "VOIDED" && <p className="text-xs text-red-700">Anulado: {p.voidReason}</p>}
                           </td>
                           <td className="hidden max-w-44 truncate px-3 py-2.5 text-muted-foreground lg:table-cell" title={p.bankReference ? `Ref. ${p.bankReference}` : undefined}>
-                            {p.depositorName ?? "—"}
+                            {p.payer ? (
+                              <Link href={`/dashboard/finanzas/pagadores/${p.payer.id}`} className="text-foreground hover:underline">{p.payer.name}</Link>
+                            ) : (
+                              p.depositorName ?? "—"
+                            )}
                           </td>
                           <td className="hidden px-3 py-2.5 text-muted-foreground md:table-cell">{METHOD_LABELS[p.method] ?? p.method}</td>
                           <td className="px-3 py-2.5">
@@ -263,20 +266,16 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                             )}
                           </td>
                           {!scopedSede && <td className="hidden px-3 py-2.5 text-muted-foreground xl:table-cell">{SEDE_SHORT[p.sede]}</td>}
-                          <td className="px-3 py-2.5 text-right font-medium tabular-nums">{fmtMoney(p.amountCents, { decimals: true })}</td>
+                          <td className={`px-3 py-2.5 text-right font-medium tabular-nums ${p.status === "VOIDED" ? "text-muted-foreground line-through" : ""}`}>{fmtMoney(p.amountCents, { decimals: true })}</td>
                           <td className="whitespace-nowrap px-4 py-2.5 text-right">
                             <div className="flex items-center justify-end gap-3">
                               <Link href={`/dashboard/pagos/${p.id}?volver=${encodeURIComponent(here)}`} className="text-xs text-muted-foreground hover:text-foreground">
                                 editar
                               </Link>
-                              {locked ? (
+                              {p.status === "VOIDED" ? null : locked ? (
                                 <span title={locked} className="text-muted-foreground/60"><Lock className="size-3.5" /></span>
                               ) : (
-                                <DeleteButton
-                                  action={deletePayment.bind(null, p.id)}
-                                  label="eliminar"
-                                  confirmText={`¿Eliminar el cobro de ${memberName} por ${fmtMoney(p.amountCents, { decimals: true })}? Sale de la contabilidad del mes.`}
-                                />
+                                <VoidPaymentButton id={p.id} what={`el cobro de ${memberName} (${fmtMoney(p.amountCents, { decimals: true })})`} />
                               )}
                             </div>
                           </td>
@@ -337,7 +336,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                       >
                         Confirmar
                       </Link>
-                      <DeleteButton action={deletePendingPayment.bind(null, p.id)} label="eliminar" confirmText="¿Eliminar este cobro sin depositar?" />
+                      <VoidPaymentButton id={p.id} what="este cobro sin depositar" />
                     </div>
                   </li>
                 ))}
@@ -372,7 +371,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="font-semibold tabular-nums">{fmtMoney(p.amountCents, { decimals: true })}</span>
                       <span className="text-xs text-muted-foreground">{METHOD_LABELS[p.method] ?? p.method}</span>
-                      {isAccounting && <DeleteButton action={deletePoolEntry.bind(null, p.id)} label="eliminar" confirmText="¿Eliminar este depósito sin asignar?" />}
+                      {isAccounting && <VoidPaymentButton id={p.id} what="este depósito sin asignar" />}
                     </div>
                   </li>
                 ))}

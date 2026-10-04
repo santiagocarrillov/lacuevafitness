@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function PagosPage() {
   const { member } = await requireMember();
   const payments = await prisma.payment.findMany({
-    where: { memberId: member.id },
+    where: { memberId: member.id, status: { not: "VOIDED" } },
     orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
     take: 50,
   });

@@ -19,7 +19,7 @@ export default async function CuentaPage() {
       orderBy: { endsAt: "desc" },
       include: { plan: true },
     }),
-    prisma.payment.count({ where: { memberId: member.id } }),
+    prisma.payment.count({ where: { memberId: member.id, status: { not: "VOIDED" } } }),
     prisma.attendance.count({ where: { memberId: member.id } }),
   ]);
 

@@ -44,7 +44,9 @@ import { Composer } from "@/components/ficha/composer";
 import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
 import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
+import { prisma } from "@/lib/prisma";
 import { EditablePropList } from "@/components/ficha/editable-props";
+import { RemovePayerButton } from "@/app/dashboard/(finanzas)/finanzas/pagadores/payer-assign";
 import { SegmentsCard } from "@/components/ficha/segments-card";
 import { getMemberAutoSegments, getPersonSegments, listSegments } from "@/lib/actions/segment-lists";
 import { SEGMENT_INFO } from "@/lib/segments/auto";
@@ -183,6 +185,14 @@ export default async function MemberDetailPage({
   // Front desk edits every field; other staff only fix contact data (same rule as updateMember).
   const canManage = can.manageMembers(user) && inScope;
   const seesPayments = can.viewPayments(user);
+  // Who pays for this socio and gets the invoice (a parent paying for a child).
+  const payer =
+    seesPayments && member.payerId
+      ? await prisma.payer.findUnique({
+          where: { id: member.payerId },
+          select: { id: true, name: true, taxId: true, members: { where: { id: { not: member.id } }, select: { id: true, firstName: true } } },
+        })
+      : null;
   const latestLevel = member.trainingLevels[0];
   const latestBody = member.bodyCompositions[0];
   const conversation = member.conversation ?? member.lead?.conversation ?? null;
@@ -779,6 +789,34 @@ export default async function MemberDetailPage({
           </Link>
         )}
       </FichaSection>
+
+      {seesPayments && (
+        <FichaSection
+          title="Paga y recibe la factura"
+          action={
+            canManage ? (
+              <Link href={`/dashboard/finanzas/pagadores/nuevo?socio=${member.id}`} className="text-xs font-medium text-primary hover:underline">
+                {payer ? "Cambiar" : "Otra persona paga"}
+              </Link>
+            ) : undefined
+          }
+        >
+          {payer ? (
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <Link href={`/dashboard/finanzas/pagadores/${payer.id}`} className="font-medium hover:underline">{payer.name}</Link>
+                {canManage && <RemovePayerButton memberId={member.id} />}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {payer.taxId}
+                {payer.members.length > 0 && <> · también paga por {payer.members.map((m) => m.firstName).join(", ")}</>}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">El mismo socio. Si paga un familiar, asígnalo para que la factura salga a su nombre.</p>
+          )}
+        </FichaSection>
+      )}
 
       <FichaSection
         title="Tareas"

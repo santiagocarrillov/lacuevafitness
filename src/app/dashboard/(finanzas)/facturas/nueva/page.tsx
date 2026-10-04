@@ -4,7 +4,7 @@ import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ecuadorDateString } from "@/lib/timezone";
 import { formatDocNumber } from "@/lib/invoicing/core";
-import { InvoiceEditor, type EditorPayment } from "./invoice-editor";
+import { InvoiceEditor, type EditorPayment, type SiblingPayment } from "./invoice-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +18,10 @@ export default async function NuevaFacturaPage({
   const params = await searchParams;
   const scope = getSedeScope(user);
 
-  const [members, saleItems, points, payment] = await Promise.all([
+  const [members, saleItems, points, payment, payers] = await Promise.all([
     prisma.member.findMany({
       where: { status: { not: "LEAD" } },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, address: true, sede: true, taxIdType: true, taxId: true },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, address: true, sede: true, taxIdType: true, taxId: true, payerId: true },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     }),
     prisma.saleItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -32,6 +32,11 @@ export default async function NuevaFacturaPage({
           include: { invoice: { select: { status: true } } },
         })
       : null,
+    prisma.payer.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, taxIdType: true, taxId: true, email: true, phone: true, address: true, members: { select: { firstName: true } } },
+    }),
   ]);
 
   let existing: EditorPayment | null = null;
@@ -48,6 +53,52 @@ export default async function NuevaFacturaPage({
       depositorName: payment.depositorName,
       status: payment.status,
     };
+  }
+
+  // Other uninvoiced collections paid by the same person (the member's payer,
+  // or the same depositor within ten days): they can go on one invoice.
+  let siblings: SiblingPayment[] = [];
+  if (existing && payment) {
+    const payerOfMember = existing.memberId ? members.find((m) => m.id === existing.memberId)?.payerId ?? null : null;
+    const or = [
+      ...(payerOfMember ? [{ payerId: payerOfMember }, { member: { payerId: payerOfMember } }] : []),
+      ...(payment.depositorName?.trim()
+        ? [{
+            // contains, not equals: front desk often leaves a trailing space.
+            depositorName: { contains: payment.depositorName.trim(), mode: "insensitive" as const },
+            paidAt: {
+              gte: new Date((payment.paidAt ?? payment.createdAt).getTime() - 10 * 86_400_000),
+              lte: new Date((payment.paidAt ?? payment.createdAt).getTime() + 10 * 86_400_000),
+            },
+          }]
+        : []),
+    ];
+    if (or.length) {
+      const rows = await prisma.payment.findMany({
+        where: {
+          id: { not: payment.id },
+          sede: payment.sede,
+          isPoolEntry: false,
+          memberId: { not: null },
+          status: { in: ["SUCCEEDED", "PENDING"] },
+          OR: [{ invoiceId: null }, { invoice: { status: "VOIDED" } }],
+          AND: [{ OR: or }],
+        },
+        include: { member: { select: { firstName: true, lastName: true } }, membership: { include: { plan: { select: { name: true, billingCycle: true } } } } },
+        orderBy: { paidAt: "desc" },
+        take: 10,
+      });
+      siblings = rows.map((r) => ({
+        id: r.id,
+        memberName: r.member ? `${r.member.firstName} ${r.member.lastName}` : "—",
+        membershipId: r.membershipId,
+        planName: r.membership?.plan.name ?? null,
+        oneTime: r.membership?.plan.billingCycle === "ONE_TIME" || r.membership?.plan.billingCycle === "TRIAL",
+        amountCents: r.amountCents,
+        paidAt: (r.paidAt ?? r.createdAt).toISOString().slice(0, 10),
+        confirmed: r.status === "SUCCEEDED",
+      }));
+    }
   }
 
   // Members whose membership was already invoiced this month (one per month
@@ -91,6 +142,8 @@ export default async function NuevaFacturaPage({
         existingPayment={existing}
         today={ecuadorDateString()}
         invoicedThisMonth={invoicedThisMonth}
+        payers={payers.map((p) => ({ ...p, members: p.members.map((m) => m.firstName) }))}
+        siblings={siblings}
       />
     </div>
   );

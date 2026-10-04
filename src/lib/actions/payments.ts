@@ -136,6 +136,7 @@ export async function listPayments(f: PaymentFilters, pageSize = 50) {
         member: { select: { id: true, firstName: true, lastName: true } },
         membership: { include: { plan: { select: { name: true } } } },
         invoice: { select: { id: true, status: true, buyerName: true, sequential: true, emissionPoint: { select: { establishment: true, point: true } } } },
+        payer: { select: { id: true, name: true } },
       },
     }),
     prisma.payment.count({ where }),
@@ -220,9 +221,14 @@ export async function registerMemberPayment(input: MemberPaymentInput) {
 
   const isCash = input.method === "CASH";
   const status: PaymentStatus = isCash ? "SUCCEEDED" : "PENDING";
+  // The member's payer (a parent paying for a child) is who paid.
+  const payerId = input.memberId
+    ? (await prisma.member.findUnique({ where: { id: input.memberId }, select: { payerId: true } }))?.payerId ?? null
+    : null;
 
   const payment = await prisma.payment.create({
     data: {
+      payerId,
       memberId: input.memberId,
       membershipId: input.membershipId || undefined,
       amountCents: input.amountCents,
@@ -318,36 +324,6 @@ export async function confirmPendingPayment(
   revalidatePath("/dashboard/pagos");
   if (payment.memberId) revalidatePath(`/dashboard/socios/${payment.memberId}`);
   return payment;
-}
-
-// ─── Delete pool entry ────────────────────────────────────────────────────────
-
-export async function deletePoolEntry(id: string) {
-  const user = await requireAuth();
-  if (!can.editFinancials(user)) throw new Error("No autorizado");
-
-  const entry = await prisma.payment.findUniqueOrThrow({ where: { id } });
-  if (!entry.isPoolEntry) throw new Error("No es un registro bancario.");
-  await prisma.payment.delete({ where: { id } });
-  revalidatePath("/dashboard/pagos");
-}
-
-// ─── Delete member payment (only PENDING ones) ────────────────────────────────
-
-export async function deletePendingPayment(id: string) {
-  const user = await requireAuth();
-  if (!canManagePayments(user)) throw new Error("No autorizado");
-
-  const p = await prisma.payment.findUniqueOrThrow({ where: { id } });
-  if (p.isPoolEntry || p.status !== "PENDING") throw new Error("No se puede eliminar este pago.");
-
-  const scopedSede = getSedeScope(user);
-  if (scopedSede && p.sede !== scopedSede) throw new Error("No autorizado");
-  await assertCanChange(user, p, "eliminar el cobro");
-
-  await prisma.payment.delete({ where: { id } });
-  revalidatePath("/dashboard/pagos");
-  if (p.memberId) revalidatePath(`/dashboard/socios/${p.memberId}`);
 }
 
 // ─── Match pool entries against a member (suggest bank deposits) ──────────────
@@ -557,6 +533,8 @@ export async function updatePayment(
   const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
   const scopedSede = getSedeScope(user);
   if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
+  if (existing.status === "VOIDED") throw new Error("Este cobro está anulado: no se edita.");
+  if (data.status === "VOIDED") throw new Error("Para anular un cobro usa Anular (pide el motivo).");
   if (data.amountCents !== undefined && data.amountCents !== existing.amountCents) await assertCanChange(user, existing, "cambiar el monto");
   const newPaidAt = data.paidAt === undefined ? undefined : data.paidAt ? new Date(data.paidAt) : null;
   if (newPaidAt !== undefined && (newPaidAt?.getTime() ?? null) !== (existing.paidAt?.getTime() ?? null)) {
@@ -585,20 +563,34 @@ export async function updatePayment(
   return updated;
 }
 
-export async function deletePayment(id: string) {
+/**
+ * Voids a collection: it stays in the history with its reason, who and when
+ * (status VOIDED), and leaves the books (the journal sync voids its entry).
+ * Same guards as any change: not matched to the bank, no live invoice, open
+ * month; confirmed ones are accounting's. Bank deposits not yet assigned
+ * (pool entries) are voided by accounting only.
+ */
+export async function voidPayment(id: string, reason: string) {
   const user = await requireAuth();
   if (!canManagePayments(user)) throw new Error("No autorizado");
+  const why = reason.trim();
+  if (why.length < 3) throw new Error("Escribe el motivo de la anulación.");
 
-  const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
+  const p = await prisma.payment.findUniqueOrThrow({ where: { id } });
   const scopedSede = getSedeScope(user);
-  if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
-  if (existing.isPoolEntry) throw new Error("Es un depósito del banco: elimínalo desde Sin asignar.");
-  await assertCanChange(user, existing, "eliminar el cobro");
+  if (scopedSede && p.sede !== scopedSede) throw new Error("No autorizado");
+  if (p.status === "VOIDED") throw new Error("Este cobro ya está anulado.");
+  if (p.isPoolEntry && !can.editFinancials(user)) throw new Error("Solo contabilidad anula depósitos del banco.");
+  if (p.isPoolEntry && p.status !== "PENDING") throw new Error("Este depósito ya se asignó a un socio: anula ese cobro.");
+  await assertCanChange(user, p, "anular el cobro");
 
-  await prisma.payment.delete({ where: { id } });
-
+  await prisma.payment.update({
+    where: { id },
+    data: { status: "VOIDED", voidedAt: new Date(), voidReason: why.slice(0, 300), voidedById: user.id },
+  });
   revalidatePath("/dashboard/pagos");
-  if (existing.memberId) revalidatePath(`/dashboard/socios/${existing.memberId}`);
+  revalidatePath("/dashboard/finanzas", "layout");
+  if (p.memberId) revalidatePath(`/dashboard/socios/${p.memberId}`);
 }
 
 // ─── Summary totals ───────────────────────────────────────────────────────────

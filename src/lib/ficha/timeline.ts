@@ -311,13 +311,13 @@ export async function loadPersonTimeline(
     if (seesPayments) {
       for (const p of member.payments) {
         const status =
-          p.status === "SUCCEEDED" ? "" : p.status === "PENDING" ? " · pendiente" : p.status === "FAILED" ? " · fallido" : " · reembolsado";
+          p.status === "SUCCEEDED" ? "" : p.status === "PENDING" ? " · pendiente" : p.status === "FAILED" ? " · fallido" : p.status === "VOIDED" ? " · anulado" : " · reembolsado";
         out.push({
           id: `pay-${p.id}`,
           kind: "pago",
           at: p.paidAt ?? p.createdAt,
           title: `Pago ${money(p.amountCents)} · ${METHOD_LABEL[p.method] ?? p.method}${status}`,
-          body: p.membership?.plan.name ?? p.notes ?? undefined,
+          body: p.status === "VOIDED" ? `Motivo: ${p.voidReason ?? "—"}` : p.membership?.plan.name ?? p.notes ?? undefined,
           href: `/dashboard/pagos/${p.id}`,
           tone: p.status === "SUCCEEDED" ? "good" : p.status === "PENDING" ? "warn" : "bad",
         });

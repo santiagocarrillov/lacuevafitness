@@ -60,6 +60,13 @@ Cada punto toca el esquema: se discute antes de construir (regla del repo).
   mes, salvo que se facture desde otro cobro ya **confirmado** con el banco. El editor lo advierte antes.
 - **Quien paga ≠ socio** (papá que paga por el hijo): el editor separa *Socio* de *Facturar a*; si el depositante
   del cobro no es el socio, arranca en "Otra persona paga". Su cédula nunca se guarda en la ficha del socio.
-- **Eliminar o cambiar monto/fecha de un cobro** (`assertCanChange` en `src/lib/actions/payments.ts`): bloqueado si
+- **Pagadores** (tabla `Payer`, migración `20261004120000_payers_and_payment_void`): quien paga por uno o varios
+  socios. Se asigna en la ficha del socio ("Paga y recibe la factura") o al facturar ("Guardar como pagador de…").
+  `Member.payerId`, `Payment.payerId`, `Invoice.payerId`. Al facturar un cobro, el editor ofrece incluir en la
+  misma factura los cobros sin factura del mismo pagador (o del mismo depositante ±10 días): una factura para
+  dos hermanos (`createInvoice({ paymentIds })`, el total debe ser la suma).
+- **Anular, nunca borrar**: estado `VOIDED` + `voidedAt/voidReason/voidedById`. Las consultas que suman cobros ya
+  filtran por SUCCEEDED/PENDING, así que un anulado sale de la contabilidad solo; la ficha lo muestra con su motivo.
+- **Anular o cambiar monto/fecha de un cobro** (`assertCanChange` en `src/lib/actions/payments.ts`): bloqueado si
   está conciliado con el banco (deshacer conciliación primero), si tiene factura vigente (anularla primero) o si su
   mes está cerrado. Un cobro confirmado solo lo toca contabilidad; recepción puede corregir su propio cobro el mismo día.

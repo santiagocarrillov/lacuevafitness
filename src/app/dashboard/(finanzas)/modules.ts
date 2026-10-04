@@ -79,6 +79,7 @@ export const FINANCE_MODULES: FinanceModule[] = [
         icon: FileText,
         active: (l) => under(l.path, "/dashboard/facturas") && l.params.get("tab") !== "config" && !l.path.includes("/catalogo") && !l.path.includes("/puntos"),
       },
+      { label: "Pagadores", href: "/dashboard/finanzas/pagadores", icon: Users, active: (l) => under(l.path, "/dashboard/finanzas/pagadores") },
       { label: "Otros ingresos", href: "/dashboard/finanzas/otros-ingresos", icon: ShoppingCart, active: (l) => under(l.path, "/dashboard/finanzas/otros-ingresos") },
       {
         label: "Servicios y emisión SRI",

@@ -77,6 +77,13 @@ export type InvoiceDraft = {
   payForm: string;
   /** Invoice an existing collection instead of recording a new one. */
   paymentId?: string | null;
+  /** Or several (siblings paid by the same payer, one invoice). Total = their sum. */
+  paymentIds?: string[];
+  /**
+   * Who pays when it isn't the member: an existing payer (`id`), or `save` to
+   * create/update one from the buyer data and assign it to the member(s).
+   */
+  payer?: { id?: string | null; save?: boolean } | null;
   payment?: {
     method: PaymentMethod;
     depositorName?: string;
@@ -125,28 +132,42 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
   }
   if (!PAY_FORM_LABELS[input.payForm]) throw new Error("Forma de pago del SRI inválida.");
 
-  // Membership lines must belong to the member being invoiced.
+  const paymentIds = [...new Set(input.paymentIds?.length ? input.paymentIds : input.paymentId ? [input.paymentId] : [])];
+  const included = paymentIds.length
+    ? await prisma.payment.findMany({ where: { id: { in: paymentIds } }, include: { invoice: { select: { status: true } } } })
+    : [];
+  // Members on this invoice: the one chosen plus those of the collections included.
+  const memberIds = new Set<string>([input.memberId, ...included.map((p) => p.memberId)].filter((x): x is string => !!x));
+
+  // Membership lines must belong to a member on the invoice.
   const membershipIds = lines.map((l) => l.membershipId).filter((x): x is string => !!x);
+  const membershipOwner = new Map<string, string>();
   if (membershipIds.length) {
-    if (!input.memberId) throw new Error("Una línea de membresía necesita un socio.");
-    const n = await prisma.membership.count({ where: { id: { in: membershipIds }, memberId: input.memberId } });
-    if (n !== new Set(membershipIds).size) throw new Error("La membresía no es de este socio.");
+    if (!memberIds.size) throw new Error("Una línea de membresía necesita un socio.");
+    const ms = await prisma.membership.findMany({ where: { id: { in: membershipIds } }, select: { id: true, memberId: true } });
+    for (const m of ms) membershipOwner.set(m.id, m.memberId);
+    if (ms.length !== new Set(membershipIds).size || ms.some((m) => !memberIds.has(m.memberId))) {
+      throw new Error("La membresía no es de un socio de esta factura.");
+    }
   }
 
   const ruc = ENTITIES[input.sede].ruc;
   if (!ruc) throw new Error("Falta el RUC de la entidad.");
 
   const invoice = await prisma.$transaction(async (tx) => {
-    // Existing collection, if any: must match the total and not be invoiced yet.
-    let existing: { status: PaymentStatus } | null = null;
-    if (input.paymentId) {
-      const p = await tx.payment.findUnique({ where: { id: input.paymentId }, include: { invoice: { select: { status: true } } } });
-      existing = p;
-      if (!p || p.isPoolEntry) throw new Error("No se encontró el cobro.");
-      if (p.invoice && p.invoice.status !== "VOIDED") throw new Error("Ese cobro ya tiene factura.");
-      if (p.sede !== input.sede) throw new Error("El cobro es de la otra entidad.");
-      if (p.amountCents !== totals.totalCents) {
-        throw new Error(`La factura ($${(totals.totalCents / 100).toFixed(2)}) debe ser igual al cobro ($${(p.amountCents / 100).toFixed(2)}).`);
+    // Existing collections, if any: not invoiced yet, same entity, and their
+    // sum is the invoice total.
+    if (paymentIds.length) {
+      const fresh = await tx.payment.findMany({ where: { id: { in: paymentIds } }, include: { invoice: { select: { status: true } } } });
+      if (fresh.length !== paymentIds.length) throw new Error("No se encontró el cobro.");
+      for (const p of fresh) {
+        if (p.isPoolEntry || p.status === "VOIDED" || p.status === "FAILED" || p.status === "REFUNDED") throw new Error("Ese cobro no se puede facturar.");
+        if (p.invoice && p.invoice.status !== "VOIDED") throw new Error("Ese cobro ya tiene factura.");
+        if (p.sede !== input.sede) throw new Error("El cobro es de la otra entidad.");
+      }
+      const sum = fresh.reduce((a, p) => a + p.amountCents, 0);
+      if (sum !== totals.totalCents) {
+        throw new Error(`La factura ($${(totals.totalCents / 100).toFixed(2)}) debe ser igual a lo cobrado ($${(sum / 100).toFixed(2)}).`);
       }
     } else if (!input.payment || !METHODS.includes(input.payment.method)) {
       throw new Error("Indica cómo pagó el cliente.");
@@ -154,25 +175,62 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
 
     // A member's membership is invoiced once a month. Invoicing it again
     // needs another collection the bank already confirmed (Santiago, 4 oct 2026).
-    const isMembership = (l: (typeof lines)[number]) => !!l.membershipId || l.incomeAccountCode === MEMBERSHIP_INCOME_CODE;
-    if (input.memberId && lines.some(isMembership) && existing?.status !== "SUCCEEDED") {
+    const membersWithMembership = new Set<string>();
+    for (const l of lines) {
+      if (l.membershipId) membersWithMembership.add(membershipOwner.get(l.membershipId)!);
+      else if (l.incomeAccountCode === MEMBERSHIP_INCOME_CODE && input.memberId) membersWithMembership.add(input.memberId);
+    }
+    if (membersWithMembership.size) {
       const start = new Date(Date.UTC(issueDate.getUTCFullYear(), issueDate.getUTCMonth(), 1));
       const end = new Date(Date.UTC(issueDate.getUTCFullYear(), issueDate.getUTCMonth() + 1, 1));
-      const prior = await tx.invoice.findFirst({
-        where: {
-          memberId: input.memberId,
-          status: { not: "VOIDED" },
-          issueDate: { gte: start, lt: end },
-          lines: { some: { OR: [{ membershipId: { not: null } }, { incomeAccountCode: MEMBERSHIP_INCOME_CODE }] } },
-        },
-        include: { emissionPoint: { select: { establishment: true, point: true } } },
-      });
-      if (prior) {
-        const num = formatDocNumber(prior.emissionPoint.establishment, prior.emissionPoint.point, prior.sequential);
-        throw new Error(
-          `Este socio ya tiene factura de membresía este mes (${num}). Solo se vuelve a facturar con otro pago comprobado: ` +
-            "regístralo en Pagos, confírmalo con el banco y factúralo desde ese cobro.",
-        );
+      for (const memberId of membersWithMembership) {
+        const confirmed = included.some((p) => p.memberId === memberId && p.status === "SUCCEEDED");
+        if (confirmed) continue;
+        const prior = await tx.invoice.findFirst({
+          where: {
+            status: { not: "VOIDED" },
+            issueDate: { gte: start, lt: end },
+            OR: [
+              { memberId, lines: { some: { OR: [{ membershipId: { not: null } }, { incomeAccountCode: MEMBERSHIP_INCOME_CODE }] } } },
+              { lines: { some: { membership: { memberId } } } },
+            ],
+          },
+          include: { emissionPoint: { select: { establishment: true, point: true } } },
+        });
+        if (prior) {
+          const who = await tx.member.findUnique({ where: { id: memberId }, select: { firstName: true, lastName: true } });
+          const num = formatDocNumber(prior.emissionPoint.establishment, prior.emissionPoint.point, prior.sequential);
+          throw new Error(
+            `${who ? `${who.firstName} ${who.lastName}` : "Este socio"} ya tiene factura de membresía este mes (${num}). ` +
+              "Solo se vuelve a facturar con otro pago comprobado: regístralo en Pagos, confírmalo con el banco y factúralo desde ese cobro.",
+          );
+        }
+      }
+    }
+
+    // Payer: an existing one, or create/update it from the buyer data.
+    let payerId: string | null = null;
+    if (input.payer && b.type !== "CONSUMIDOR_FINAL") {
+      if (input.payer.id) {
+        const found = await tx.payer.findUnique({ where: { id: input.payer.id }, select: { id: true } });
+        if (!found) throw new Error("No se encontró el pagador.");
+        payerId = found.id;
+      } else if (input.payer.save) {
+        const data = {
+          name: buyerName,
+          email: b.email?.trim() || null,
+          phone: b.phone?.trim() || null,
+          address: b.address?.trim() || null,
+        };
+        const saved = await tx.payer.upsert({
+          where: { taxIdType_taxId: { taxIdType: b.type, taxId: buyerId } },
+          create: { ...data, taxIdType: b.type, taxId: buyerId },
+          update: data,
+        });
+        payerId = saved.id;
+      }
+      if (payerId && input.payer.save && memberIds.size) {
+        await tx.member.updateMany({ where: { id: { in: [...memberIds] } }, data: { payerId } });
       }
     }
 
@@ -200,7 +258,8 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
         accessKey,
         environment: point.environment,
         issueDate,
-        memberId: input.memberId || null,
+        memberId: input.memberId || included.find((p) => p.memberId)?.memberId || null,
+        payerId,
         buyerIdType,
         buyerId,
         buyerName,
@@ -233,8 +292,8 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
       },
     });
 
-    if (input.paymentId) {
-      await tx.payment.update({ where: { id: input.paymentId }, data: { invoiceId: inv.id } });
+    if (paymentIds.length) {
+      await tx.payment.updateMany({ where: { id: { in: paymentIds } }, data: { invoiceId: inv.id, ...(payerId ? { payerId } : {}) } });
     } else {
       // Same status rule as registerMemberPayment: cash is final, the rest
       // waits for Isabel to see it in the bank ("fondos sin depositar").
@@ -254,12 +313,13 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
           sede: input.sede,
           recordedByUserId: user.id,
           invoiceId: inv.id,
+          payerId,
           notes: input.notes?.trim() || null,
         },
       });
     }
 
-    if (input.memberId && input.saveToMember && b.type !== "CONSUMIDOR_FINAL") {
+    if (input.memberId && input.saveToMember && !payerId && !input.payer && b.type !== "CONSUMIDOR_FINAL") {
       await tx.member.update({ where: { id: input.memberId }, data: { taxIdType: b.type, taxId: buyerId } });
     }
     return inv;
@@ -274,7 +334,7 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
 
   revalidatePath(PATH);
   revalidatePath("/dashboard/pagos");
-  if (input.memberId) revalidatePath(`/dashboard/socios/${input.memberId}`);
+  for (const m of memberIds) revalidatePath(`/dashboard/socios/${m}`);
   return { id: invoice.id, emission };
 }
 
