@@ -48,6 +48,13 @@ export default async function EditarPagoPage({ params, searchParams }: { params:
         </>
       }
     >
+      {p.status === "VOIDED" ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-medium">Cobro anulado{p.voidedAt ? ` el ${p.voidedAt.toLocaleDateString("es-EC", { timeZone: "America/Guayaquil" })}` : ""}.</p>
+          <p className="mt-1">Motivo: {p.voidReason ?? "—"}</p>
+          <p className="mt-1 text-xs">Ya no cuenta en la contabilidad. Se conserva para el historial; no se edita.</p>
+        </div>
+      ) : (
       <EditPaymentForm
         backHref={back}
         payment={{
@@ -62,6 +69,7 @@ export default async function EditarPagoPage({ params, searchParams }: { params:
           notes: p.notes,
         }}
       />
+      )}
     </FormPage>
   );
 }

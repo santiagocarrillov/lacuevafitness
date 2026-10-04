@@ -21,7 +21,7 @@ import {
   lineAmounts,
   taxIdError,
 } from "@/lib/invoicing/core";
-import type { PaymentMethod, Sede, SriEnvironment, TaxIdType } from "@/generated/prisma/enums";
+import type { PaymentMethod, PaymentStatus, Sede, SriEnvironment, TaxIdType } from "@/generated/prisma/enums";
 
 type MemberOpt = {
   id: string;
@@ -33,6 +33,28 @@ type MemberOpt = {
   sede: Sede;
   taxIdType: TaxIdType | null;
   taxId: string | null;
+  payerId: string | null;
+};
+export type PayerOpt = {
+  id: string;
+  name: string;
+  taxIdType: TaxIdType;
+  taxId: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  members: string[];
+};
+/** Another uninvoiced collection that can go on the same invoice (a sibling paid by the same person). */
+export type SiblingPayment = {
+  id: string;
+  memberName: string;
+  membershipId: string | null;
+  planName: string | null;
+  oneTime: boolean;
+  amountCents: number;
+  paidAt: string;
+  confirmed: boolean;
 };
 type SaleItemOpt = { id: string; sede: Sede | null; name: string; priceCents: number; ivaRate: number; incomeAccountCode: string };
 type PointOpt = { id: string; sede: Sede; establishment: string; point: string; address: string; lastSequential: number; environment: SriEnvironment };
@@ -54,7 +76,7 @@ export type EditorPayment = {
   paidAt: string;
   bankReference: string | null;
   depositorName: string | null;
-  status: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED";
+  status: PaymentStatus;
 };
 
 type Line = {
@@ -101,6 +123,8 @@ export function InvoiceEditor({
   existingPayment,
   today,
   invoicedThisMonth = {},
+  payers = [],
+  siblings = [],
 }: {
   members: MemberOpt[];
   saleItems: SaleItemOpt[];
@@ -111,6 +135,8 @@ export function InvoiceEditor({
   today: string;
   /** memberId → number of the membership invoice already issued this month. */
   invoicedThisMonth?: Record<string, string>;
+  payers?: PayerOpt[];
+  siblings?: SiblingPayment[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -126,20 +152,39 @@ export function InvoiceEditor({
   const [member, setMember] = useState<MemberOpt | null>(initialMember);
   const [search, setSearch] = useState(initialMember ? `${initialMember.firstName} ${initialMember.lastName}` : "");
   const [consumerFinal, setConsumerFinal] = useState(false);
-  const [idType, setIdType] = useState<TaxIdType>(initialMember?.taxIdType ?? "CEDULA");
-  const startsThirdParty = !!existingPayment?.depositorName && !!initialMember && !existingPayment.depositorName
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(initialMember.firstName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
-  const [taxId, setTaxId] = useState(startsThirdParty ? "" : initialMember?.taxId ?? "");
-  const [buyerName, setBuyerName] = useState(
-    startsThirdParty ? existingPayment!.depositorName! : initialMember ? `${initialMember.firstName} ${initialMember.lastName}` : "",
-  );
-  const [email, setEmail] = useState(startsThirdParty ? "" : initialMember?.email ?? "");
-  const [phone, setPhone] = useState(startsThirdParty ? "" : initialMember?.phone ?? "");
-  const [address, setAddress] = useState(startsThirdParty ? "" : initialMember?.address ?? "");
+  // The person who pays and gets the invoice can differ from the member (a
+  // parent paying for a child): the member's payer, or whoever deposited.
+  // Their ID never goes on the member's file.
+  const initialPayer = payers.find((p) => p.id === initialMember?.payerId) ?? null;
+  const fold = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const depositorIsOther =
+    !!existingPayment?.depositorName && !!initialMember && !fold(existingPayment.depositorName).includes(fold(initialMember.firstName));
+  const startsThirdParty = !!initialPayer || depositorIsOther;
+  const startBuyer = initialPayer
+    ? { idType: initialPayer.taxIdType, taxId: initialPayer.taxId, name: initialPayer.name, email: initialPayer.email ?? "", phone: initialPayer.phone ?? "", address: initialPayer.address ?? "" }
+    : depositorIsOther
+      ? { idType: "CEDULA" as TaxIdType, taxId: "", name: existingPayment!.depositorName!, email: "", phone: "", address: "" }
+      : {
+          idType: initialMember?.taxIdType ?? ("CEDULA" as TaxIdType),
+          taxId: initialMember?.taxId ?? "",
+          name: initialMember ? `${initialMember.firstName} ${initialMember.lastName}` : "",
+          email: initialMember?.email ?? "",
+          phone: initialMember?.phone ?? "",
+          address: initialMember?.address ?? "",
+        };
+  const [idType, setIdType] = useState<TaxIdType>(startBuyer.idType);
+  const [taxId, setTaxId] = useState(startBuyer.taxId);
+  const [buyerName, setBuyerName] = useState(startBuyer.name);
+  const [email, setEmail] = useState(startBuyer.email);
+  const [phone, setPhone] = useState(startBuyer.phone);
+  const [address, setAddress] = useState(startBuyer.address);
   const [saveToMember, setSaveToMember] = useState(true);
-  // The person who pays and gets the invoice can differ from the member
-  // (a parent paying for a child). Their ID never goes on the member's file.
   const [thirdParty, setThirdParty] = useState(startsThirdParty);
+  const [payerId, setPayerId] = useState<string | null>(initialPayer?.id ?? null);
+  const [savePayer, setSavePayer] = useState(true);
+  const [payerSearch, setPayerSearch] = useState("");
+  // Sibling collections invoiced together: payment id → line key.
+  const [included, setIncluded] = useState<Record<string, number>>({});
   const [memberships, setMemberships] = useState<MembershipOpt[]>([]);
 
   // Lines
@@ -197,6 +242,40 @@ export function InvoiceEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function fillBuyerFromPayer(p: PayerOpt) {
+    setPayerId(p.id);
+    setBuyerName(p.name);
+    setIdType(p.taxIdType);
+    setTaxId(p.taxId);
+    setEmail(p.email ?? "");
+    setPhone(p.phone ?? "");
+    setAddress(p.address ?? "");
+    setPayerSearch("");
+  }
+
+  function toggleSibling(sp: SiblingPayment, on: boolean) {
+    if (on) {
+      const line: Line = {
+        key: nextKey++,
+        membershipId: sp.membershipId,
+        saleItemId: null,
+        code: sp.oneTime ? "PASE" : "MEM",
+        description: `${sp.planName ?? "Mensualidad"} · ${sp.memberName}`,
+        quantity: "1",
+        price: dollars(sp.amountCents),
+        discount: "0.00",
+        ivaRate: 15,
+        incomeAccountCode: sp.oneTime ? "4.1.02" : "4.1.01",
+      };
+      setLines((ls) => [...ls, line]);
+      setIncluded((m) => ({ ...m, [sp.id]: line.key }));
+    } else {
+      const key = included[sp.id];
+      setLines((ls) => ls.filter((l) => l.key !== key));
+      setIncluded(({ [sp.id]: _, ...rest }) => rest);
+    }
+  }
+
   function fillBuyerFrom(m: MemberOpt | null) {
     setBuyerName(m ? `${m.firstName} ${m.lastName}` : "");
     setIdType(m?.taxIdType ?? "CEDULA");
@@ -208,14 +287,23 @@ export function InvoiceEditor({
 
   function toggleThirdParty(on: boolean) {
     setThirdParty(on);
-    fillBuyerFrom(on ? null : member);
+    const p = on ? payers.find((x) => x.id === member?.payerId) : null;
+    if (p) fillBuyerFromPayer(p);
+    else {
+      fillBuyerFrom(on ? null : member);
+      setPayerId(null);
+    }
     if (on) setSaveToMember(false);
   }
 
   function pickMember(m: MemberOpt) {
     setMember(m);
     setSearch(`${m.firstName} ${m.lastName}`);
-    if (!thirdParty) fillBuyerFrom(m);
+    const p = payers.find((x) => x.id === m.payerId);
+    if (p) {
+      setThirdParty(true);
+      fillBuyerFromPayer(p);
+    } else if (!thirdParty) fillBuyerFrom(m);
     setConsumerFinal(false);
     if (!existingPayment) setSede(m.sede);
     setLines((ls) => ls.filter((l) => !l.membershipId));
@@ -292,7 +380,15 @@ export function InvoiceEditor({
   const total = totals?.totalCents ?? 0;
   const cfAllowed = total <= CONSUMER_FINAL_MAX_CENTS;
   const idError = consumerFinal ? null : taxId ? taxIdError(idType, taxId) : null;
-  const mismatch = existingPayment && totals && totals.totalCents !== existingPayment.amountCents;
+  const collectedCents = (existingPayment?.amountCents ?? 0) + siblings.filter((x) => included[x.id]).reduce((a, x) => a + x.amountCents, 0);
+  const mismatch = existingPayment && totals && totals.totalCents !== collectedCents;
+  const selectedPayer = payers.find((p) => p.id === payerId) ?? null;
+  const payerMatches = useMemo(() => {
+    const q = fold(payerSearch.trim());
+    if (!q) return [];
+    return payers.filter((p) => fold(`${p.name} ${p.taxId} ${p.members.join(" ")}`).includes(q)).slice(0, 6);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payerSearch, payers]);
 
   const sedeItems = saleItems.filter((s) => !s.sede || s.sede === sede);
   const entity = ENTITIES[sede];
@@ -330,7 +426,8 @@ export function InvoiceEditor({
           saveToMember: !!member && !thirdParty && saveToMember,
           lines: draftLines,
           payForm,
-          paymentId: existingPayment?.id ?? null,
+          paymentIds: existingPayment ? [existingPayment.id, ...Object.keys(included)] : undefined,
+          payer: thirdParty && !consumerFinal ? { id: payerId, save: savePayer } : null,
           payment: existingPayment ? undefined : { method, depositorName: depositor, bankReference: reference, bankEntity: method === "CASH" ? "" : bank },
           notes,
         });
@@ -436,6 +533,40 @@ export function InvoiceEditor({
             </div>
           )}
 
+          {thirdParty && !consumerFinal && (
+            <div className="space-y-2 rounded-md bg-stone-50 p-3">
+              {selectedPayer ? (
+                <p className="text-sm">
+                  Pagador registrado: <strong>{selectedPayer.name}</strong>
+                  {selectedPayer.members.length > 0 && <span className="text-muted-foreground"> · paga por {selectedPayer.members.join(", ")}</span>}
+                  <button type="button" className="ml-2 text-xs text-muted-foreground hover:underline" onClick={() => { setPayerId(null); fillBuyerFrom(null); }}>
+                    otra persona
+                  </button>
+                </p>
+              ) : payers.length > 0 ? (
+                <div className="relative">
+                  <Input className="h-8 bg-white" placeholder="Buscar un pagador registrado (nombre, cédula o socio)…" value={payerSearch} onChange={(e) => setPayerSearch(e.target.value)} />
+                  {payerMatches.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md">
+                      {payerMatches.map((p) => (
+                        <button key={p.id} type="button" onClick={() => fillBuyerFromPayer(p)} className="flex w-full justify-between px-3 py-2 text-left text-sm hover:bg-muted">
+                          <span>{p.name}</span>
+                          <span className="text-xs text-muted-foreground">{p.taxId}{p.members.length ? ` · ${p.members.join(", ")}` : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+              {member && (!selectedPayer || member.payerId !== selectedPayer.id) && (
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={savePayer} onChange={(e) => setSavePayer(e.target.checked)} />
+                  {selectedPayer ? `Dejarlo como pagador de ${member.firstName}` : `Guardar como pagador de ${member.firstName} para las próximas facturas`}
+                </label>
+              )}
+            </div>
+          )}
+
           {consumerFinal ? (
             <div className="space-y-1 text-sm">
               <p>CONSUMIDOR FINAL · 9999999999999</p>
@@ -461,6 +592,7 @@ export function InvoiceEditor({
                   onChange={(e) => {
                     const v = e.target.value.trim();
                     setTaxId(v);
+                    if (selectedPayer && selectedPayer.taxId !== v) setPayerId(null);
                     if (/^\d{10}$|^\d{13}$/.test(v)) setIdType(guessTaxIdType(v));
                   }}
                   aria-invalid={!!idError}
@@ -607,7 +739,22 @@ export function InvoiceEditor({
                 Cobro ya registrado: <strong>{fmtUsd(existingPayment.amountCents)}</strong> · {METHOD_LABEL[existingPayment.method]} · {existingPayment.paidAt}
                 {existingPayment.bankReference ? ` · ref. ${existingPayment.bankReference}` : ""}
               </p>
-            ) : (
+            ) : null}
+            {existingPayment && siblings.length > 0 && (
+              <div className="space-y-1.5 rounded-md border border-dashed p-3">
+                <p className="text-xs font-medium">Incluir en la misma factura (lo pagó la misma persona):</p>
+                {siblings.map((sp) => (
+                  <label key={sp.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={!!included[sp.id]} onChange={(e) => toggleSibling(sp, e.target.checked)} />
+                    <span>
+                      {sp.memberName} · {sp.planName ?? "Mensualidad"} · <strong>{fmtUsd(sp.amountCents)}</strong>
+                      <span className="text-xs text-muted-foreground"> · {sp.paidAt}{sp.confirmed ? "" : " · sin depositar"}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {existingPayment ? null : (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label className="text-xs">Cómo pagó</Label>
@@ -682,7 +829,7 @@ export function InvoiceEditor({
               <dd className="tabular-nums">{fmtUsd(total)}</dd>
             </div>
             {mismatch && (
-              <p className="text-[11px] text-destructive">El total debe ser igual al cobro ({fmtUsd(existingPayment!.amountCents)}).</p>
+              <p className="text-[11px] text-destructive">El total debe ser igual a lo cobrado ({fmtUsd(collectedCents)}).</p>
             )}
           </dl>
         </div>

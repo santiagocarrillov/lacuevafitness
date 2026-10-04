@@ -174,6 +174,7 @@ export async function getMember(id: string) {
         include: { plan: true },
       },
       payments: {
+        where: { status: { not: "VOIDED" } },
         orderBy: { paidAt: "desc" },
         take: 30,
         include: { membership: { include: { plan: true } } },

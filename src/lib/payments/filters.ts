@@ -28,7 +28,7 @@ export type PaymentFilters = {
   hasta: string;
   rango: string | null; // preset that produced desde/hasta, or null = custom
   sede: Sede | null;
-  estado: "confirmado" | "pendiente" | null;
+  estado: "confirmado" | "pendiente" | "anulado" | null;
   metodos: PaymentMethod[];
   factura: "con" | "sin" | null;
   banco: "conciliado" | "sin" | null;
@@ -100,7 +100,7 @@ export function parsePaymentFilters(sp: Record<string, string | undefined>, scop
     hasta,
     rango,
     sede,
-    estado: sp.estado === "confirmado" || sp.estado === "pendiente" ? sp.estado : null,
+    estado: sp.estado === "confirmado" || sp.estado === "pendiente" || sp.estado === "anulado" ? sp.estado : null,
     metodos: (sp.metodo ?? "").split(",").filter((m): m is PaymentMethod => METHODS.includes(m as PaymentMethod)),
     factura: sp.factura === "con" || sp.factura === "sin" ? sp.factura : null,
     banco: sp.banco === "conciliado" || sp.banco === "sin" ? sp.banco : null,
@@ -134,7 +134,7 @@ export function paidBetween(desde: string, hasta: string): Prisma.PaymentWhereIn
 export function paymentsWhere(f: PaymentFilters): Prisma.PaymentWhereInput {
   const and: Prisma.PaymentWhereInput[] = [{ isPoolEntry: false, memberId: { not: null } }, paidBetween(f.desde, f.hasta)];
   if (f.sede) and.push({ sede: f.sede });
-  if (f.estado) and.push({ status: f.estado === "confirmado" ? "SUCCEEDED" : "PENDING" });
+  if (f.estado) and.push({ status: f.estado === "confirmado" ? "SUCCEEDED" : f.estado === "anulado" ? "VOIDED" : "PENDING" });
   else and.push({ status: { in: ["SUCCEEDED", "PENDING"] } });
   if (f.metodos.length) and.push({ method: { in: f.metodos } });
   if (f.factura === "con") and.push({ invoice: { status: { not: "VOIDED" } } });
@@ -149,6 +149,7 @@ export function paymentsWhere(f: PaymentFilters): Prisma.PaymentWhereInput {
           { member: { firstName: { contains: w, mode: "insensitive" } } },
           { member: { lastName: { contains: w, mode: "insensitive" } } },
           { depositorName: { contains: w, mode: "insensitive" } },
+          { payer: { name: { contains: w, mode: "insensitive" } } },
           { bankReference: { contains: w, mode: "insensitive" } },
           { invoice: { buyerName: { contains: w, mode: "insensitive" } } },
         ],
