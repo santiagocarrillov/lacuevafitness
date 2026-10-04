@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -80,9 +81,8 @@ export function RegisterPaymentForm({
   const isCash = method === "CASH";
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q || member) return [];
-    return members.filter((m) => `${m.firstName} ${m.lastName}`.toLowerCase().includes(q)).slice(0, 8);
+    if (!search.trim() || member) return [];
+    return members.filter((m) => textMatches(`${m.firstName} ${m.lastName}`, search)).slice(0, 8);
   }, [search, member, members]);
 
   // Memberships (with what's already paid) and bank deposits that look like this member.

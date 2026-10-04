@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -199,10 +200,10 @@ export function InvoiceEditor({
   const [notes, setNotes] = useState("");
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q || (member && search === `${member.firstName} ${member.lastName}`)) return [];
     return members
-      .filter((m) => `${m.firstName} ${m.lastName} ${m.taxId ?? ""}`.toLowerCase().includes(q))
+      .filter((m) => textMatches(`${m.firstName} ${m.lastName} ${m.taxId ?? ""}`, q))
       .slice(0, 8);
   }, [search, members, member]);
 

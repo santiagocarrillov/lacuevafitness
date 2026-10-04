@@ -131,7 +131,7 @@ export function paidBetween(desde: string, hasta: string): Prisma.PaymentWhereIn
 }
 
 /** Prisma filter of the payments list (member payments only, not pool entries). */
-export function paymentsWhere(f: PaymentFilters): Prisma.PaymentWhereInput {
+export function paymentsWhere(f: PaymentFilters, matchIds?: string[] | null): Prisma.PaymentWhereInput {
   const and: Prisma.PaymentWhereInput[] = [{ isPoolEntry: false, memberId: { not: null } }, paidBetween(f.desde, f.hasta)];
   if (f.sede) and.push({ sede: f.sede });
   if (f.estado) and.push({ status: f.estado === "confirmado" ? "SUCCEEDED" : f.estado === "anulado" ? "VOIDED" : "PENDING" });
@@ -141,20 +141,7 @@ export function paymentsWhere(f: PaymentFilters): Prisma.PaymentWhereInput {
   if (f.factura === "sin") and.push({ OR: [{ invoiceId: null }, { invoice: { status: "VOIDED" } }] });
   if (f.banco === "conciliado") and.push({ OR: [{ bankTransactionId: { not: null } }, { reconciledAt: { not: null } }] });
   if (f.banco === "sin") and.push({ bankTransactionId: null, reconciledAt: null });
-  if (f.q) {
-    const words = f.q.split(/\s+/).filter(Boolean);
-    for (const w of words) {
-      and.push({
-        OR: [
-          { member: { firstName: { contains: w, mode: "insensitive" } } },
-          { member: { lastName: { contains: w, mode: "insensitive" } } },
-          { depositorName: { contains: w, mode: "insensitive" } },
-          { payer: { name: { contains: w, mode: "insensitive" } } },
-          { bankReference: { contains: w, mode: "insensitive" } },
-          { invoice: { buyerName: { contains: w, mode: "insensitive" } } },
-        ],
-      });
-    }
-  }
+  // Text search runs first, accent-insensitive (lib/text-search): its ids come in here.
+  if (matchIds) and.push({ id: { in: matchIds } });
   return { AND: and };
 }

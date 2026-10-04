@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { applyPlanToMember } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
@@ -114,14 +115,9 @@ export async function getLeads({
   }
 
   if (search) {
-    and.push({
-      OR: [
-        { firstName: { contains: search, mode: "insensitive" } },
-        { lastName: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search, mode: "insensitive" } },
-      ],
-    });
+    // Accent- and case-insensitive, every word in any field ("maria rojas").
+    const ids = await idsMatching(SEARCH_SOURCES.lead, search);
+    if (ids) and.push({ id: { in: ids } });
   }
   const where: Prisma.LeadWhereInput = { AND: and };
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
@@ -35,19 +36,14 @@ function revalidateAgenda(memberId?: string) {
 /** Socios to book, by any mix of first/last name tokens ("ana pe" finds Ana Pérez). */
 export async function searchMembersForNutrition(query: string) {
   const user = await requireScheduler();
-  const tokens = query.trim().split(/\s+/).filter((t) => t.length >= 2);
-  if (tokens.length === 0) return [];
+  const ids = await idsMatching(SEARCH_SOURCES.memberName, query, { minLength: 2 });
+  if (!ids) return [];
   const scope = getSedeScope(user);
   return prisma.member.findMany({
     where: {
       status: { not: "CHURNED" },
       ...(scope ? { OR: [{ sede: scope }, { secondarySede: scope }] } : {}),
-      AND: tokens.map((t) => ({
-        OR: [
-          { firstName: { contains: t, mode: "insensitive" as const } },
-          { lastName: { contains: t, mode: "insensitive" as const } },
-        ],
-      })),
+      id: { in: ids },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     take: 12,

@@ -1,5 +1,6 @@
 "use server";
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyUsers } from "@/lib/push/notify-staff";
@@ -279,28 +280,26 @@ export async function getAssignableUsers(): Promise<AssignableUser[]> {
 /** Members (every staff role) and leads (front desk only) matching `q`. */
 export async function searchTaskPeople(q: string): Promise<PersonSearchResult[]> {
   const user = await requireTaskUser();
-  const words = q.trim().split(/\s+/).filter(Boolean).slice(0, 3);
-  if (words.length === 0 || q.trim().length < 2) return [];
-
-  const nameMatch = (w: string) => ({
-    OR: [
-      { firstName: { contains: w, mode: "insensitive" as const } },
-      { lastName: { contains: w, mode: "insensitive" as const } },
-      { phone: { contains: w } },
-    ],
-  });
+  if (q.trim().length < 2) return [];
+  // Accent- and case-insensitive; every word in name or phone.
+  const seesLeads = can.manageLeads(user);
+  const [memberIds, leadIds] = await Promise.all([
+    idsMatching(SEARCH_SOURCES.member, q, { limit: 200 }),
+    seesLeads ? idsMatching(SEARCH_SOURCES.lead, q, { limit: 200 }) : Promise.resolve([]),
+  ]);
+  if (!memberIds) return [];
 
   const [members, leads] = await Promise.all([
     prisma.member.findMany({
-      where: { AND: words.map(nameMatch) },
+      where: { id: { in: memberIds } },
       select: { id: true, firstName: true, lastName: true, status: true, sede: true },
       orderBy: { updatedAt: "desc" },
       take: 8,
     }),
-    can.manageLeads(user)
+    seesLeads && leadIds?.length
       ? prisma.lead.findMany({
           // A lead that already became a member is found as the member.
-          where: { AND: [...words.map(nameMatch), { member: null }] },
+          where: { id: { in: leadIds }, member: null },
           select: { id: true, firstName: true, lastName: true, stage: true, sede: true },
           orderBy: { updatedAt: "desc" },
           take: 6,

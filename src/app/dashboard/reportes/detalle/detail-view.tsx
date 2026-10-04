@@ -1,5 +1,6 @@
 "use client";
 
+import { textMatches } from "@/lib/text";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -99,7 +100,7 @@ export function DetailView({
 
   // Filtered rows
   const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     return rows.filter((row) => {
       // Per-column filters
       for (const [key, val] of Object.entries(colFilters)) {
@@ -108,9 +109,7 @@ export function DetailView({
       }
       // Free-text search across all string-ish cells
       if (q) {
-        const anyMatch = Object.values(row).some((v) =>
-          String(v ?? "").toLowerCase().includes(q),
-        );
+        const anyMatch = textMatches(Object.values(row).map((v) => String(v ?? "")).join(" "), q);
         if (!anyMatch) return false;
       }
       return true;

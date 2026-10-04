@@ -7,6 +7,7 @@ import type { Sede, PaymentMethod, PaymentStatus } from "@/generated/prisma/clie
 import { assertOpen, postingDay } from "@/lib/accounting/posting";
 import { ecuadorDateString } from "@/lib/timezone";
 import { paymentsWhere, type PaymentFilters } from "@/lib/payments/filters";
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,8 @@ export async function listPayments(f: PaymentFilters, pageSize = 50) {
   const user = await requireAuth();
   if (!canManagePayments(user)) throw new Error("No autorizado");
   const scoped = getSedeScope(user);
-  const where = paymentsWhere({ ...f, sede: scoped ?? f.sede });
+  const matchIds = f.q ? await idsMatching(SEARCH_SOURCES.payment, f.q) : null;
+  const where = paymentsWhere({ ...f, sede: scoped ?? f.sede }, matchIds);
 
   const [rows, total, byStatus, uninvoiced, unreconciled, byMethod] = await Promise.all([
     prisma.payment.findMany({
