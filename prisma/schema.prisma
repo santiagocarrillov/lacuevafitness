@@ -2122,3 +2122,105 @@ model SegmentEntry {
   @@index([leadId])
   @@index([memberId])
 }
+
+// ─────────────────────────────────────────────────────────────
+// Trabajadores y nómina (módulo 4, 4 oct 2026). Privado: solo dueños y
+// contabilidad. Cálculo según la ley ecuatoriana (src/lib/payroll/rules.ts);
+// el rol aprobado genera su asiento PAYROLL en el libro diario.
+// ─────────────────────────────────────────────────────────────
+
+enum EmploymentType {
+  DEPENDENCIA // relación de dependencia: rol de pagos, IESS, décimos
+  HONORARIOS // servicios profesionales: factura o liquidación de compra (va por Gastos)
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED // contabilizado (provisión del mes)
+  PAID // sueldos netos pagados
+  VOIDED
+}
+
+model Employee {
+  id                   String         @id @default(cuid())
+  sede                 Sede // empresa que lo contrata
+  firstName            String
+  lastName             String
+  idNumber             String? // cédula
+  email                String?
+  phone                String?
+  position             String? // cargo: coach, recepción, limpieza…
+  employmentType       EmploymentType @default(DEPENDENCIA)
+  monthlySalaryCents   Int            @default(0) // sueldo pactado por mes (jornada completa o la parcial pactada)
+  weeklyHours          Int            @default(40) // 40 = completa; menos = jornada parcial (décimo cuarto proporcional)
+  startDate            DateTime       @db.Date
+  endDate              DateTime?      @db.Date // salida (deja de entrar en los roles)
+  iessAffiliated       Boolean        @default(true)
+  // Lo que el trabajador pidió recibir cada mes en vez de acumulado.
+  monthlyDecimoTercero Boolean        @default(false)
+  monthlyDecimoCuarto  Boolean        @default(false)
+  monthlyFondosReserva Boolean        @default(true)
+  bankName             String?
+  bankAccount          String?
+  userId               String?        @unique // su usuario de staff, si tiene
+  notes                String?
+  active               Boolean        @default(true)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  payrollLines PayrollLine[]
+
+  @@index([sede, active])
+}
+
+model PayrollRun {
+  id           String            @id @default(cuid())
+  sede         Sede
+  period       String // "2026-10"
+  status       PayrollStatus     @default(DRAFT)
+  approvedAt   DateTime?
+  approvedById String?
+  paidAt       DateTime?         @db.Date
+  paidMethod   ExpensePayMethod?
+  notes        String?
+  voidReason   String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  lines PayrollLine[]
+
+  @@unique([sede, period])
+}
+
+// Una fila del rol: entradas (días, extras, bonos, descuentos) y el resultado
+// calculado, guardado tal cual se aprobó.
+model PayrollLine {
+  id         String     @id @default(cuid())
+  runId      String
+  run        PayrollRun @relation(fields: [runId], references: [id])
+  employeeId String
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+
+  // Entradas
+  daysWorked           Int @default(30)
+  overtime50Hours      Int @default(0) // horas suplementarias (recargo 50 %)
+  overtime100Hours     Int @default(0) // horas extraordinarias (recargo 100 %)
+  bonusCents           Int @default(0) // bonos y comisiones gravables
+  otherDeductionsCents Int @default(0) // préstamos IESS, pensiones, otros descuentos
+  incomeTaxCents       Int @default(0) // retención de IR (sugerida, editable)
+
+  // Resultado
+  baseCents          Int @default(0) // sueldo por los días trabajados
+  overtimeCents      Int @default(0)
+  grossCents         Int @default(0) // materia gravada del IESS
+  iessPersonalCents  Int @default(0)
+  iessEmployerCents  Int @default(0) // 11,15 % + IECE + SECAP
+  fondosReservaCents Int @default(0)
+  decimoTerceroCents Int @default(0)
+  decimoCuartoCents  Int @default(0)
+  vacationCents      Int @default(0) // provisión 1/24
+  netCents           Int @default(0) // a recibir
+
+  @@unique([runId, employeeId])
+  @@index([employeeId])
+}

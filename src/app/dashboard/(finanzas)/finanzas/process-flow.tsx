@@ -171,10 +171,10 @@ export function ProcessFlow({ data, ym, today }: { data: HomeData; ym: string; t
           color={PURPLE}
           end="Impuestos"
           nodes={[
-            { label: "Rol de pagos", href: "/dashboard/finanzas/trabajadores", icon: IdCard, soon: true },
-            { label: "Pagar sueldos y honorarios", href: "/dashboard/finanzas/trabajadores", icon: Banknote },
-            { label: "Planilla IESS", href: "/dashboard/finanzas/trabajadores", icon: FileSpreadsheet, soon: true },
-            { label: "Décimos y utilidades", href: "/dashboard/finanzas/trabajadores", icon: HandCoins, soon: true },
+            { label: "Equipo y contratos", href: "/dashboard/finanzas/trabajadores/equipo", icon: IdCard },
+            { label: "Rol de pagos", href: "/dashboard/finanzas/trabajadores/roles", icon: FileSpreadsheet },
+            { label: "Pagar sueldos", href: "/dashboard/finanzas/trabajadores/roles", icon: Banknote },
+            { label: "IESS y décimos", href: "/dashboard/finanzas/trabajadores", icon: HandCoins },
           ]}
         />
       </div>

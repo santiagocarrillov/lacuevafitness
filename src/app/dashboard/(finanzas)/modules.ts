@@ -116,7 +116,11 @@ export const FINANCE_MODULES: FinanceModule[] = [
     icon: IdCard,
     color: "#6b4fb5",
     href: "/dashboard/finanzas/trabajadores",
-    subs: [],
+    subs: [
+      { label: "Resumen", href: "/dashboard/finanzas/trabajadores", icon: ChartPie, active: (l) => l.path === "/dashboard/finanzas/trabajadores" },
+      { label: "Equipo", href: "/dashboard/finanzas/trabajadores/equipo", icon: Users, active: (l) => under(l.path, "/dashboard/finanzas/trabajadores/equipo") },
+      { label: "Roles de pago", href: "/dashboard/finanzas/trabajadores/roles", icon: FileText, active: (l) => under(l.path, "/dashboard/finanzas/trabajadores/roles") },
+    ],
   },
   {
     key: "banco",

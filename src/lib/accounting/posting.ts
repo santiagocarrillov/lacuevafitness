@@ -15,7 +15,7 @@ import { accumulatedThrough, chargeForMonth, monthEnd, monthIdx, ymOf } from "@/
 type Db = Prisma.TransactionClient | typeof prisma;
 
 export const IVA_RATE = 15; // %, prices include IVA (Santiago, 1 oct 2026)
-export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE", "DEPRECIATION"];
+export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE", "DEPRECIATION", "PAYROLL"];
 
 /** Splits a VAT-inclusive total. $50 → net 43.48 + IVA 6.52. */
 export function splitIva(totalCents: number, rate = IVA_RATE) {
@@ -293,6 +293,69 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
         : [{ accountId: equityOrLoan, debitCents: c.amountCents, party: c.person }, { accountId: cash, creditCents: c.amountCents, party: c.person }],
     });
   }
+  // Payroll (módulo 4): an approved rol is accrued on the last day of its
+  // month — Dr sueldos (5.2.01) + beneficios y aporte patronal (5.2.03) ·
+  // Cr what each worker is owed and what goes to the IESS, the SRI and the
+  // provisions — and its payment closes the net salaries.
+  const runs = await db.payrollRun.findMany({
+    where: { sede, status: { in: ["APPROVED", "PAID"] } },
+    include: { lines: { include: { employee: { select: { firstName: true, lastName: true, monthlyDecimoTercero: true, monthlyDecimoCuarto: true, monthlyFondosReserva: true } } } } },
+  });
+  for (const run of runs) {
+    const [y, m] = run.period.split("-").map(Number);
+    const accrualDate = new Date(Date.UTC(y, m, 0));
+    const lines: LineInput[] = [];
+    let gross = 0;
+    let benefits = 0;
+    const credit = (code: string, cents: number, party?: string, memo?: string) => {
+      if (cents > 0) lines.push({ accountId: A.code(code), creditCents: cents, party, memo });
+    };
+    for (const l of run.lines) {
+      const e = l.employee;
+      const who = `${e.firstName} ${e.lastName}`;
+      gross += l.grossCents;
+      benefits += l.iessEmployerCents + l.fondosReservaCents + l.decimoTerceroCents + l.decimoCuartoCents + l.vacationCents;
+      credit("2.1.08", l.netCents, who, "Sueldo neto");
+      credit("2.1.04", l.iessPersonalCents, who, "Aporte personal IESS");
+      credit("2.1.03", l.iessEmployerCents, who, "Aporte patronal IESS (incluye IECE y SECAP)");
+      if (!e.monthlyFondosReserva) credit("2.1.05", l.fondosReservaCents, who);
+      if (!e.monthlyDecimoTercero) credit("2.1.10", l.decimoTerceroCents, who);
+      if (!e.monthlyDecimoCuarto) credit("2.1.11", l.decimoCuartoCents, who);
+      credit("2.1.12", l.vacationCents, who);
+      credit("2.1.13", l.incomeTaxCents, who);
+      credit("2.1.14", l.otherDeductionsCents, who);
+    }
+    if (inRange(accrualDate) && lines.length) {
+      out.push({
+        source: "PAYROLL",
+        sourceId: `${run.id}:rol`,
+        date: accrualDate,
+        description: `Rol de pagos ${run.period}`,
+        lines: [
+          { accountId: A.code("5.2.01"), debitCents: gross, memo: "Sueldos, horas extra y bonos" },
+          { accountId: A.code("5.2.03"), debitCents: benefits, memo: "Aporte patronal, décimos, fondos de reserva y vacaciones" },
+          ...lines,
+        ],
+      });
+    }
+    if (run.status === "PAID" && run.paidAt && inRange(run.paidAt)) {
+      const net = run.lines.reduce((a, l) => a + l.netCents, 0);
+      const cash = run.paidMethod === "CASH" ? A.code("1.1.01") : A.code("1.1.05");
+      if (net > 0) {
+        out.push({
+          source: "PAYROLL",
+          sourceId: `${run.id}:pago`,
+          date: run.paidAt,
+          description: `Pago de sueldos ${run.period}`,
+          lines: [
+            ...run.lines.filter((l) => l.netCents > 0).map((l) => ({ accountId: A.code("2.1.08"), debitCents: l.netCents, party: `${l.employee.firstName} ${l.employee.lastName}` })),
+            { accountId: cash, creditCents: net },
+          ],
+        });
+      }
+    }
+  }
+
   // Fixed assets: one depreciation entry per month-end, and the disposal
   // (Dr accumulated depreciation + loss · Cr asset at cost).
   const assets = await db.fixedAsset.findMany({ where: { sede }, include: { account: { select: { id: true } } } });

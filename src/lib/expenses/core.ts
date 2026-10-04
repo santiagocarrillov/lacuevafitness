@@ -12,7 +12,7 @@ export const isPrivateCode = (code: string) => code.startsWith(PRIVATE_PREFIX);
 /** Asset accounts a purchase can go to (prepaid rent, fixed assets). */
 export const ASSET_LINE_CODES = ["1.1.04", "1.2.01", "1.2.02", "1.2.03"];
 /** Expense accounts that are never bought directly. */
-const NOT_PURCHASABLE = ["5.3.10"]; // depreciación (asiento de ajuste)
+const NOT_PURCHASABLE = ["5.3.10", "5.2.03"]; // depreciación y beneficios sociales: asientos automáticos
 
 export type AccountOpt = { id: string; code: string; name: string; type: string; postable: boolean; expenseCategory: ExpenseCategory | null };
 
