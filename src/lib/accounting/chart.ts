@@ -56,6 +56,12 @@ const COMMON_TOP: ChartRow[] = [
   { code: "2.1.07", name: "Ingresos diferidos (membresías prepagadas)", type: "LIABILITY" },
   { code: "2.1.08", name: "Sueldos y beneficios por pagar", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
   { code: "2.1.09", name: "Tarjetas de crédito por pagar", type: "LIABILITY" },
+  // Nómina (módulo 4, 4 oct 2026): provisiones y retenciones del rol de pagos.
+  { code: "2.1.10", name: "Décimo tercer sueldo por pagar", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
+  { code: "2.1.11", name: "Décimo cuarto sueldo por pagar", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
+  { code: "2.1.12", name: "Vacaciones por pagar", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
+  { code: "2.1.13", name: "Retenciones de IR en relación de dependencia por pagar", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
+  { code: "2.1.14", name: "Descuentos a trabajadores por pagar a terceros", type: "LIABILITY", role: "PAYROLL_LIABILITIES" },
 
   { code: "4", name: "Ingresos", type: "INCOME", group: true },
   { code: "4.1", name: "Ingresos de actividades ordinarias", type: "INCOME", group: true },
@@ -72,6 +78,7 @@ const COMMON_TOP: ChartRow[] = [
   { code: "5.2", name: "Gastos de personal", type: "EXPENSE", group: true },
   { code: "5.2.01", name: "Sueldos, beneficios y aportes", type: "EXPENSE", expenseCategory: "PAYROLL" },
   { code: "5.2.02", name: "Honorarios de coaches", type: "EXPENSE", expenseCategory: "COACH_FEES" },
+  { code: "5.2.03", name: "Beneficios sociales y aporte patronal", type: "EXPENSE" },
   { code: "5.3", name: "Gastos de administración y ventas", type: "EXPENSE", group: true },
   { code: "5.3.01", name: "Arriendo", type: "EXPENSE", expenseCategory: "RENT" },
   { code: "5.3.02", name: "Servicios básicos", type: "EXPENSE", expenseCategory: "UTILITIES" },

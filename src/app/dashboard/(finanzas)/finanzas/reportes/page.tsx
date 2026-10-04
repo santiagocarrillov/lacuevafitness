@@ -53,9 +53,9 @@ const FAMILIES: Family[] = [
     icon: IdCard,
     color: "#6b4fb5",
     reports: [
-      { title: "Costo del equipo", detail: "Sueldos y honorarios pagados por persona.", href: "/dashboard/finanzas/trabajadores" },
-      { title: "Roles de pago y planilla IESS", detail: "Llega con el módulo de nómina." },
-      { title: "Provisiones de beneficios sociales", detail: "Décimos, fondos de reserva y vacaciones por pagar." },
+      { title: "Costo del equipo", detail: "Nómina y honorarios del año, por persona.", href: "/dashboard/finanzas/trabajadores" },
+      { title: "Roles de pago y planilla IESS", detail: "Rol de cada mes, recibos individuales y total a pagar al IESS.", href: "/dashboard/finanzas/trabajadores/roles" },
+      { title: "Provisiones de beneficios sociales", detail: "Décimos y vacaciones por pagar: saldos de las cuentas 2.1.10 a 2.1.12.", href: "/dashboard/contabilidad?tab=comprobacion" },
     ],
   },
   {

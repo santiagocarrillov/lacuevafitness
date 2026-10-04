@@ -40,9 +40,7 @@ los bancos de La Cueva. Para que otro gimnasio la use:
    sociedad) en lugar de los catálogos por sede; los bancos se crean desde Caja y Bancos.
 3. **Proveedores como tabla** (RUC, nombre, contacto, plazo de pago, retenciones habituales) en vez
    de derivarlos de los gastos; habilita pagos a proveedores y retenciones.
-4. **Nómina** (Trabajadores): contratos, rol mensual, IESS, fondos de reserva, décimos, vacaciones,
-   utilidades, retención en relación de dependencia y planilla; asiento automático. Bloqueado por los
-   datos del personal (Isabel).
+4. ~~Nómina~~ — hecho (ver abajo). Faltan utilidades, liquidaciones, pago de planilla/décimos y Formulario 107.
 5. **Retenciones en la fuente** (emisión del comprobante electrónico) para empresas agentes de retención.
 6. **Eliminaciones intercompañía** en los estados consolidados si las empresas del grupo se prestan
    o facturan entre sí (hoy no ocurre en La Cueva).
@@ -84,3 +82,19 @@ Cada punto toca el esquema: se discute antes de construir (regla del repo).
 - **Antigüedad de cuentas por pagar** (Por vencer · 1–30 · 31–60 · 61–90 · +90) por proveedor, como el A/P Aging
   de QuickBooks: en Gastos › Por pagar, en Proveedores y en la ficha de cada proveedor.
 - Pendiente: pagar varias facturas de un proveedor a la vez, pagos parciales y retenciones en la fuente.
+
+## Trabajadores y nómina — 4 oct 2026
+
+- Tablas `Employee`, `PayrollRun`, `PayrollLine` (migración `20261004220000_nomina`, aplicada). Cuentas nuevas en el
+  plan (seed corrido): 2.1.10 décimo tercero, 2.1.11 décimo cuarto, 2.1.12 vacaciones, 2.1.13 retenciones IR,
+  2.1.14 descuentos a terceros, 5.2.03 beneficios sociales y aporte patronal.
+- Reglas en `src/lib/payroll/rules.ts` (verificadas el 4 oct 2026: SBU 2026 $482, IESS 9,45 % / 12,15 %, fondos
+  8,33 % desde el mes 13, tabla IR 2026 con fracción básica $12.208). Cálculo puro en `compute.ts`; pruebas en
+  `scripts/test-nomina.ts` (`npx tsx scripts/test-nomina.ts`). **Cada enero: agregar el año en `RULES_BY_YEAR`.**
+- Por trabajador: dependencia u honorarios, jornada (parcial → décimo cuarto proporcional), afiliado o no, y si
+  recibe décimos y fondos de reserva cada mes o acumulados. Honorarios no entran al rol: van por Gastos (5.2.02).
+- Rol mensual por empresa: borrador editable (días, horas extra 50/100 %, bonos, descuentos, retención IR sugerida),
+  aprobar = asiento PAYROLL al último día del mes; registrar pago = asiento que cierra los netos (cuenta puente
+  1.1.05 si fue por transferencia). Recibo individual imprimible.
+- Pendiente: pagar planilla IESS y décimos desde la app (hoy con asiento manual), utilidades (15 %), liquidaciones
+  de salida, Formulario 107, vacaciones gozadas, enlazar el pago de sueldos con la línea del banco.
