@@ -6,6 +6,8 @@ import { getEvaluationCompliance, getBodyFatMetrics, getMembersEvalStatus } from
 import { ComplianceGauge } from "./compliance-gauge";
 import { EvaluacionesTable } from "./evaluaciones-table";
 import { EvalDateRangePicker } from "./eval-date-range-picker";
+import { GroupDashboard } from "./group-dashboard";
+import { groupEvaluationStats } from "@/lib/srxfit/group-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,8 @@ export default async function EvaluacionesPage({
 
   const sedeForQuery = sede ? (sede as Sede) : undefined;
 
-  const [compliance, fatMetrics, members] = await Promise.all([
+  const [group, compliance, fatMetrics, members] = await Promise.all([
+    groupEvaluationStats({ sede: sedeForQuery ?? null }),
     getEvaluationCompliance(sedeForQuery, from, to),
     getBodyFatMetrics(sedeForQuery, from, to),
     getMembersEvalStatus(sedeForQuery, from, to),
@@ -87,6 +90,10 @@ export default async function EvaluacionesPage({
         )}
         <EvalDateRangePicker from={from} to={to} sede={sede as string} />
       </div>
+
+      <GroupDashboard s={group} />
+
+      <h2 className="border-t pt-6 text-lg font-semibold">Detalle del período</h2>
 
       {/* Compliance gauges */}
       <section className="space-y-4">
