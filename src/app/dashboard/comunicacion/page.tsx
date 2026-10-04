@@ -30,12 +30,14 @@ export default async function ComunicacionPage({
           </p>
         </div>
         {user.role === "OWNER" && (
-          <Link
-            href="/dashboard/comunicacion/whatsapp-setup"
-            className="shrink-0 text-xs font-medium text-primary hover:underline"
-          >
-            Configurar número
-          </Link>
+          <div className="flex shrink-0 items-center gap-4 text-xs font-medium">
+            <Link href="/dashboard/comunicacion/plantillas" className="text-primary hover:underline">
+              Plantillas
+            </Link>
+            <Link href="/dashboard/comunicacion/whatsapp-setup" className="text-primary hover:underline">
+              Configurar número
+            </Link>
+          </div>
         )}
       </header>
       <Inbox
