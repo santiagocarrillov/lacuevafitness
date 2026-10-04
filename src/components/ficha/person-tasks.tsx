@@ -15,7 +15,7 @@ export function PersonTasks({ open, today }: { open: TaskListItem[]; today: stri
         const overdue = dueBucket(t.dueDate, today) === "overdue";
         return (
           <li key={t.id}>
-            <Link href={`/dashboard/tareas?t=${t.id}`} className="block rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/60">
+            <Link href={`/dashboard/tareas?t=${t.id}`} className="block rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm hover:bg-muted/60">
               <span className="block truncate font-medium">{t.title}</span>
               <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                 <span className={overdue ? "font-medium text-destructive" : ""}>{dueLabel(t.dueDate, t.dueMinutes, today)}</span>

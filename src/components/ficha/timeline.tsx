@@ -93,8 +93,8 @@ export function Timeline({
   const shownKinds = present.filter((p) => !hidden.has(p.kind)).length;
 
   return (
-    <div className="rounded-lg border border-border bg-background">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+    <div>
+      <div className="flex flex-wrap items-center gap-2 py-1">
         <h2 className="mr-auto text-sm font-semibold">Actividad</h2>
         <label className="relative">
           <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -102,14 +102,14 @@ export function Timeline({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar en la actividad"
-            className="h-8 w-48 rounded-md border border-border bg-background pl-7 pr-2 text-sm outline-none focus:border-primary"
+            className="h-8 w-48 rounded-md border border-border bg-card pl-7 pr-2 text-sm outline-none focus:border-primary"
           />
         </label>
         <div className="relative">
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-medium hover:bg-muted"
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-card px-3 text-xs font-medium hover:bg-muted"
           >
             Actividad ({shownKinds}/{present.length}) <ChevronDown className="size-3.5" />
           </button>
@@ -146,14 +146,14 @@ export function Timeline({
       </div>
 
       {months.length === 0 ? (
-        <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="mt-2 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
           {items.length === 0 ? "Todavía no hay actividad con esta persona." : "Nada coincide con el filtro."}
         </p>
       ) : (
-        <div className="px-4 pb-4">
+        <div className="pb-4">
           {months.map((m) => (
             <section key={m.key}>
-              <h3 className={`-mx-4 bg-background/95 lg:sticky lg:z-[1] ${underTabs ? "lg:top-10" : "lg:top-0"} px-4 pb-2 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur`}>
+              <h3 className={`-mx-1 bg-muted/95 lg:sticky lg:z-[1] ${underTabs ? "lg:top-10" : "lg:top-0"} px-1 pb-2 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur`}>
                 {m.label}
               </h3>
               <ol className="space-y-2">
@@ -167,7 +167,7 @@ export function Timeline({
             <button
               type="button"
               onClick={() => setLimit((l) => l + 100)}
-              className="mt-4 w-full rounded-md border border-border py-2 text-sm text-muted-foreground hover:bg-muted"
+              className="mt-4 w-full rounded-md border border-border bg-card py-2 text-sm text-muted-foreground hover:bg-muted"
             >
               Ver más ({filtered.length - limit})
             </button>
@@ -195,7 +195,7 @@ function Entry({ item }: { item: TimelineItem }) {
     item.title
   );
   return (
-    <li className="flex gap-3 rounded-md border border-border p-3">
+    <li className="flex gap-3 rounded-lg border border-border bg-card p-3 shadow-sm">
       <span
         className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border ${
           item.tone ? TONE[item.tone] : "border-border bg-muted/60 text-muted-foreground"

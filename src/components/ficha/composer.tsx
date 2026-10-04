@@ -52,7 +52,7 @@ export function Composer({ target }: { target: { kind: "member"; id: string } | 
   }
 
   return (
-    <form id="nota" onSubmit={submit} className="mt-4 scroll-mt-16 rounded-lg border border-border bg-background p-3">
+    <form id="nota" onSubmit={submit} className="mt-4 scroll-mt-16 rounded-lg border border-border bg-card p-3 shadow-sm">
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
