@@ -158,6 +158,8 @@ const TEMPLATE_BODIES: Record<string, string> = {
     "¡Hola {{1}}! En una hora es tu primera sesión en {{2}} ({{3}}). Llega 15 min antes para tomarte los datos de tu evaluación. ¡Te esperamos! 📍💪",
   noshow_recuperacion:
     "¡Hola {{1}}! 😊 Vimos que no pudiste venir a tu primera sesión. ¿La reagendamos? Tenemos cupos esta semana. Recuerda: entrenas dos semanas por tan solo $9 y aprovechas todo un proceso de evaluación de tu condición física y de salud. ¿Qué día te queda mejor?",
+  miembro_inasistencia:
+    "¡Hola {{1}}! 💪 Te extrañamos en La Cueva estos días. ¿Todo bien? Cuéntanos si necesitas ayuda para retomar tu rutina o reacomodar tus horarios; aquí estamos para ti. 🙌",
   reengagement_no_reply:
     "¡Hola {{1}}! 😊 ¿Arrancamos tus dos semanas en La Cueva? Entrena dos semanas por tan solo $9 y aprovecha todo un proceso de evaluación de tu condición física y de salud con datos científicos para saber cuál es el mejor entrenamiento para ti. Cuéntame qué día te queda mejor y lo agendamos. 💪",
 };
@@ -176,4 +178,31 @@ export function renderTemplate(spec: TemplateSpec): string {
     (text, value, i) => text.replaceAll(`{{${i + 1}}}`, value),
     body,
   );
+}
+
+
+/**
+ * Plantillas que el staff puede mandar a mano desde la ficha cuando la ventana
+ * de 24h está cerrada. Todas llevan solo el nombre como variable. Al socio, la
+ * de retención; al lead, las del embudo.
+ */
+export const FICHA_TEMPLATES: Record<"lead" | "member", { name: string; label: string }[]> = {
+  member: [{ name: "miembro_inasistencia", label: "Te extrañamos (retomar rutina)" }],
+  lead: [
+    { name: "reengagement_no_reply", label: "¿Arrancamos tus dos semanas?" },
+    { name: "noshow_recuperacion", label: "No pudiste venir: ¿reagendamos?" },
+  ],
+};
+
+/** Las plantillas de la ficha con el texto que recibiría esta persona. */
+export function fichaTemplatePreviews(
+  kind: "lead" | "member",
+  firstName: string | null,
+  lastName?: string | null,
+): { name: string; label: string; preview: string }[] {
+  const variables = [templateName(firstName, lastName)];
+  return FICHA_TEMPLATES[kind].map((t) => ({
+    ...t,
+    preview: renderTemplate({ name: t.name, language: TEMPLATE_LANGUAGE, variables }),
+  }));
 }

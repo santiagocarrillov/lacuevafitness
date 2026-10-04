@@ -13,8 +13,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, can } from "@/lib/auth";
-import { sendText } from "@/lib/whatsapp/client";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
+import { sendTemplate, sendText } from "@/lib/whatsapp/client";
+import { FICHA_TEMPLATES, TEMPLATE_LANGUAGE, renderTemplate, templateName } from "@/lib/whatsapp/templates";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import { MEMBER_OWNED_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import { contactOf, phoneKey } from "@/lib/whatsapp/contact";
@@ -410,6 +411,107 @@ export async function openMemberConversation(
   });
   revalidatePath("/dashboard/comunicacion");
   return { ok: true, conversationId: created.id };
+}
+
+/**
+ * Abrir (o reabrir) la conversación con un lead que no escribió al número de
+ * La Cueva (llegó por formulario, llamada, visita). Igual que con el socio: no
+ * manda nada y deja el bot en pausa — quien la abre es quien la atiende.
+ */
+export async function openLeadConversation(
+  leadId: string,
+): Promise<{ ok: true; conversationId: string } | { ok: false; error: string }> {
+  const user = await requireInboxAccess();
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, phone: true, sede: true, conversation: { select: { id: true } } },
+  });
+  if (!lead) return { ok: false, error: "Lead no encontrado." };
+  const scope = getSedeScope(user);
+  if (scope && lead.sede !== scope) return { ok: false, error: "No autorizado." };
+  if (lead.conversation) return { ok: true, conversationId: lead.conversation.id };
+
+  const key = phoneKey(lead.phone);
+  if (!key) return { ok: false, error: "Este lead no tiene un teléfono válido." };
+  const digits = lead.phone!.replace(/\D/g, "");
+  const externalId = digits.startsWith("593") ? digits : `593${key}`;
+
+  const existing = await prisma.conversation.findUnique({
+    where: { channel_externalId: { channel: "WHATSAPP", externalId } },
+    select: { id: true },
+  });
+  if (existing) return { ok: true, conversationId: existing.id };
+
+  const created = await prisma.conversation.create({
+    data: { leadId: lead.id, sede: lead.sede, channel: "WHATSAPP", externalId, botPaused: true },
+    select: { id: true },
+  });
+  revalidatePath("/dashboard/comunicacion");
+  return { ok: true, conversationId: created.id };
+}
+
+/**
+ * Mandar una plantilla aprobada desde la ficha (ventana de 24h cerrada).
+ *
+ * Solo las de `FICHA_TEMPLATES` para el tipo de persona, y nunca dos seguidas:
+ * si ya le escribimos y no ha respondido en las últimas 24h, se espera. Igual
+ * que la respuesta a mano, mandar = tomar la conversación (el bot se pausa).
+ */
+export async function sendFichaTemplate(conversationId: string, name: string): Promise<SendReplyResult> {
+  const user = await requireInboxAccess();
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    include: {
+      lead: { select: { firstName: true, lastName: true, sede: true } },
+      member: { select: { firstName: true, lastName: true, sede: true } },
+    },
+  });
+  if (!conversation) return { ok: false, error: "Conversación no encontrada." };
+  const scope = getSedeScope(user);
+  if (scope && conversation.sede !== scope) return { ok: false, error: "No autorizado." };
+
+  const kind = conversation.memberId ? "member" : "lead";
+  if (!FICHA_TEMPLATES[kind].some((t) => t.name === name)) {
+    return { ok: false, error: "Esa plantilla no está disponible para esta persona." };
+  }
+  const now = Date.now();
+  const inboundMs = conversation.lastInboundAt ? conversation.lastInboundAt.getTime() : 0;
+  if (inboundMs > 0 && now - inboundMs < WINDOW_MS) {
+    return { ok: false, error: "La ventana de 24h está abierta: escríbele un mensaje normal." };
+  }
+  const outboundMs = conversation.lastOutboundAt ? conversation.lastOutboundAt.getTime() : 0;
+  if (outboundMs > inboundMs && now - outboundMs < WINDOW_MS) {
+    return { ok: false, error: "Ya le escribimos en las últimas 24h y no ha respondido. Espera su respuesta." };
+  }
+
+  const person = conversation.member ?? conversation.lead;
+  const spec = { name, language: TEMPLATE_LANGUAGE, variables: [templateName(person?.firstName ?? null, person?.lastName)] };
+  try {
+    const sent = await sendTemplate(conversation.externalId, spec.name, spec.language, spec.variables);
+    await prisma.$transaction([
+      prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          direction: "OUTBOUND",
+          channel: "WHATSAPP",
+          externalId: sent.messageId,
+          body: renderTemplate(spec),
+          sentByUserId: user.id,
+          llmGenerated: false,
+          sendStatus: "SENT",
+          sendAttemptedAt: new Date(),
+        },
+      }),
+      prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { botPaused: true, botResumeAt: null, lastOutboundAt: new Date() },
+      }),
+    ]);
+    revalidatePath("/dashboard/comunicacion");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "No se pudo enviar la plantilla." };
+  }
 }
 
 export type ConversationSearchResult = {

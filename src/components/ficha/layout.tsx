@@ -24,13 +24,13 @@ export function FichaLayout({
 }) {
   return (
     <div className="lg:grid lg:h-[calc(100dvh-2.75rem)] lg:grid-cols-[300px_minmax(0,1fr)_320px] 2xl:grid-cols-[340px_minmax(0,1fr)_380px]">
-      <aside className="border-b border-border bg-background lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <aside className="border-b border-border bg-card lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         {left}
         {about && <div className="hidden lg:block">{about}</div>}
       </aside>
-      <section className="min-w-0 px-4 pb-16 md:px-6 lg:min-h-0 lg:overflow-y-auto">{center}</section>
-      <aside className="border-t border-border bg-background lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0">{right}</aside>
-      {about && <div className="border-t border-border pb-8 lg:hidden">{about}</div>}
+      <section className="min-w-0 bg-muted px-4 pb-16 md:px-6 lg:min-h-0 lg:overflow-y-auto">{center}</section>
+      <aside className="border-t border-border bg-card lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0">{right}</aside>
+      {about && <div className="border-t border-border bg-card pb-8 lg:hidden">{about}</div>}
     </div>
   );
 }
@@ -69,7 +69,7 @@ export function FichaSection({
 /** "Data highlights": el resumen de una línea de quién es y en qué va. */
 export function Highlights({ items }: { items: { label: string; value: ReactNode; hint?: ReactNode; href?: string }[] }) {
   return (
-    <div className="mt-4 flex flex-wrap gap-px overflow-hidden rounded-lg border border-border bg-border">
+    <div className="mt-4 flex flex-wrap gap-px overflow-hidden rounded-lg border border-border bg-border shadow-sm">
       {items.map((it) => {
         const inner = (
           <>
@@ -79,11 +79,11 @@ export function Highlights({ items }: { items: { label: string; value: ReactNode
           </>
         );
         return it.href ? (
-          <Link key={it.label} href={it.href} className="min-w-[100px] flex-1 basis-[100px] bg-background px-3 py-3 transition hover:bg-muted/50">
+          <Link key={it.label} href={it.href} className="min-w-[100px] flex-1 basis-[100px] bg-card px-3 py-3 transition hover:bg-muted/50">
             {inner}
           </Link>
         ) : (
-          <div key={it.label} className="min-w-[100px] flex-1 basis-[100px] bg-background px-3 py-3">
+          <div key={it.label} className="min-w-[100px] flex-1 basis-[100px] bg-card px-3 py-3">
             {inner}
           </div>
         );
@@ -136,7 +136,7 @@ export function Initials({ name, size = 52 }: { name: string; size?: number }) {
     .join("");
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary"
+      className="flex shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground"
       style={{ width: size, height: size, fontSize: size * 0.36 }}
       aria-hidden
     >
@@ -166,7 +166,7 @@ export function QuickAction({
   title?: string;
 }) {
   const circle = (
-    <span className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+    <span className="flex size-8 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
       {icon}
     </span>
   );
@@ -195,7 +195,7 @@ export function QuickAction({
 /** Pestañas de la columna central como enlaces (?tab=), para que cada una tenga su URL. */
 export function FichaTabs({ tabs, active, base }: { tabs: { key: string; label: string; count?: number }[]; active: string; base: string }) {
   return (
-    <nav className="sticky top-12 z-10 -mx-4 flex gap-1 overflow-x-auto md:top-11 lg:top-0 border-b border-border bg-background/95 px-4 backdrop-blur md:-mx-6 md:px-6">
+    <nav className="sticky top-12 z-10 -mx-4 flex gap-1 overflow-x-auto md:top-11 lg:top-0 border-b border-border bg-muted/95 px-4 backdrop-blur md:-mx-6 md:px-6">
       {tabs.map((t) => (
         <Link
           key={t.key}

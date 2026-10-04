@@ -20,11 +20,29 @@ function ago(d: Date, now: Date) {
 export function WhatsappSummary({
   conversation,
   fallback,
+  writeHref,
 }: {
   conversation: { id: string; lastInboundAt: Date | null; lastOutboundAt: Date | null } | null;
   fallback?: React.ReactNode;
+  /** La pestaña WhatsApp de la ficha, donde se escribe sin salir. */
+  writeHref?: string;
 }) {
-  if (!conversation) return <>{fallback ?? <p className="text-xs text-muted-foreground">Sin conversación de WhatsApp.</p>}</>;
+  const write = writeHref ? (
+    <Link
+      href={writeHref}
+      scroll={false}
+      className="inline-flex h-8 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90"
+    >
+      Escribir por WhatsApp
+    </Link>
+  ) : null;
+  if (!conversation)
+    return (
+      <div className="space-y-3">
+        {fallback ?? <p className="text-xs text-muted-foreground">Sin conversación de WhatsApp.</p>}
+        {write}
+      </div>
+    );
   const now = new Date();
   const open = conversation.lastInboundAt != null && now.getTime() - conversation.lastInboundAt.getTime() < H24;
   return (
@@ -43,8 +61,9 @@ export function WhatsappSummary({
           <dd>{conversation.lastOutboundAt ? ago(conversation.lastOutboundAt, now) : "--"}</dd>
         </div>
       </dl>
+      {write}
       <Link href={`/dashboard/comunicacion?c=${conversation.id}`} className="inline-block text-xs font-medium text-primary hover:underline">
-        Abrir conversación →
+        Abrir en el inbox →
       </Link>
     </div>
   );

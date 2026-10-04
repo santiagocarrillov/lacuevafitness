@@ -106,6 +106,8 @@ Marketing, reintentar como **Utility** (mensaje sobre su membresía/servicio vig
 - **Recordatorio sin hora de cita no se manda.** Si el lead perdió su `trialScheduledAt`,
   `templateForFollowup` devuelve null y el followup se marca FAILED en vez de mandar una
   plantilla a medio llenar.
-- **`miembro_inasistencia` sigue sin poder usarse:** `Conversation` solo se ata a `Lead`,
-  no a `Member`. Es Fase 3.
+- **Envío a mano desde la ficha (oct 2026):** con la ventana cerrada, la pestaña WhatsApp de la
+  ficha ofrece las plantillas de `FICHA_TEMPLATES` (`src/lib/whatsapp/templates.ts`):
+  `miembro_inasistencia` al socio; `reengagement_no_reply` y `noshow_recuperacion` al lead. Solo
+  una sin respuesta cada 24h (`sendFichaTemplate`).
 - **Gotcha del editor de Meta:** al escribir `{{` el editor inserta la variable completa (`{{1}}`) y deja el cursor después. Escribir `{{1}}` a mano produce `{{1}}}}`, y usar el botón "Add variable" recorta el espacio anterior (`¡Hola{{1}}`). Lo que funciona: escribir el texto de corrido y solo `{{` donde va cada variable.

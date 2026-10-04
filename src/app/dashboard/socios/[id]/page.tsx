@@ -43,7 +43,9 @@ import { Timeline } from "@/components/ficha/timeline";
 import { Composer } from "@/components/ficha/composer";
 import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
-import { WriteWhatsappButton } from "@/components/ficha/write-whatsapp";
+import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
+import { getConversationThread } from "@/lib/actions/comunicacion";
+import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +114,7 @@ function age(dob: Date | null) {
   return a;
 }
 
-type Tab = "actividad" | "membresia" | "salud" | "nutricion";
+type Tab = "actividad" | "whatsapp" | "membresia" | "salud" | "nutricion";
 
 export default async function MemberDetailPage({
   params,
@@ -127,8 +129,14 @@ export default async function MemberDetailPage({
   const canEditHealth = user.role === "OWNER" || user.role === "NUTRITIONIST";
   const canSchedule = can.scheduleNutrition(user);
   const showNutritionTab = canEditHealth || canSchedule;
+  const seesInbox = can.manageLeads(user);
   const tab: Tab =
-    tabParam === "membresia" || tabParam === "salud" || (tabParam === "nutricion" && showNutritionTab) ? (tabParam as Tab) : "actividad";
+    tabParam === "membresia" ||
+    tabParam === "salud" ||
+    (tabParam === "nutricion" && showNutritionTab) ||
+    (tabParam === "whatsapp" && seesInbox)
+      ? (tabParam as Tab)
+      : "actividad";
 
   const [member, analytics, tasks, challenges, selfEntries, appointments] = await Promise.all([
     getMember(id),
@@ -156,7 +164,6 @@ export default async function MemberDetailPage({
   const lastMembership = member.memberships.find((m) => m.plan.billingCycle !== "ONE_TIME");
   const canEditMembership = user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN";
   const seesPayments = can.viewPayments(user);
-  const seesInbox = can.manageLeads(user);
   const latestLevel = member.trainingLevels[0];
   const latestBody = member.bodyCompositions[0];
   const conversation = member.conversation ?? member.lead?.conversation ?? null;
@@ -166,12 +173,13 @@ export default async function MemberDetailPage({
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
 
   // Only what the open tab needs.
-  const [timeline, plans, tabData] = await Promise.all([
+  const [timeline, plans, tabData, waThread] = await Promise.all([
     tab === "actividad" ? loadPersonTimeline(user, { leadId: member.leadId, memberId: member.id }, tasks.closed) : Promise.resolve([]),
     tab === "membresia" ? getMembershipPlans() : Promise.resolve([]),
     (tab === "nutricion" || tab === "salud") && canEditHealth
       ? Promise.all([getClinicalRecords(id), getMemberMealPlans(id), getMemberMealLogs(id), getNutritionFocus(id)])
       : Promise.resolve(null),
+    tab === "whatsapp" && conversation ? getConversationThread(conversation.id) : Promise.resolve(null),
   ]);
   const [clinicalRecords, mealPlans, mealLogs, nutritionFocus] = tabData ?? [[], [], [], null];
 
@@ -210,14 +218,15 @@ export default async function MemberDetailPage({
         <div className="mt-5">
           <QuickActions>
             <QuickAction href={`${base}#nota`} label="Nota" icon={<StickyNote className="size-4" />} />
-            {seesInbox &&
-              (conversation ? (
-                <QuickAction href={`/dashboard/comunicacion?c=${conversation.id}`} label="WhatsApp" icon={<MessageCircle className="size-4" />} />
-              ) : member.phone ? (
-                <WriteWhatsappButton memberId={member.id} />
-              ) : (
-                <QuickAction label="WhatsApp" icon={<MessageCircle className="size-4" />} disabled title="Sin teléfono en la ficha" />
-              ))}
+            {seesInbox && (
+              <QuickAction
+                href={`${base}?tab=whatsapp`}
+                label="WhatsApp"
+                icon={<MessageCircle className="size-4" />}
+                disabled={!conversation && !member.phone}
+                title={!conversation && !member.phone ? "Sin teléfono en la ficha" : undefined}
+              />
+            )}
             <QuickAction
               href={telLink(member.phone)}
               external
@@ -318,6 +327,7 @@ export default async function MemberDetailPage({
   // ── Centro: qué ha pasado ──────────────────────────────────────────
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "actividad", label: "Actividad" },
+    ...(seesInbox ? [{ key: "whatsapp" as const, label: "WhatsApp" }] : []),
     { key: "membresia", label: "Membresía y pagos" },
     { key: "salud", label: "Salud y entrenamiento", count: pendingSelf || undefined },
     ...(showNutritionTab ? [{ key: "nutricion" as const, label: "Nutrición" }] : []),
@@ -362,6 +372,15 @@ export default async function MemberDetailPage({
             <Timeline items={timeline} labels={TIMELINE_KIND_LABEL} underTabs />
           </div>
         </>
+      )}
+
+      {tab === "whatsapp" && (
+        <WhatsappPanel
+          person={{ kind: "member", id: member.id }}
+          hasPhone={!!member.phone}
+          initial={waThread}
+          templates={fichaTemplatePreviews("member", member.firstName, member.lastName)}
+        />
       )}
 
       {tab === "membresia" && (
@@ -685,9 +704,10 @@ export default async function MemberDetailPage({
         <FichaSection title="WhatsApp">
           <WhatsappSummary
             conversation={conversation}
+            writeHref={member.phone || conversation ? `${base}?tab=whatsapp` : undefined}
             fallback={
               <p className="text-xs text-muted-foreground">
-                {member.phone ? "Todavía no hay conversación. Usa el botón WhatsApp de la izquierda para abrirla." : "Sin teléfono en la ficha."}
+                {member.phone ? "Todavía no hay conversación." : "Sin teléfono en la ficha."}
               </p>
             }
           />

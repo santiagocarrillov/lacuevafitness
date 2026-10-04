@@ -11,14 +11,17 @@ import { loadPersonTimeline, TIMELINE_KIND_LABEL } from "@/lib/ficha/timeline";
 import {
   FichaLayout,
   FichaSection,
+  FichaTabs,
   Highlights,
   Initials,
   PropList,
   QuickAction,
   QuickActions,
   telLink,
-  waLink,
 } from "@/components/ficha/layout";
+import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
+import { getConversationThread } from "@/lib/actions/comunicacion";
+import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 import { Timeline } from "@/components/ficha/timeline";
 import { Composer } from "@/components/ficha/composer";
 import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
@@ -50,8 +53,16 @@ function daysSince(d: Date) {
  * en cuanto la persona tiene ficha de socio, este enlace la lleva allá, donde
  * la historia del lead sigue en la línea de tiempo.
  */
-export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeadDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
+  const tab = tabParam === "whatsapp" ? "whatsapp" : "actividad";
   const user = await requireAuth();
   if (!can.manageLeads(user)) redirect("/dashboard?forbidden=1");
 
@@ -60,7 +71,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   if (lead.member) redirect(`/dashboard/socios/${lead.member.id}`);
 
   const tasks = await getPersonTasks({ kind: "lead", id }, 50);
-  const timeline = await loadPersonTimeline(user, { leadId: lead.id }, tasks.closed);
+  // La actividad se carga siempre: la última entrada alimenta el resumen de arriba.
+  const [timeline, waThread] = await Promise.all([
+    loadPersonTimeline(user, { leadId: lead.id }, tasks.closed),
+    tab === "whatsapp" && lead.conversation ? getConversationThread(lead.conversation.id) : Promise.resolve(null),
+  ]);
 
   const name = `${lead.firstName} ${lead.lastName ?? ""}`.trim();
   const base = `/dashboard/leads/${lead.id}`;
@@ -97,18 +112,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <div className="mt-5">
           <QuickActions>
             <QuickAction href={`${base}#nota`} label="Nota" icon={<StickyNote className="size-4" />} />
-            {lead.conversation ? (
-              <QuickAction href={`/dashboard/comunicacion?c=${lead.conversation.id}`} label="WhatsApp" icon={<MessageCircle className="size-4" />} />
-            ) : (
-              <QuickAction
-                href={waLink(lead.phone)}
-                external
-                label="WhatsApp"
-                icon={<MessageCircle className="size-4" />}
-                disabled={!waLink(lead.phone)}
-                title={lead.phone ? "Abre WhatsApp en este dispositivo (no hay conversación en el inbox)" : "Sin teléfono"}
-              />
-            )}
+            <QuickAction
+              href={`${base}?tab=whatsapp`}
+              label="WhatsApp"
+              icon={<MessageCircle className="size-4" />}
+              disabled={!lead.conversation && !lead.phone}
+              title={!lead.conversation && !lead.phone ? "Sin teléfono" : undefined}
+            />
             <QuickAction
               href={telLink(lead.phone)}
               external
@@ -182,10 +192,31 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           },
         ]}
       />
-      <Composer target={{ kind: "lead", id: lead.id }} />
       <div className="mt-4">
-        <Timeline items={timeline} labels={TIMELINE_KIND_LABEL} />
+        <FichaTabs
+          tabs={[
+            { key: "actividad", label: "Actividad" },
+            { key: "whatsapp", label: "WhatsApp" },
+          ]}
+          active={tab}
+          base={base}
+        />
       </div>
+      {tab === "actividad" ? (
+        <>
+          <Composer target={{ kind: "lead", id: lead.id }} />
+          <div className="mt-4">
+            <Timeline items={timeline} labels={TIMELINE_KIND_LABEL} underTabs />
+          </div>
+        </>
+      ) : (
+        <WhatsappPanel
+          person={{ kind: "lead", id: lead.id }}
+          hasPhone={!!lead.phone}
+          initial={waThread}
+          templates={fichaTemplatePreviews("lead", lead.firstName, lead.lastName)}
+        />
+      )}
     </>
   );
 
@@ -208,11 +239,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       <FichaSection title="WhatsApp">
         <WhatsappSummary
           conversation={lead.conversation}
-          fallback={
-            <p className="text-xs text-muted-foreground">
-              No escribió al número de WhatsApp de La Cueva. {lead.phone ? "Puedes escribirle desde tu teléfono con el botón WhatsApp." : ""}
-            </p>
-          }
+          writeHref={lead.phone || lead.conversation ? `${base}?tab=whatsapp` : undefined}
+          fallback={<p className="text-xs text-muted-foreground">No ha escrito al número de WhatsApp de La Cueva.</p>}
         />
       </FichaSection>
     </div>
