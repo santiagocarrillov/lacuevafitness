@@ -28,3 +28,16 @@ cualquier sede), sin días libres, con 2 h de anticipación.
 Migración `20261005150000_nutricion_horarios` (aplicada). Pruebas: `npm run test:nutricion-horarios`.
 Pendiente: envío automático de las plantillas cuando Meta las apruebe; modo "consulta en vivo" del
 editor de dietas.
+
+## Modo consulta (dieta en vivo)
+
+`/dashboard/nutricion/planes/socio/[id]/consulta` (`consult-view.tsx`): la nutricionista arma con el
+socio presente su día tipo, comida por comida, sobre el mismo plan de menú del editor completo.
+- Marcador fijo legible desde el otro lado del escritorio: anillo de kcal contra la meta, gramos de
+  proteína/carbohidratos/grasa contra la meta, reparto de calorías por macro y "te faltan / te pasas".
+- Cada cambio muestra el aviso "+124 kcal" (o "−") junto al total.
+- Calorías escondidas en un toque (aceite, mantequilla, azúcar, mayonesa, queso, miel, leche, pan):
+  usa la base de alimentos si lo tiene, si no valores de referencia.
+- −/+ suma o quita una porción igual a la que se agregó; al final, "Usar este día para toda la
+  semana", "Personalizar por día" o el editor completo para opciones e indicaciones.
+- Se entra desde la portada ("Consulta en vivo"), al crear un plan (casilla) o con el botón del editor.

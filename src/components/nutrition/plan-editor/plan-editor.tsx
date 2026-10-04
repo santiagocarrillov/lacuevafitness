@@ -187,6 +187,17 @@ export function PlanEditor(props: PlanEditorProps) {
           <Button variant="outline" disabled={isPending || !dirty} onClick={save}>
             {props.mode === "member" ? "Guardar borrador" : "Guardar"}
           </Button>
+          {props.mode === "member" && content.kind === "MENU" && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (dirty && !confirm("Hay cambios sin guardar. ¿Ir al modo consulta igual?")) return;
+                router.push(`/dashboard/nutricion/planes/socio/${props.id}/consulta`);
+              }}
+            >
+              Modo consulta
+            </Button>
+          )}
           {props.mode === "member" ? (
             <Button disabled={isPending || (!unpublished && !dirty)} onClick={publish}>
               {props.publishedAt ? "Publicar cambios" : "Publicar al socio"}
