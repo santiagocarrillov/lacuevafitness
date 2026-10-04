@@ -142,9 +142,24 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
-**Última sesión (5 oct 2026):** Caja y Bancos v2 (ver `docs/contabilidad-v2.md` § Caja y Bancos). Migración
-`20261005120000_caja_bancos` aplicada + seed del plan (cuenta 1.1.07). Al 5 oct **no hay ningún extracto importado**
-en prod: el siguiente paso es subir los extractos desde el 1 ene 2026 de cada cuenta y conciliar.
+**Última sesión (5 oct 2026):** PRs #140–#147 en producción (main `9b99c47`). Migraciones aplicadas:
+`20261005120000_caja_bancos`, `20261005150000_nutricion_horarios`, `20261005200000_avisos_socios` (+ seed del plan, cuenta 1.1.07).
+- **Caja y Bancos v2** (#140): resumen banco vs libros, conciliar, movimientos con ficha; transferencias propias (1.1.07), capital de
+  préstamos, sueldos / IESS / SRI que cancelan pasivos. `docs/contabilidad-v2.md` § Caja y Bancos.
+- **SRI masivo** (#141): TXT de recibidos → XML por clave desde el web service del SRI → gasto. `docs/finanzas-fase1.md`.
+- **Plantillas de WhatsApp** (#142): catálogo en `src/lib/whatsapp/template-catalog.ts`, pantalla WhatsApp › Plantillas
+  (envía a Meta con el token del servidor). Las 8 se enviaron el 5 oct y quedaron en revisión.
+- **Nutrición** (#143, #144): portada en 3 columnas, "por agendar" automático, horarios, agendamiento en el portal y por enlace
+  `/cita/[código]`, modo consulta para armar la dieta en vivo. `docs/nutricion-agenda.md`.
+- **SRXFIT › Evaluaciones** (#145): el grupo como un solo socio + tareas «Evaluar a…» para la sede. `docs/srxfit-evaluaciones-grupo.md`.
+- **Avisos automáticos** (#146, #147): WhatsApp › Avisos, cron 10:00, interruptor por aviso; **todos apagados (modo prueba)**.
+  `docs/whatsapp-templates.md`.
+
+**Próximo paso concreto:**
+- Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.
+- Que la nutricionista cargue sus horarios (Nutrición › Horarios); sin eso nadie puede agendar.
+- Subir extractos bancarios desde el 1 ene 2026 y los TXT del SRI; primer rol de pagos y conciliar sueldos.
+- QA con login de todo lo anterior (no se pudo ver en pantalla).
 
 **Última sesión (4 oct 2026, tarde):** PRs #132–#138 en producción (main `b84180f`). Migraciones aplicadas:
 `20261004120000_payers_and_payment_void`, `20261004180000_suppliers`, `20261004220000_nomina` (+ seed del plan de cuentas).
