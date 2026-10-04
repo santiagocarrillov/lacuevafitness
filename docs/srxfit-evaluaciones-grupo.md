@@ -19,3 +19,18 @@ Arriba de `/dashboard/srxfit/evaluaciones` (`group-dashboard.tsx`, lógica en `s
 
 Pruebas: `npm run test:evaluaciones-grupo` (incluye simulación de las tareas sin crearlas).
 Pendiente: cuando el admin anota que no pudo evaluar, mandar la plantilla `socio_tests_pendientes`.
+
+## Panel de evaluación y avance ponderado (oct 2026)
+
+- **Panel en la misma pantalla:** el nombre del socio o «Iniciar / Ver» abre `?socio=<id>` sobre Evaluaciones:
+  composición corporal | fuerza | acondicionamiento + olímpicos (opcionales) + observaciones + historial.
+  Cada dato se guarda solo al salir del campo (`saveEvalTest`, `saveEvalBodyField`, `saveEvalSummary` en
+  `src/lib/actions/srxfit.ts`); no hay botón «Guardar evaluación». Esc cierra; ← → pasan al socio anterior/siguiente
+  en el orden de la tabla. `/dashboard/srxfit/evaluaciones/[memberId]` redirige al panel.
+- **Qué evaluación edita:** la última que empezó dentro del período o en los últimos 21 días
+  (`src/lib/srxfit/eval-panel.ts`). Si no hay, el primer dato la crea (inicial si nunca tuvo, si no re-evaluación).
+- **Avance ponderado** (`src/lib/srxfit/eval-score.ts`, prueba `npm run test:eval-score`): peso 10, % grasa 10,
+  sentadilla 10, peso muerto 10, press banca 5, push press 5, dominadas o ring row 10, plancha 5, dead hang 5,
+  Christine 15, Cooper 15. **≥ 60 % = evaluado.** Los olímpicos no suman. Al cruzar el 60 % se marca `completedAt`
+  (y se quita si baja), así el portal y el resumen del hub siguen funcionando.
+- Medidores, conteos y tabla salen de la misma lista (`getMembersEvalStatus`), así que siempre coinciden.

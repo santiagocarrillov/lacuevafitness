@@ -1,27 +1,16 @@
 import Link from "next/link";
+import { EVAL_COMPLETE_PCT, STATUS_COLOR, type EvalStatus } from "@/lib/srxfit/eval-score";
+import { StatusBadge } from "./status-badge";
 
-type MemberStatus = {
+export type MemberEvalRow = {
   memberId: string;
   name: string;
   sede: string;
-  status: "evaluado" | "parcial" | "pendiente";
-  evalId: string | null;
+  status: EvalStatus;
+  pct: number;
   lastEvalAt: string | null;
-  completedAt: string | null;
   testCount: number;
   hasBodyComp: boolean;
-};
-
-const STATUS_STYLES = {
-  evaluado: "bg-green-100 text-green-800",
-  parcial: "bg-amber-100 text-amber-800",
-  pendiente: "bg-zinc-100 text-zinc-600",
-};
-
-const STATUS_LABEL = {
-  evaluado: "Evaluado",
-  parcial: "Parcial",
-  pendiente: "Pendiente",
 };
 
 const SEDE_LABEL: Record<string, string> = {
@@ -29,66 +18,84 @@ const SEDE_LABEL: Record<string, string> = {
   XTREME: "Xtreme",
 };
 
-export function EvaluacionesTable({ members, from, to }: {
-  members: MemberStatus[];
-  from: string;
-  to: string;
+const ORDER: Record<EvalStatus, number> = { pendiente: 0, parcial: 1, evaluado: 2 };
+
+export function sortEvalRows<T extends { status: EvalStatus; pct: number }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.pct - a.pct);
+}
+
+function Progress({ pct, status }: { pct: number; status: EvalStatus }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-stone-100">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: STATUS_COLOR[status] }} />
+        {/* the line every evaluation has to reach */}
+        <div className="absolute inset-y-0 w-px bg-stone-400" style={{ left: `${EVAL_COMPLETE_PCT}%` }} />
+      </div>
+      <span className="w-9 text-xs tabular-nums text-muted-foreground">{pct}%</span>
+    </div>
+  );
+}
+
+export function EvaluacionesTable({ members, openHref }: {
+  members: MemberEvalRow[];
+  /** URL that opens the evaluation panel for a socio. */
+  openHref: (memberId: string) => string;
 }) {
-  const sorted = [...members].sort((a, b) => {
-    const order = { pendiente: 0, parcial: 1, evaluado: 2 };
-    return order[a.status] - order[b.status];
-  });
+  const sorted = sortEvalRows(members);
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
       <table className="w-full text-sm">
-        <thead className="bg-muted/50">
-          <tr>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Socio</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sede</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tests</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Comp. corporal</th>
-            <th className="text-left px-4 py-3 font-medium text-muted-foreground">Última eval.</th>
+        <thead>
+          <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+            <th className="px-4 py-3 font-medium">Socio</th>
+            <th className="px-4 py-3 font-medium">Sede</th>
+            <th className="px-4 py-3 font-medium">Estado</th>
+            <th className="px-4 py-3 font-medium">Avance</th>
+            <th className="hidden px-4 py-3 font-medium md:table-cell">Tests</th>
+            <th className="hidden px-4 py-3 font-medium md:table-cell">Comp. corporal</th>
+            <th className="hidden px-4 py-3 font-medium lg:table-cell">Última eval.</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {sorted.map((m) => (
-            <tr key={m.memberId} className="hover:bg-muted/30 transition">
-              <td className="px-4 py-3 font-medium">{m.name}</td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {SEDE_LABEL[m.sede] ?? m.sede}
-              </td>
-              <td className="px-4 py-3">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[m.status]}`}>
-                  {STATUS_LABEL[m.status]}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {m.testCount > 0 ? `${m.testCount} / 13` : "—"}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {m.hasBodyComp ? "✓" : "—"}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground text-xs">
-                {m.lastEvalAt
-                  ? new Date(m.lastEvalAt).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })
-                  : "—"}
-              </td>
-              <td className="px-4 py-3">
-                <Link
-                  href={`/dashboard/srxfit/evaluaciones/${m.memberId}?from=${from}&to=${to}`}
-                  className="text-xs text-primary hover:underline whitespace-nowrap"
-                >
-                  {m.status === "pendiente" ? "Iniciar" : "Ver / editar"} →
-                </Link>
-              </td>
-            </tr>
-          ))}
+        <tbody>
+          {sorted.map((m) => {
+            const href = openHref(m.memberId);
+            return (
+              <tr key={m.memberId} className="group border-t transition hover:bg-stone-50">
+                <td className="px-4 py-2.5">
+                  <Link href={href} scroll={false} className="font-medium hover:underline">
+                    {m.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-2.5 text-muted-foreground">{SEDE_LABEL[m.sede] ?? m.sede}</td>
+                <td className="px-4 py-2.5"><StatusBadge status={m.status} /></td>
+                <td className="px-4 py-2.5"><Progress pct={m.pct} status={m.status} /></td>
+                <td className="hidden px-4 py-2.5 tabular-nums text-muted-foreground md:table-cell">
+                  {m.testCount > 0 ? m.testCount : "—"}
+                </td>
+                <td className="hidden px-4 py-2.5 text-muted-foreground md:table-cell">{m.hasBodyComp ? "✓" : "—"}</td>
+                <td className="hidden px-4 py-2.5 text-xs text-muted-foreground lg:table-cell">
+                  {m.lastEvalAt
+                    ? new Date(m.lastEvalAt).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })
+                    : "—"}
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  <Link
+                    href={href}
+                    scroll={false}
+                    className="whitespace-nowrap rounded-full border border-stone-200 px-3 py-1 text-xs font-medium hover:border-stone-400"
+                  >
+                    {m.status === "pendiente" ? "Iniciar" : "Ver / editar"} →
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
           {sorted.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">
+              <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">
                 No hay socios activos en este período.
               </td>
             </tr>
