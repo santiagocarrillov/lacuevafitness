@@ -88,7 +88,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Cobrado a socios" value={fmtMoney(total)} sub={`${payments.length} cobros`} href="/dashboard/pagos" icon={HandCoins} color={TEAL} />
+        <Stat label="Cobrado a socios" value={fmtMoney(total)} sub={`${payments.length} cobros`} href={`/dashboard/pagos?mes=${ym}${view !== "ALL" ? `&sede=${view}` : ""}`} icon={HandCoins} color={TEAL} />
         <Stat label="Socios que pagaron" value={String(members)} sub={members ? `Ticket promedio ${fmtMoney(Math.round(total / members))}` : undefined} href="/dashboard/socios" icon={Users} color="#6b4fb5" />
         <Stat label="Facturado al SRI" value={fmtMoney(invoiced)} sub={`${authorized} de ${invoices.length} autorizadas`} href={`/dashboard/facturas?mes=${ym}`} icon={FileText} color="#2f6fb0" />
         <Stat
@@ -103,7 +103,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Panel title="Ventas por plan" className="lg:col-span-2">
-          <BarList rows={byPlan.map((r) => ({ ...r, href: "/dashboard/pagos" }))} color={TEAL} empty="Sin cobros este mes." />
+          <BarList rows={byPlan.map((r) => ({ ...r, href: `/dashboard/pagos?mes=${ym}${view !== "ALL" ? `&sede=${view}` : ""}` }))} color={TEAL} empty="Sin cobros este mes." />
         </Panel>
         <div className="space-y-5">
           <Panel title="Por forma de pago">
@@ -117,7 +117,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      <Panel title="Últimos cobros" aside={<Link href="/dashboard/pagos" className="text-[#2f6fb0] hover:underline">Ver todos ›</Link>}>
+      <Panel title="Últimos cobros" aside={<Link href={`/dashboard/pagos?mes=${ym}${view !== "ALL" ? `&sede=${view}` : ""}`} className="text-[#2f6fb0] hover:underline">Ver todos ›</Link>}>
         {payments.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sin cobros este mes.</p>
         ) : (

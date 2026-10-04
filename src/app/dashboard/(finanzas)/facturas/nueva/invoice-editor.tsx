@@ -53,6 +53,8 @@ export type EditorPayment = {
   method: PaymentMethod;
   paidAt: string;
   bankReference: string | null;
+  depositorName: string | null;
+  status: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED";
 };
 
 type Line = {
@@ -98,6 +100,7 @@ export function InvoiceEditor({
   defaultMemberId,
   existingPayment,
   today,
+  invoicedThisMonth = {},
 }: {
   members: MemberOpt[];
   saleItems: SaleItemOpt[];
@@ -106,6 +109,8 @@ export function InvoiceEditor({
   defaultMemberId: string | null;
   existingPayment: EditorPayment | null;
   today: string;
+  /** memberId → number of the membership invoice already issued this month. */
+  invoicedThisMonth?: Record<string, string>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -122,12 +127,19 @@ export function InvoiceEditor({
   const [search, setSearch] = useState(initialMember ? `${initialMember.firstName} ${initialMember.lastName}` : "");
   const [consumerFinal, setConsumerFinal] = useState(false);
   const [idType, setIdType] = useState<TaxIdType>(initialMember?.taxIdType ?? "CEDULA");
-  const [taxId, setTaxId] = useState(initialMember?.taxId ?? "");
-  const [buyerName, setBuyerName] = useState(initialMember ? `${initialMember.firstName} ${initialMember.lastName}` : "");
-  const [email, setEmail] = useState(initialMember?.email ?? "");
-  const [phone, setPhone] = useState(initialMember?.phone ?? "");
-  const [address, setAddress] = useState(initialMember?.address ?? "");
+  const startsThirdParty = !!existingPayment?.depositorName && !!initialMember && !existingPayment.depositorName
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(initialMember.firstName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+  const [taxId, setTaxId] = useState(startsThirdParty ? "" : initialMember?.taxId ?? "");
+  const [buyerName, setBuyerName] = useState(
+    startsThirdParty ? existingPayment!.depositorName! : initialMember ? `${initialMember.firstName} ${initialMember.lastName}` : "",
+  );
+  const [email, setEmail] = useState(startsThirdParty ? "" : initialMember?.email ?? "");
+  const [phone, setPhone] = useState(startsThirdParty ? "" : initialMember?.phone ?? "");
+  const [address, setAddress] = useState(startsThirdParty ? "" : initialMember?.address ?? "");
   const [saveToMember, setSaveToMember] = useState(true);
+  // The person who pays and gets the invoice can differ from the member
+  // (a parent paying for a child). Their ID never goes on the member's file.
+  const [thirdParty, setThirdParty] = useState(startsThirdParty);
   const [memberships, setMemberships] = useState<MembershipOpt[]>([]);
 
   // Lines
@@ -185,15 +197,25 @@ export function InvoiceEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function fillBuyerFrom(m: MemberOpt | null) {
+    setBuyerName(m ? `${m.firstName} ${m.lastName}` : "");
+    setIdType(m?.taxIdType ?? "CEDULA");
+    setTaxId(m?.taxId ?? "");
+    setEmail(m?.email ?? "");
+    setPhone(m?.phone ?? "");
+    setAddress(m?.address ?? "");
+  }
+
+  function toggleThirdParty(on: boolean) {
+    setThirdParty(on);
+    fillBuyerFrom(on ? null : member);
+    if (on) setSaveToMember(false);
+  }
+
   function pickMember(m: MemberOpt) {
     setMember(m);
     setSearch(`${m.firstName} ${m.lastName}`);
-    setBuyerName(`${m.firstName} ${m.lastName}`);
-    setIdType(m.taxIdType ?? "CEDULA");
-    setTaxId(m.taxId ?? "");
-    setEmail(m.email ?? "");
-    setPhone(m.phone ?? "");
-    setAddress(m.address ?? "");
+    if (!thirdParty) fillBuyerFrom(m);
     setConsumerFinal(false);
     if (!existingPayment) setSede(m.sede);
     setLines((ls) => ls.filter((l) => !l.membershipId));
@@ -305,7 +327,7 @@ export function InvoiceEditor({
           buyer: consumerFinal
             ? { type: "CONSUMIDOR_FINAL", id: "", name: "" }
             : { type: idType, id: taxId, name: buyerName, email, address, phone },
-          saveToMember: !!member && saveToMember,
+          saveToMember: !!member && !thirdParty && saveToMember,
           lines: draftLines,
           payForm,
           paymentId: existingPayment?.id ?? null,
@@ -371,7 +393,7 @@ export function InvoiceEditor({
         {/* Buyer */}
         <div className="space-y-3 border-b p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Cliente</h2>
+            <h2 className="text-sm font-semibold">Socio</h2>
             <label className={`flex items-center gap-2 text-sm ${cfAllowed ? "" : "opacity-50"}`}>
               <input type="checkbox" checked={consumerFinal} disabled={!cfAllowed && !consumerFinal} onChange={(e) => setConsumerFinal(e.target.checked)} />
               Consumidor final (hasta $50)
@@ -396,6 +418,23 @@ export function InvoiceEditor({
               </div>
             )}
           </div>
+
+          {member && invoicedThisMonth[member.id] && existingPayment?.status !== "SUCCEEDED" && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {member.firstName} ya tiene factura de membresía este mes ({invoicedThisMonth[member.id]}). Solo se vuelve a
+              facturar con otro pago comprobado: regístralo en Pagos, confírmalo con el banco y factúralo desde ese cobro.
+            </p>
+          )}
+
+          {!consumerFinal && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+              <h3 className="text-sm font-semibold">Facturar a</h3>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={thirdParty} onChange={(e) => toggleThirdParty(e.target.checked)} />
+                Otra persona paga y recibe la factura (p. ej. mamá o papá)
+              </label>
+            </div>
+          )}
 
           {consumerFinal ? (
             <div className="space-y-1 text-sm">
@@ -444,7 +483,7 @@ export function InvoiceEditor({
                 <Label className="text-xs">Dirección</Label>
                 <Input className="h-8" value={address} onChange={(e) => setAddress(e.target.value)} />
               </div>
-              {member && (member.taxId !== taxId || member.taxIdType !== idType) && taxId && !idError && (
+              {member && !thirdParty && (member.taxId !== taxId || member.taxIdType !== idType) && taxId && !idError && (
                 <label className="flex items-center gap-2 text-xs text-muted-foreground md:col-span-3">
                   <input type="checkbox" checked={saveToMember} onChange={(e) => setSaveToMember(e.target.checked)} />
                   Guardar esta identificación en la ficha de {member.firstName}

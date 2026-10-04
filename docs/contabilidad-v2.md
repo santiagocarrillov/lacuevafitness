@@ -49,3 +49,17 @@ los bancos de La Cueva. Para que otro gimnasio la use:
 7. **Feriados nacionales** en el calendario del SRI.
 
 Cada punto toca el esquema: se discute antes de construir (regla del repo).
+
+## Pagos (Clientes › Cobros de socios) — 4 oct 2026
+
+- Misma apariencia que Contabilidad (barra de módulos para dueños/contabilidad; recepción ve la página blanca sin la barra).
+- Filtros en la URL: rango de fechas (presets o desde–hasta, día de Ecuador exacto: `paidBetween` en
+  `src/lib/payments/filters.ts`), sede, estado, forma de pago, factura, banco y búsqueda por socio / quien pagó /
+  referencia. Los totales de arriba son del conjunto filtrado completo.
+- **Una factura de membresía por socio y mes**: `createInvoice` rechaza otra si el socio ya tiene una vigente ese
+  mes, salvo que se facture desde otro cobro ya **confirmado** con el banco. El editor lo advierte antes.
+- **Quien paga ≠ socio** (papá que paga por el hijo): el editor separa *Socio* de *Facturar a*; si el depositante
+  del cobro no es el socio, arranca en "Otra persona paga". Su cédula nunca se guarda en la ficha del socio.
+- **Eliminar o cambiar monto/fecha de un cobro** (`assertCanChange` en `src/lib/actions/payments.ts`): bloqueado si
+  está conciliado con el banco (deshacer conciliación primero), si tiene factura vigente (anularla primero) o si su
+  mes está cerrado. Un cobro confirmado solo lo toca contabilidad; recepción puede corregir su propio cobro el mismo día.

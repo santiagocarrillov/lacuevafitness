@@ -16,7 +16,7 @@ export function FinanceNav() {
   const current = activeModule(loc);
   const mes = params.get("mes");
   const withMonth = (href: string) => {
-    if (!mes || href.startsWith("/dashboard/pagos")) return href;
+    if (!mes) return href;
     return `${href}${href.includes("?") ? "&" : "?"}mes=${mes}`;
   };
 

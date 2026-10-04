@@ -126,8 +126,8 @@ export async function computeHome(ym: string, view: EntityView, today: string): 
   const expensesCents = sum((s) => s.expensesCents);
 
   const incomeSlices: Slice[] = [
-    { label: "Membresías", cents: sum((s) => s.membershipsConfirmedCents + s.membershipsUnreconciledCents), href: "/dashboard/pagos" },
-    { label: "Depósitos sin asignar", cents: sum((s) => s.unassignedDepositsCents), href: "/dashboard/pagos" },
+    { label: "Membresías", cents: sum((s) => s.membershipsConfirmedCents + s.membershipsUnreconciledCents), href: `/dashboard/pagos?mes=${ym}` },
+    { label: "Depósitos sin asignar", cents: sum((s) => s.unassignedDepositsCents), href: `/dashboard/pagos?mes=${ym}` },
   ];
   const otherCats = new Map<string, number>();
   for (const s of statement) for (const o of s.otherIncome) otherCats.set(o.category, (otherCats.get(o.category) ?? 0) + o.cents);

@@ -6,14 +6,16 @@ import { toast } from "sonner";
 export function DeleteButton({
   action,
   label = "eliminar",
+  confirmText = "¿Eliminar este registro?",
 }: {
   action: () => Promise<void>;
   label?: string;
+  confirmText?: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
   function handleClick() {
-    if (!confirm("¿Eliminar este registro?")) return;
+    if (!confirm(confirmText)) return;
     startTransition(async () => {
       try {
         await action();

@@ -17,6 +17,7 @@ import {
   CONSUMER_FINAL_NAME,
   INCOME_ACCOUNTS,
   PAY_FORM_LABELS,
+  formatDocNumber,
   invoiceTotals,
   lineAmounts,
   taxIdError,
@@ -28,6 +29,7 @@ import { loadP12 } from "@/lib/invoicing/xades";
 import { storeCertificate } from "@/lib/storage/upload";
 
 const PATH = "/dashboard/facturas";
+const MEMBERSHIP_INCOME_CODE = "4.1.01"; // Mensualidades
 const SEDES: Sede[] = ["FITNESS_CENTER", "XTREME"];
 const METHODS: PaymentMethod[] = ["CASH", "BANK_TRANSFER", "STRIPE_CARD", "PLUX_CARD", "STRIPE_LINK", "OTHER"];
 
@@ -136,8 +138,10 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
 
   const invoice = await prisma.$transaction(async (tx) => {
     // Existing collection, if any: must match the total and not be invoiced yet.
+    let existing: { status: PaymentStatus } | null = null;
     if (input.paymentId) {
       const p = await tx.payment.findUnique({ where: { id: input.paymentId }, include: { invoice: { select: { status: true } } } });
+      existing = p;
       if (!p || p.isPoolEntry) throw new Error("No se encontró el cobro.");
       if (p.invoice && p.invoice.status !== "VOIDED") throw new Error("Ese cobro ya tiene factura.");
       if (p.sede !== input.sede) throw new Error("El cobro es de la otra entidad.");
@@ -146,6 +150,30 @@ export async function createInvoice(input: InvoiceDraft): Promise<{ id: string; 
       }
     } else if (!input.payment || !METHODS.includes(input.payment.method)) {
       throw new Error("Indica cómo pagó el cliente.");
+    }
+
+    // A member's membership is invoiced once a month. Invoicing it again
+    // needs another collection the bank already confirmed (Santiago, 4 oct 2026).
+    const isMembership = (l: (typeof lines)[number]) => !!l.membershipId || l.incomeAccountCode === MEMBERSHIP_INCOME_CODE;
+    if (input.memberId && lines.some(isMembership) && existing?.status !== "SUCCEEDED") {
+      const start = new Date(Date.UTC(issueDate.getUTCFullYear(), issueDate.getUTCMonth(), 1));
+      const end = new Date(Date.UTC(issueDate.getUTCFullYear(), issueDate.getUTCMonth() + 1, 1));
+      const prior = await tx.invoice.findFirst({
+        where: {
+          memberId: input.memberId,
+          status: { not: "VOIDED" },
+          issueDate: { gte: start, lt: end },
+          lines: { some: { OR: [{ membershipId: { not: null } }, { incomeAccountCode: MEMBERSHIP_INCOME_CODE }] } },
+        },
+        include: { emissionPoint: { select: { establishment: true, point: true } } },
+      });
+      if (prior) {
+        const num = formatDocNumber(prior.emissionPoint.establishment, prior.emissionPoint.point, prior.sequential);
+        throw new Error(
+          `Este socio ya tiene factura de membresía este mes (${num}). Solo se vuelve a facturar con otro pago comprobado: ` +
+            "regístralo en Pagos, confírmalo con el banco y factúralo desde ese cobro.",
+        );
+      }
     }
 
     // Atomic numbering: the UPDATE row-locks the emission point.
