@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { Sede, MemberStatus, MembershipState, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
 import { headers } from "next/headers";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
-import type { User } from "@/generated/prisma/client";
+import type { Sex, TaxIdType, User } from "@/generated/prisma/client";
+import { guessTaxIdType, taxIdError } from "@/lib/invoicing/core";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createPasswordRecovery, sendPortalInviteEmail } from "@/lib/account/recovery";
 
@@ -242,17 +243,20 @@ export async function updateMember(
   data: {
     firstName?: string;
     lastName?: string;
-    email?: string;
-    phone?: string;
-    dateOfBirth?: string;
-    address?: string;
-    occupation?: string;
-    emergencyName?: string;
-    emergencyPhone?: string;
+    email?: string | null;
+    phone?: string | null;
+    dateOfBirth?: string | null;
+    address?: string | null;
+    occupation?: string | null;
+    emergencyName?: string | null;
+    emergencyPhone?: string | null;
     sede?: Sede;
     secondarySede?: Sede | null;
     status?: MemberStatus;
-    notes?: string;
+    notes?: string | null;
+    sex?: Sex | null;
+    /** Cédula, RUC o pasaporte; el tipo se deduce de los dígitos. "" lo borra. */
+    taxId?: string | null;
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   // Se DEVUELVE el error en vez de lanzarlo: en producción Next borra el mensaje
@@ -264,8 +268,28 @@ export async function updateMember(
   // who helps socios get into the app, and coaches — only fix contact data.
   if (!can.manageMembers(actor)) data = { email: data.email, phone: data.phone };
 
-  const email = data.email?.trim().toLowerCase() || undefined;
-  const { secondarySede, ...rest } = data;
+  // Each field may come alone (edit in place on the ficha). A field that is
+  // present but blank means "clear it"; an absent field is left untouched.
+  const blank = (v: string | null | undefined) => (v === undefined ? undefined : v?.trim() || null);
+  const email = data.email === undefined ? undefined : data.email?.trim().toLowerCase() || null;
+  if (data.firstName !== undefined && !data.firstName.trim()) return { ok: false, error: "El nombre no puede quedar vacío." };
+  let dateOfBirth: Date | null | undefined = undefined;
+  if (data.dateOfBirth !== undefined) {
+    if (!data.dateOfBirth) dateOfBirth = null;
+    else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.dateOfBirth)) return { ok: false, error: "Fecha de nacimiento no válida." };
+    else dateOfBirth = new Date(`${data.dateOfBirth}T00:00:00Z`);
+  }
+  let tax: { taxId: string | null; taxIdType: TaxIdType | null } | undefined = undefined;
+  if (data.taxId !== undefined) {
+    const v = data.taxId?.trim() ?? "";
+    if (!v) tax = { taxId: null, taxIdType: null };
+    else {
+      const type = guessTaxIdType(v);
+      const err = taxIdError(type, v);
+      if (err) return { ok: false, error: err };
+      tax = { taxId: v, taxIdType: type };
+    }
+  }
 
   // Email is @unique. Pre-check against OTHER members so a collision surfaces as a
   // clean message instead of an unhandled P2002 that crashes the socio page (bug #5).
@@ -287,17 +311,22 @@ export async function updateMember(
   // (which looks the ficha email up) can't find them.
   const current = await prisma.member.findUnique({
     where: { id },
-    select: { email: true, user: { select: { id: true, role: true, supabaseUserId: true } } },
+    select: { email: true, sede: true, secondarySede: true, user: { select: { id: true, role: true, supabaseUserId: true } } },
   });
   if (!current) return { ok: false, error: "Socio no encontrado." };
-  const emailChanged = email !== undefined && email !== current.email?.toLowerCase();
+  if (email === null && current.user) {
+    return { ok: false, error: "Usa la app con ese correo: no se puede dejar vacío." };
+  }
+  const emailChanged = email !== undefined && email !== (current.email?.toLowerCase() ?? null);
   const login = emailChanged ? current.user : null;
+  // With a login the new email is never null (refused above); this is the narrowed value.
+  const loginEmail = email ?? undefined;
   if (login && login.role !== "MEMBER") {
     return { ok: false, error: "Esta ficha es de alguien del staff: su correo se cambia en Usuarios." };
   }
   if (login) {
     const taken = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" }, id: { not: login.id } },
+      where: { email: { equals: loginEmail, mode: "insensitive" }, id: { not: login.id } },
       select: { id: true },
     });
     if (taken) return { ok: false, error: `El correo ${email} ya tiene una cuenta en la app.` };
@@ -307,7 +336,7 @@ export async function updateMember(
   try {
     if (login?.supabaseUserId) {
       const { error } = await createSupabaseAdminClient().auth.admin.updateUserById(login.supabaseUserId, {
-        email,
+        email: loginEmail,
         email_confirm: true,
       });
       if (error) return { ok: false, error: `No se pudo cambiar el correo de acceso: ${error.message}` };
@@ -318,17 +347,32 @@ export async function updateMember(
       prisma.member.update({
         where: { id },
         data: {
-          ...rest,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+          firstName: data.firstName?.trim(),
+          lastName: data.lastName === undefined ? undefined : data.lastName.trim(),
+          status: data.status,
+          sede: data.sede,
+          sex: data.sex,
+          dateOfBirth,
           email,
-          phone: data.phone || undefined,
+          phone: blank(data.phone),
+          address: blank(data.address),
+          occupation: blank(data.occupation),
+          emergencyName: blank(data.emergencyName),
+          emergencyPhone: blank(data.emergencyPhone),
+          notes: blank(data.notes),
+          ...(tax ?? {}),
           // Secondary sede is attendance-only; never equal to the primary.
-          ...(secondarySede !== undefined
-            ? { secondarySede: secondarySede && secondarySede !== data.sede ? secondarySede : null }
+          // Moving the primary sede onto the secondary one clears the secondary.
+          ...(data.secondarySede === undefined && data.sede && data.sede === current.secondarySede ? { secondarySede: null } : {}),
+          ...(data.secondarySede !== undefined
+            ? {
+                secondarySede:
+                  data.secondarySede && data.secondarySede !== (data.sede ?? current.sede) ? data.secondarySede : null,
+              }
             : {}),
         },
       }),
-      ...(login ? [prisma.user.update({ where: { id: login.id }, data: { email } })] : []),
+      ...(login ? [prisma.user.update({ where: { id: login.id }, data: { email: loginEmail } })] : []),
     ]);
 
     revalidatePath("/dashboard/socios");

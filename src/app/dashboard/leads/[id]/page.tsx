@@ -1,11 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ListChecks, MessageCircle, Phone, StickyNote, UserPlus } from "lucide-react";
-import { requireAuth, can } from "@/lib/auth";
-import { getLead } from "@/lib/actions/leads";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
+import { getLead, getStaffUsers } from "@/lib/actions/leads";
 import { getPersonTasks } from "@/lib/actions/staff-tasks";
 import { Badge } from "@/components/ui/badge";
-import { ecuadorDateString, ECUADOR_TZ } from "@/lib/timezone";
+import { ecuadorDateString, ecuadorDateTimeInput, ECUADOR_TZ } from "@/lib/timezone";
 import { STAGE_COLOR, STAGE_LABEL } from "@/lib/leads/stages";
 import { loadPersonTimeline, TIMELINE_KIND_LABEL } from "@/lib/ficha/timeline";
 import {
@@ -20,6 +20,7 @@ import {
   telLink,
 } from "@/components/ficha/layout";
 import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
+import { EditablePropList } from "@/components/ficha/editable-props";
 import { getConversationThread } from "@/lib/actions/comunicacion";
 import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 import { Timeline } from "@/components/ficha/timeline";
@@ -70,7 +71,7 @@ export default async function LeadDetailPage({
   if (!lead) return notFound();
   if (lead.member) redirect(`/dashboard/socios/${lead.member.id}`);
 
-  const tasks = await getPersonTasks({ kind: "lead", id }, 50);
+  const [tasks, staff] = await Promise.all([getPersonTasks({ kind: "lead", id }, 50), getStaffUsers()]);
   // La actividad se carga siempre: la última entrada alimenta el resumen de arriba.
   const [timeline, waThread] = await Promise.all([
     loadPersonTimeline(user, { leadId: lead.id }, tasks.closed),
@@ -138,35 +139,84 @@ export default async function LeadDetailPage({
   const about = (
     <>
       <FichaSection title="Sobre este lead">
-        <PropList
+        <EditablePropList
+          target={{ kind: "lead", id: lead.id }}
           props={[
-            { label: "Correo", value: lead.email, href: lead.email ? `mailto:${lead.email}` : undefined, external: true },
-            { label: "Celular", value: lead.phone, href: telLink(lead.phone), external: true },
-            { label: "Sede de interés", value: sedeLabel(lead.sede) },
-            { label: "Responsable", value: lead.owner?.fullName },
-            { label: "Notas", value: lead.notes },
-            { label: "Creado", value: dateFmt(lead.createdAt) },
+            { field: "firstName", label: "Nombre", value: lead.firstName },
+            { field: "lastName", label: "Apellido", value: lead.lastName ?? "" },
+            {
+              field: "email",
+              label: "Correo",
+              value: lead.email ?? "",
+              kind: "email",
+              href: lead.email ? `mailto:${lead.email}` : undefined,
+              external: true,
+            },
+            { field: "phone", label: "Celular", value: lead.phone ?? "", kind: "tel", href: telLink(lead.phone), external: true },
+            {
+              field: "sede",
+              label: "Sede de interés",
+              value: lead.sede,
+              kind: "select",
+              options: [
+                { value: "FITNESS_CENTER", label: "Fitness Center" },
+                { value: "XTREME", label: "Xtreme" },
+              ],
+              readOnly: !!getSedeScope(user),
+            },
+            {
+              field: "ownerUserId",
+              label: "Responsable",
+              value: lead.ownerUserId ?? "",
+              kind: "select",
+              options: [{ value: "", label: "Sin asignar" }, ...staff.map((u) => ({ value: u.id, label: u.fullName }))],
+            },
+            { field: "notes", label: "Notas", value: lead.notes ?? "", kind: "textarea" },
           ]}
         />
+        <p className="mt-3 text-xs text-muted-foreground">Creado el {dateFmt(lead.createdAt)}.</p>
       </FichaSection>
       <FichaSection title="Origen">
-        <PropList
+        <EditablePropList
+          target={{ kind: "lead", id: lead.id }}
           props={[
-            { label: "Canal", value: sourceLabels[lead.source] ?? lead.source },
-            { label: "Anuncio", value: ad, href: lead.adSourceUrl ?? undefined, external: true },
-            { label: "Llegó del anuncio", value: dateTimeFmt(lead.adReferredAt) },
+            {
+              field: "source",
+              label: "Canal",
+              value: lead.source,
+              kind: "select",
+              options: Object.entries(sourceLabels).map(([value, label]) => ({ value, label })),
+            },
+            { field: "ad", label: "Anuncio", value: ad ?? "", href: lead.adSourceUrl ?? undefined, external: true, readOnly: true },
+            { field: "adReferredAt", label: "Llegó del anuncio", value: dateTimeFmt(lead.adReferredAt) ?? "", readOnly: true },
           ]}
         />
       </FichaSection>
       <FichaSection title="Evaluación">
-        <PropList
+        <EditablePropList
+          target={{ kind: "lead", id: lead.id }}
           props={[
-            { label: "Agendada para", value: dateTimeFmt(lead.trialScheduledAt) },
             {
-              label: "¿Vino?",
-              value: lead.trialAttended == null ? null : lead.trialAttended ? "Sí" : "No",
+              field: "trialScheduledAt",
+              label: "Agendada para",
+              value: ecuadorDateTimeInput(lead.trialScheduledAt),
+              display: dateTimeFmt(lead.trialScheduledAt) ?? "",
+              kind: "datetime",
             },
-            ...(lead.stage === "LOST" || lead.stage === "DISQUALIFIED" ? [{ label: "Motivo", value: lead.lostReason }] : []),
+            {
+              field: "trialAttended",
+              label: "¿Vino?",
+              value: lead.trialAttended == null ? "" : lead.trialAttended ? "yes" : "no",
+              kind: "select",
+              options: [
+                { value: "", label: "Sin registrar" },
+                { value: "yes", label: "Sí vino" },
+                { value: "no", label: "No vino" },
+              ],
+            },
+            ...(lead.stage === "LOST" || lead.stage === "DISQUALIFIED"
+              ? [{ field: "lostReason", label: "Motivo", value: lead.lostReason ?? "", kind: "textarea" as const }]
+              : []),
           ]}
         />
       </FichaSection>

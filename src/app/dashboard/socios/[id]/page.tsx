@@ -44,6 +44,7 @@ import { Composer } from "@/components/ficha/composer";
 import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
 import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
+import { EditablePropList } from "@/components/ficha/editable-props";
 import { getConversationThread } from "@/lib/actions/comunicacion";
 import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 
@@ -163,6 +164,8 @@ export default async function MemberDetailPage({
   // "Renovar" when the socio has no currently-valid membership.
   const lastMembership = member.memberships.find((m) => m.plan.billingCycle !== "ONE_TIME");
   const canEditMembership = user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN";
+  // Front desk edits every field; other staff only fix contact data (same rule as updateMember).
+  const canManage = can.manageMembers(user);
   const seesPayments = can.viewPayments(user);
   const latestLevel = member.trainingLevels[0];
   const latestBody = member.bodyCompositions[0];
@@ -264,22 +267,88 @@ export default async function MemberDetailPage({
   const about = (
     <>
       <FichaSection title="Sobre este socio">
-        <PropList
+        <EditablePropList
+          target={{ kind: "member", id: member.id }}
           props={[
-            { label: "Correo", value: member.email, href: member.email ? `mailto:${member.email}` : undefined, external: true },
-            { label: "Celular", value: member.phone, href: telLink(member.phone), external: true },
+            { field: "firstName", label: "Nombre", value: member.firstName, readOnly: !canManage },
+            { field: "lastName", label: "Apellido", value: member.lastName, readOnly: !canManage },
             {
-              label: "Nacimiento",
-              value: member.dateOfBirth ? `${dayFmt(member.dateOfBirth)} · ${age(member.dateOfBirth)} años` : null,
+              field: "email",
+              label: "Correo",
+              value: member.email ?? "",
+              kind: "email",
+              href: member.email ? `mailto:${member.email}` : undefined,
+              external: true,
             },
-            { label: "Sexo", value: member.sex === "FEMALE" ? "Mujer" : member.sex === "MALE" ? "Hombre" : null },
-            { label: "Ocupación", value: member.occupation },
-            { label: "Dirección", value: member.address },
-            { label: "Contacto de emergencia", value: [member.emergencyName, member.emergencyPhone].filter(Boolean).join(" · ") },
-            { label: "Socio desde", value: dateFmt(member.joinedAt) },
-            { label: "Identificación (facturar)", value: member.taxId },
+            { field: "phone", label: "Celular", value: member.phone ?? "", kind: "tel", href: telLink(member.phone), external: true },
+            {
+              field: "dateOfBirth",
+              label: "Nacimiento",
+              value: member.dateOfBirth ? member.dateOfBirth.toISOString().slice(0, 10) : "",
+              display: member.dateOfBirth ? `${dayFmt(member.dateOfBirth)} · ${age(member.dateOfBirth)} años` : "",
+              kind: "date",
+              readOnly: !canManage,
+            },
+            {
+              field: "sex",
+              label: "Sexo",
+              value: member.sex ?? "",
+              kind: "select",
+              options: [
+                { value: "", label: "--" },
+                { value: "FEMALE", label: "Mujer" },
+                { value: "MALE", label: "Hombre" },
+                { value: "OTHER", label: "Otro" },
+              ],
+              readOnly: !canManage,
+            },
+            { field: "occupation", label: "Ocupación", value: member.occupation ?? "", readOnly: !canManage },
+            { field: "address", label: "Dirección", value: member.address ?? "", readOnly: !canManage },
+            { field: "emergencyName", label: "Contacto de emergencia", value: member.emergencyName ?? "", readOnly: !canManage },
+            {
+              field: "emergencyPhone",
+              label: "Tel. de emergencia",
+              value: member.emergencyPhone ?? "",
+              kind: "tel",
+              href: telLink(member.emergencyPhone),
+              external: true,
+              readOnly: !canManage,
+            },
+            {
+              field: "sede",
+              label: "Sede principal",
+              value: member.sede,
+              kind: "select",
+              options: [
+                { value: "FITNESS_CENTER", label: "Fitness Center" },
+                { value: "XTREME", label: "Xtreme" },
+              ],
+              readOnly: !canManage,
+            },
+            {
+              field: "secondarySede",
+              label: "También entrena en",
+              value: member.secondarySede ?? "",
+              kind: "select",
+              options: [
+                { value: "", label: "--" },
+                ...(member.sede === "XTREME" ? [] : [{ value: "XTREME", label: "Xtreme" }]),
+                ...(member.sede === "FITNESS_CENTER" ? [] : [{ value: "FITNESS_CENTER", label: "Fitness Center" }]),
+              ],
+              readOnly: !canManage,
+            },
+            {
+              field: "taxId",
+              label: "Cédula / RUC (para facturar)",
+              value: member.taxId ?? "",
+              display: member.taxId ? `${member.taxIdType === "RUC" ? "RUC" : member.taxIdType === "PASAPORTE" ? "Pasaporte" : "Cédula"} ${member.taxId}` : "",
+              placeholder: "10 dígitos cédula · 13 RUC",
+              readOnly: !canManage,
+            },
+            { field: "notes", label: "Notas internas", value: member.notes ?? "", kind: "textarea", readOnly: !canManage },
           ]}
         />
+        <p className="mt-3 text-xs text-muted-foreground">Socio desde {dateFmt(member.joinedAt)}.</p>
       </FichaSection>
 
       <FichaSection title="Origen" defaultOpen={!!member.lead}>
