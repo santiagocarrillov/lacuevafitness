@@ -11,19 +11,23 @@ import { isStaffFreeTraining } from "@/lib/staff-free-training";
 import { ecuadorDateAt, ecuadorTimeOfDayMinutes, todayDateUtc } from "@/lib/timezone";
 import { dueLabel, minutesToTime } from "@/lib/tasks/meta";
 import type { LeadStage, Sede, StaffTaskType } from "@/generated/prisma/client";
+import { blockOf, evaluationGaps } from "@/lib/srxfit/group-stats";
+import { notifyStaff } from "@/lib/push/notify-staff";
 
 /** How many "N días sin venir" calls per sede per day — a list nobody can finish is noise. */
 const INACTIVE_CAP_PER_SEDE = 8;
 const INACTIVE_MIN_DAYS = 7;
 const INACTIVE_MAX_DAYS = 30;
 const RENEWAL_WINDOW_DAYS = 3;
+/** "Evaluar a X" per sede per day: the full list lives in SRXFIT › Evaluaciones. */
+const EVALGAP_CAP_PER_SEDE = 10;
 
 /** Stages where there's no evaluation left to receive. */
 const EVAL_DONE_STAGES: LeadStage[] = ["TRIAL_ATTENDED", "CONVERTED", "LOST", "DISQUALIFIED"];
 
 export type AutoTaskPlan = {
   autoKey: string;
-  reason: "evaluación" | "renovación" | "inasistencia";
+  reason: "evaluación" | "renovación" | "inasistencia" | "evaluación SRXFIT";
   title: string;
   detail: string;
   type: StaffTaskType;
@@ -197,6 +201,37 @@ async function planInactive(now: Date): Promise<AutoTaskPlan[]> {
   return out;
 }
 
+/**
+ * Socios who pay and train but have no official SRXFIT data in two cycles:
+ * the sede's admin must test and measure them. One task per socio per block.
+ */
+async function planEvalGaps(now: Date): Promise<AutoTaskPlan[]> {
+  const gaps = await evaluationGaps(now);
+  const block = blockOf(now);
+  const perSede = new Map<Sede, number>();
+  const out: AutoTaskPlan[] = [];
+  for (const g of gaps) {
+    const n = perSede.get(g.sede) ?? 0;
+    if (n >= EVALGAP_CAP_PER_SEDE) continue;
+    perSede.set(g.sede, n + 1);
+    out.push({
+      autoKey: `evalgap:${g.memberId}:${block}`,
+      reason: "evaluación SRXFIT",
+      title: `Evaluar a ${g.name}: sin datos SRXFIT en dos ciclos`,
+      detail:
+        `${g.lastDataAt ? `Último dato: ${shortDate(g.lastDataAt)}.` : "Nunca se le registraron tests ni mediciones."} ` +
+        `Viene (${g.visits30} visitas en 30 días) pero no ve su progreso en la app. Hazle los tests y la composición corporal ` +
+        `(SRXFIT › Evaluaciones). Si no se pudo, anótalo aquí para mandarle el mensaje.`,
+      type: "TASK",
+      priority: 1,
+      sede: g.sede,
+      memberId: g.memberId,
+      dueMinutes: null,
+    });
+  }
+  return out;
+}
+
 export type AutoTasksSummary = {
   planned: number;
   created: number;
@@ -221,6 +256,7 @@ export async function generateAutoTasks(opts: { dryRun?: boolean } = {}): Promis
     ...(await planEvaluations(today)),
     ...renewals,
     ...(await planInactive(now)).filter((p) => !renewing.has(p.memberId)),
+    ...(await planEvalGaps(now)),
   ];
 
   const existing = new Set(
@@ -266,6 +302,25 @@ export async function generateAutoTasks(opts: { dryRun?: boolean } = {}): Promis
         if (code !== "P2002") throw err;
       }
     }
+  }
+
+  // Immediate heads-up to the sede's admins when new evaluation gaps appear.
+  if (!opts.dryRun) {
+    const gapsBySede = new Map<Sede, number>();
+    for (const p of fresh) if (p.reason === "evaluación SRXFIT") gapsBySede.set(p.sede, (gapsBySede.get(p.sede) ?? 0) + 1);
+    await Promise.all(
+      [...gapsBySede].map(([sede, n]) =>
+        notifyStaff({
+          roles: ["ADMIN"],
+          sede,
+          payload: {
+            title: "Socios sin evaluación SRXFIT",
+            body: `${n} ${n === 1 ? "socio paga y asiste" : "socios pagan y asisten"} sin datos en dos ciclos. Evalúalos esta semana.`,
+            url: "/dashboard/tareas",
+          },
+        }).catch(() => undefined),
+      ),
+    );
   }
 
   return { planned: plans.length, created, alreadyThere: existing.size, byReason, plans: fresh };
