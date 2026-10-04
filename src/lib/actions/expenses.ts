@@ -261,7 +261,7 @@ export async function saveExpense(input: ExpenseDraft): Promise<{ id: string }> 
     return e.id;
   });
   revalidatePath(PATH);
-  revalidatePath("/dashboard/finanzas");
+  revalidatePath("/dashboard/finanzas", "layout");
   return { id };
 }
 
@@ -333,5 +333,5 @@ export async function voidExpenseScoped(id: string, reason: string) {
   await assertOpen(prisma, e.sede, e.date);
   await prisma.expense.update({ where: { id, voidedAt: null }, data: { voidedAt: new Date(), voidReason: reason.trim() } });
   revalidatePath(PATH);
-  revalidatePath("/dashboard/finanzas");
+  revalidatePath("/dashboard/finanzas", "layout");
 }

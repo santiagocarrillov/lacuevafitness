@@ -13,7 +13,7 @@ export default async function NuevoAportePage({ searchParams }: { searchParams: 
   const ym = /^\d{4}-\d{2}$/.test(mes ?? "") ? mes : undefined;
   return (
     <FormPage title="Aporte o préstamo de los dueños" description="Dinero que tú o Isabel ponen para cubrir la caja (o que regresa a ustedes). No cuenta como ingreso.">
-      <CapitalForm defaultDate={ym && ym < ecuadorDateString().slice(0, 7) ? `${ym}-01` : undefined} backHref={`/dashboard/finanzas?tab=aportes${ym ? `&mes=${ym}` : ""}`} />
+      <CapitalForm defaultDate={ym && ym < ecuadorDateString().slice(0, 7) ? `${ym}-01` : undefined} backHref={`/dashboard/finanzas/aportes${ym ? `?mes=${ym}` : ""}`} />
     </FormPage>
   );
 }

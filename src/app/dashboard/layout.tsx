@@ -84,7 +84,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         // Finanzas (barra propia). Admins solo registran gastos.
         {
           href: "/dashboard/finanzas",
-          label: "Contabilidad y facturas",
+          label: "Contabilidad",
           show: can.viewFinancials(user),
           match: ["/dashboard/facturas", "/dashboard/gastos", "/dashboard/contabilidad"],
         },

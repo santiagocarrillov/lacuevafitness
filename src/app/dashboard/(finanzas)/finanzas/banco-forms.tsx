@@ -42,7 +42,7 @@ function errMsg(err: unknown) {
 export function AccountForm() {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const done = () => router.push("/dashboard/finanzas?tab=banco");
+  const done = () => router.push("/dashboard/finanzas/banco");
   return (
         <form
           className="space-y-3"

@@ -38,11 +38,11 @@ export async function GET(req: Request) {
     case "EXPENSE":
       return go(`/dashboard/gastos/${id}`);
     case "OTHER_INCOME":
-      return go(`/dashboard/finanzas?tab=otros${mes ? `&mes=${mes}` : ""}`);
+      return go(`/dashboard/finanzas/otros-ingresos${mes ? `?mes=${mes}` : ""}`);
     case "CAPITAL":
-      return go(`/dashboard/finanzas?tab=aportes${mes ? `&mes=${mes}` : ""}`);
+      return go(`/dashboard/finanzas/aportes${mes ? `?mes=${mes}` : ""}`);
     case "BANK":
-      return go("/dashboard/finanzas?tab=banco");
+      return go("/dashboard/finanzas/banco");
     case "DEPRECIATION":
       return go(`/dashboard/contabilidad?tab=activos&entidad=${sede}`);
     default:
