@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { OFFICIAL_ENTRY_WHERE } from "@/lib/entry-source";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
-import { Sede, EvaluationType, TestKey } from "@/generated/prisma/client";
+import { Sede, TestKey } from "@/generated/prisma/client";
+import { TEST_LABELS } from "@/lib/portal/test-labels";
+import { evalScore, evalStatus } from "@/lib/srxfit/eval-score";
+import { findTargetEvaluation, newEvaluationType, syncEvaluationCompletion } from "@/lib/srxfit/eval-panel";
 
 // ─── Guards ──────────────────────────────────────────────────────────
 // Server actions are public POST endpoints: every export checks its caller.
@@ -26,54 +29,6 @@ function rangeBounds(from: string, to: string) {
     start: new Date(from + "T00:00:00"),
     end: new Date(to + "T23:59:59"),
   };
-}
-
-// ─── Compliance report ───────────────────────────────────────────────
-
-export async function getEvaluationCompliance(
-  sede: Sede | undefined,
-  from: string,
-  to: string,
-) {
-  sede = await evalReportSede(sede);
-  const { start, end } = rangeBounds(from, to);
-
-  async function forSede(s: Sede | undefined) {
-    const sedeFilter = s ? { sede: s } : {};
-    const [totalActive, evaluated] = await Promise.all([
-      prisma.member.count({
-        where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
-      }),
-      prisma.member.count({
-        where: {
-          ...sedeFilter,
-          status: { in: ["ACTIVE", "TRIAL"] },
-          evaluations: {
-            some: { completedAt: { gte: start, lte: end } },
-          },
-        },
-      }),
-    ]);
-    return {
-      label: s === "FITNESS_CENTER" ? "Fitness Center" : s === "XTREME" ? "Xtreme" : "Ambas sedes",
-      sede: s,
-      totalActive,
-      evaluated,
-      pct: totalActive > 0 ? Math.round((evaluated / totalActive) * 100) : 0,
-    };
-  }
-
-  if (sede) {
-    return [await forSede(sede)];
-  }
-
-  // Both sedes + combined
-  const [fitness, xtreme, combined] = await Promise.all([
-    forSede("FITNESS_CENTER"),
-    forSede("XTREME"),
-    forSede(undefined),
-  ]);
-  return [combined, fitness, xtreme];
 }
 
 // ─── Body fat metrics ────────────────────────────────────────────────
@@ -148,6 +103,9 @@ export async function getBodyFatMetrics(
 }
 
 // ─── Members eval status list ────────────────────────────────────────
+// Status comes from the weighted score (eval-score.ts), not from someone
+// pressing "completar": ≥ 60 % → evaluado, something → parcial. Takes the best
+// evaluation that started (or was completed) inside the period.
 
 export async function getMembersEvalStatus(
   sede: Sede | undefined,
@@ -157,230 +115,55 @@ export async function getMembersEvalStatus(
   sede = await evalReportSede(sede);
   const { start, end } = rangeBounds(from, to);
   const sedeFilter = sede ? { sede } : {};
+  const inPeriod = { OR: [{ startedAt: { gte: start, lte: end } }, { completedAt: { gte: start, lte: end } }] };
 
   const members = await prisma.member.findMany({
     where: { ...sedeFilter, status: { in: ["ACTIVE", "TRIAL"] } },
-    include: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      sede: true,
       evaluations: {
+        where: inPeriod,
         orderBy: { startedAt: "desc" },
-        take: 1,
-        include: {
+        select: {
+          id: true,
+          startedAt: true,
           testResults: { select: { test: true } },
-          bodyCompositions: { select: { id: true } },
+          bodyCompositions: { orderBy: { measuredAt: "desc" }, take: 1, select: { weightKg: true, bodyFatPct: true } },
         },
       },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
 
-  return members.map((m) => {
-    const last = m.evaluations[0];
-    const inRange = last && last.startedAt >= start && last.startedAt <= end;
-    const status: "evaluado" | "parcial" | "pendiente" = inRange && last.completedAt
-      ? "evaluado"
-      : inRange && (last.testResults.length > 0 || last.bodyCompositions.length > 0)
-      ? "parcial"
-      : "pendiente";
+  const lastEver = await prisma.evaluation.groupBy({
+    by: ["memberId"],
+    where: { memberId: { in: members.map((m) => m.id) } },
+    _max: { startedAt: true },
+  });
+  const lastAt = new Map(lastEver.map((r) => [r.memberId, r._max.startedAt]));
 
+  return members.map((m) => {
+    const scored = m.evaluations.map((e) => ({
+      e,
+      score: evalScore({ tests: e.testResults.map((t) => t.test), body: e.bodyCompositions[0] }),
+    }));
+    const best = scored.sort((a, b) => b.score.pct - a.score.pct)[0];
+    const pct = best?.score.pct ?? 0;
     return {
       memberId: m.id,
       name: `${m.firstName} ${m.lastName}`,
       sede: m.sede,
-      status,
-      evalId: inRange ? last?.id ?? null : null,
-      lastEvalAt: last?.startedAt?.toISOString() ?? null,
-      completedAt: last?.completedAt?.toISOString() ?? null,
-      testCount: inRange ? last?.testResults.length ?? 0 : 0,
-      hasBodyComp: inRange ? (last?.bodyCompositions.length ?? 0) > 0 : false,
+      status: evalStatus(pct),
+      pct,
+      evalId: best?.e.id ?? null,
+      lastEvalAt: lastAt.get(m.id)?.toISOString() ?? null,
+      testCount: best ? new Set(best.e.testResults.map((t) => t.test)).size : 0,
+      hasBodyComp: !!best?.e.bodyCompositions[0]?.weightKg,
     };
   });
-}
-
-// ─── Member eval detail ──────────────────────────────────────────────
-
-export async function getMemberEvalDetail(memberId: string) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
-    include: {
-      trainingLevels: { orderBy: { assignedAt: "desc" }, take: 1 },
-    },
-  });
-  if (!member) throw new Error("Socio no encontrado");
-
-  // Get all evaluations ordered by most recent
-  const evaluations = await prisma.evaluation.findMany({
-    where: { memberId },
-    include: {
-      testResults: { orderBy: { recordedAt: "desc" } },
-      bodyCompositions: { orderBy: { measuredAt: "desc" } },
-      coach: { select: { fullName: true } },
-    },
-    orderBy: { startedAt: "desc" },
-  });
-
-  return { member, evaluations };
-}
-
-// ─── Start or get open evaluation ────────────────────────────────────
-
-export async function getOrStartEvaluation(
-  memberId: string,
-  type: EvaluationType,
-  cycleNumber?: number,
-) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-
-  // Look for an open (incomplete) evaluation of this type
-  const existing = await prisma.evaluation.findFirst({
-    where: {
-      memberId,
-      type,
-      ...(cycleNumber !== undefined ? { cycleNumber } : {}),
-      completedAt: null,
-    },
-    include: {
-      testResults: { orderBy: { recordedAt: "desc" } },
-      bodyCompositions: { orderBy: { measuredAt: "desc" }, take: 1 },
-    },
-    orderBy: { startedAt: "desc" },
-  });
-  if (existing) return existing;
-
-  const created = await prisma.evaluation.create({
-    data: {
-      memberId,
-      type,
-      ...(cycleNumber !== undefined ? { cycleNumber } : {}),
-      coachId: user.id,
-    },
-    include: {
-      testResults: true,
-      bodyCompositions: true,
-    },
-  });
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
-  return created;
-}
-
-// ─── Get open evaluation WITHOUT creating one ─────────────────────────
-// Used by the eval page so it never silently spawns an empty duplicate when
-// the latest eval is already completed. Returns null when nothing is open.
-export async function getActiveEvaluation(
-  memberId: string,
-  type: EvaluationType,
-  cycleNumber?: number,
-) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-  return prisma.evaluation.findFirst({
-    where: {
-      memberId,
-      type,
-      ...(cycleNumber !== undefined ? { cycleNumber } : {}),
-      completedAt: null,
-    },
-    include: {
-      testResults: { orderBy: { recordedAt: "desc" } },
-      bodyCompositions: { orderBy: { measuredAt: "desc" }, take: 1 },
-    },
-    orderBy: { startedAt: "desc" },
-  });
-}
-
-// ─── Start a NEW evaluation (explicit button) ─────────────────────────
-export async function startEvaluation(
-  memberId: string,
-  type: EvaluationType,
-  cycleNumber?: number,
-) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-  // Never create a second open eval — reuse the open one if it exists.
-  const open = await prisma.evaluation.findFirst({
-    where: { memberId, type, ...(cycleNumber !== undefined ? { cycleNumber } : {}), completedAt: null },
-    orderBy: { startedAt: "desc" },
-  });
-  if (open) return { id: open.id };
-  const created = await prisma.evaluation.create({
-    data: { memberId, type, ...(cycleNumber !== undefined ? { cycleNumber } : {}), coachId: user.id },
-  });
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
-  return { id: created.id };
-}
-
-// ─── Reopen a completed evaluation ────────────────────────────────────
-// Undo an accidental "Marcar como completada" so staff can keep editing.
-export async function reopenEvaluation(evaluationId: string, memberId: string) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-  await prisma.evaluation.update({
-    where: { id: evaluationId },
-    data: { completedAt: null },
-  });
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
-  revalidatePath("/dashboard/srxfit/evaluaciones");
-  return { success: true };
-}
-
-// ─── Delete a test result ─────────────────────────────────────────────
-export async function deleteTestResult(evaluationId: string, test: TestKey, memberId: string) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-  await prisma.testResult.deleteMany({ where: { evaluationId, test } });
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
-  return { success: true };
-}
-
-// ─── Upsert test result ───────────────────────────────────────────────
-
-export async function upsertTestResult(data: {
-  evaluationId: string;
-  memberId: string;
-  test: TestKey;
-  valueNumeric: number;
-  unit: string;
-  notes?: string;
-}) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-
-  const existing = await prisma.testResult.findFirst({
-    where: { evaluationId: data.evaluationId, test: data.test },
-    orderBy: { recordedAt: "desc" },
-  });
-
-  if (existing) {
-    await prisma.testResult.update({
-      where: { id: existing.id },
-      data: {
-        valueNumeric: data.valueNumeric,
-        unit: data.unit,
-        notes: data.notes ?? null,
-        recordedByUserId: user.id,
-        recordedAt: new Date(),
-      },
-    });
-  } else {
-    await prisma.testResult.create({
-      data: {
-        memberId: data.memberId,
-        evaluationId: data.evaluationId,
-        test: data.test,
-        valueNumeric: data.valueNumeric,
-        unit: data.unit,
-        notes: data.notes ?? null,
-        recordedByUserId: user.id,
-      },
-    });
-  }
-
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${data.memberId}`);
-  revalidatePath("/dashboard/srxfit/evaluaciones");
-  return { success: true };
 }
 
 // ─── Single ad-hoc test result (no full battery) ─────────────────────
@@ -426,79 +209,6 @@ export async function deleteTestResultById(id: string, memberId: string) {
   revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
   return { success: true };
 }
-
-// ─── Upsert body composition ──────────────────────────────────────────
-
-export async function upsertBodyComposition(data: {
-  evaluationId: string;
-  memberId: string;
-  weightKg?: number;
-  heightCm?: number;
-  bodyFatPct?: number;
-  muscleMassKg?: number;
-  waterPct?: number;
-  basalMetabolism?: number;
-  notes?: string;
-}) {
-  const user = await requireAuth();
-  if (!can.editTests(user) && !can.editBodyComp(user)) throw new Error("Sin permisos");
-
-  const existing = await prisma.bodyComposition.findFirst({
-    where: { evaluationId: data.evaluationId },
-    orderBy: { measuredAt: "desc" },
-  });
-
-  if (existing) {
-    await prisma.bodyComposition.update({
-      where: { id: existing.id },
-      data: {
-        weightKg: data.weightKg ?? null,
-        heightCm: data.heightCm ?? null,
-        bodyFatPct: data.bodyFatPct ?? null,
-        muscleMassKg: data.muscleMassKg ?? null,
-        waterPct: data.waterPct ?? null,
-        basalMetabolism: data.basalMetabolism ?? null,
-        notes: data.notes ?? null,
-        measuredAt: new Date(),
-      },
-    });
-  } else {
-    await prisma.bodyComposition.create({
-      data: {
-        memberId: data.memberId,
-        evaluationId: data.evaluationId,
-        weightKg: data.weightKg ?? null,
-        heightCm: data.heightCm ?? null,
-        bodyFatPct: data.bodyFatPct ?? null,
-        muscleMassKg: data.muscleMassKg ?? null,
-        waterPct: data.waterPct ?? null,
-        basalMetabolism: data.basalMetabolism ?? null,
-        notes: data.notes ?? null,
-      },
-    });
-  }
-
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${data.memberId}`);
-  return { success: true };
-}
-
-// ─── Complete evaluation ──────────────────────────────────────────────
-
-export async function completeEvaluation(evaluationId: string, memberId: string, summary?: string) {
-  const user = await requireAuth();
-  if (!can.editTests(user)) throw new Error("Sin permisos");
-
-  await prisma.evaluation.update({
-    where: { id: evaluationId },
-    data: { completedAt: new Date(), summary: summary ?? null },
-  });
-
-  revalidatePath(`/dashboard/srxfit/evaluaciones/${memberId}`);
-  revalidatePath("/dashboard/srxfit/evaluaciones");
-  return { success: true };
-}
-
-// ─── Training level assignment ────────────────────────────────────────
 
 export async function assignTrainingLevel(
   memberId: string,
@@ -551,4 +261,144 @@ export async function getSrxfitHubStats(sede: Sede | undefined) {
   ]);
 
   return { totalMembers, evalsThisMonth, completedEvals, withBodyComp };
+}
+
+// ─── Evaluation panel: one field at a time ────────────────────────────
+// The panel over Evaluaciones saves every value on its own (no "Guardar
+// evaluación"). The first value creates the evaluation; every save recomputes
+// the weighted score and stamps/clears completedAt (≥ EVAL_COMPLETE_PCT).
+
+async function memberForEdit(memberId: string) {
+  const user = await requireAuth();
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { id: true, sede: true, secondarySede: true, status: true, _count: { select: { evaluations: true } } },
+  });
+  if (!member) throw new Error("Socio no encontrado");
+  const scope = getSedeScope(user);
+  if (scope && member.sede !== scope && member.secondarySede !== scope) throw new Error("Socio de otra sede");
+  if (member.status !== "ACTIVE" && member.status !== "TRIAL") throw new Error("El socio no tiene membresía activa");
+  return { user, member };
+}
+
+async function ensurePanelEvaluation(
+  member: { id: string; _count: { evaluations: number } },
+  userId: string,
+  evaluationId: string | null,
+  from: string,
+  to: string,
+) {
+  if (evaluationId) {
+    const ev = await prisma.evaluation.findUnique({ where: { id: evaluationId }, select: { id: true, memberId: true } });
+    if (!ev || ev.memberId !== member.id) throw new Error("Evaluación no encontrada");
+    return ev.id;
+  }
+  const existing = await findTargetEvaluation(member.id, from, to);
+  if (existing) return existing.id;
+  const created = await prisma.evaluation.create({
+    data: { memberId: member.id, type: newEvaluationType(member._count.evaluations), coachId: userId },
+  });
+  return created.id;
+}
+
+function afterPanelSave(memberId: string) {
+  revalidatePath("/dashboard/srxfit/evaluaciones");
+  revalidatePath(`/dashboard/socios/${memberId}`);
+}
+
+export async function saveEvalTest(data: {
+  memberId: string;
+  evaluationId: string | null;
+  from: string;
+  to: string;
+  test: TestKey;
+  value: number | null; // null = borrar
+}) {
+  const { user, member } = await memberForEdit(data.memberId);
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  if (data.value != null && !(Number.isFinite(data.value) && data.value > 0)) throw new Error("Valor inválido");
+
+  const evaluationId = await ensurePanelEvaluation(member, user.id, data.evaluationId, data.from, data.to);
+  if (data.value == null) {
+    await prisma.testResult.deleteMany({ where: { evaluationId, test: data.test } });
+  } else {
+    const existing = await prisma.testResult.findFirst({
+      where: { evaluationId, test: data.test },
+      orderBy: { recordedAt: "desc" },
+    });
+    const unit = TEST_LABELS[data.test].unit;
+    if (existing) {
+      await prisma.testResult.update({
+        where: { id: existing.id },
+        data: { valueNumeric: data.value, recordedByUserId: user.id, recordedAt: new Date() },
+      });
+    } else {
+      await prisma.testResult.create({
+        data: { memberId: member.id, evaluationId, test: data.test, valueNumeric: data.value, unit, recordedByUserId: user.id },
+      });
+    }
+  }
+  const pct = await syncEvaluationCompletion(evaluationId);
+  afterPanelSave(member.id);
+  return { evaluationId, pct };
+}
+
+const PANEL_BODY_FIELDS = ["weightKg", "heightCm", "bodyFatPct", "muscleMassPct", "waistCm", "hipCm", "basalMetabolism", "notes"] as const;
+type PanelBodyField = (typeof PANEL_BODY_FIELDS)[number];
+
+export async function saveEvalBodyField(data: {
+  memberId: string;
+  evaluationId: string | null;
+  from: string;
+  to: string;
+  field: PanelBodyField;
+  value: number | string | null;
+}) {
+  const { user, member } = await memberForEdit(data.memberId);
+  if (!can.editTests(user) && !can.editBodyComp(user)) throw new Error("Sin permisos");
+  if (!PANEL_BODY_FIELDS.includes(data.field)) throw new Error("Campo inválido");
+
+  let value: number | string | null = data.value;
+  if (data.field === "notes") {
+    value = typeof value === "string" && value.trim() ? value.trim() : null;
+  } else if (value != null) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) throw new Error("Valor inválido");
+    value = data.field === "basalMetabolism" ? Math.round(n) : n;
+  }
+
+  const evaluationId = await ensurePanelEvaluation(member, user.id, data.evaluationId, data.from, data.to);
+  const existing = await prisma.bodyComposition.findFirst({
+    where: { evaluationId },
+    orderBy: { measuredAt: "desc" },
+    select: { id: true },
+  });
+  if (existing) {
+    await prisma.bodyComposition.update({ where: { id: existing.id }, data: { [data.field]: value } });
+  } else if (value != null) {
+    await prisma.bodyComposition.create({
+      data: { memberId: member.id, evaluationId, recordedById: user.id, [data.field]: value },
+    });
+  }
+  const pct = await syncEvaluationCompletion(evaluationId);
+  afterPanelSave(member.id);
+  return { evaluationId, pct };
+}
+
+export async function saveEvalSummary(data: {
+  memberId: string;
+  evaluationId: string | null;
+  from: string;
+  to: string;
+  summary: string;
+}) {
+  const { user, member } = await memberForEdit(data.memberId);
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  const summary = data.summary.trim() || null;
+  if (!summary && !data.evaluationId) return { evaluationId: null, pct: 0 };
+  const evaluationId = await ensurePanelEvaluation(member, user.id, data.evaluationId, data.from, data.to);
+  await prisma.evaluation.update({ where: { id: evaluationId }, data: { summary } });
+  const pct = await syncEvaluationCompletion(evaluationId);
+  afterPanelSave(member.id);
+  return { evaluationId, pct };
 }

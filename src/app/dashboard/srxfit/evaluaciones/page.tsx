@@ -2,9 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
-import { getEvaluationCompliance, getBodyFatMetrics, getMembersEvalStatus } from "@/lib/actions/srxfit";
+import { getBodyFatMetrics, getMembersEvalStatus } from "@/lib/actions/srxfit";
 import { ComplianceGauge } from "./compliance-gauge";
-import { EvaluacionesTable } from "./evaluaciones-table";
+import { EvaluacionesTable, sortEvalRows } from "./evaluaciones-table";
+import { EvalPanel } from "./eval-panel";
+import { loadEvalPanel } from "@/lib/srxfit/eval-panel";
+import { EVAL_COMPLETE_PCT, STATUS_COLOR, STATUS_LABEL, type EvalStatus } from "@/lib/srxfit/eval-score";
 import { EvalDateRangePicker } from "./eval-date-range-picker";
 import { GroupDashboard } from "./group-dashboard";
 import { groupEvaluationStats } from "@/lib/srxfit/group-stats";
@@ -24,7 +27,7 @@ function isoDate(d: Date) {
 export default async function EvaluacionesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sede?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ sede?: string; from?: string; to?: string; socio?: string }>;
 }) {
   const user = await requireAuth();
   if (!can.editTests(user) && !can.manageMembers(user)) redirect("/dashboard/srxfit?forbidden=1");
@@ -44,12 +47,37 @@ export default async function EvaluacionesPage({
 
   const sedeForQuery = sede ? (sede as Sede) : undefined;
 
-  const [group, compliance, fatMetrics, members] = await Promise.all([
+  const [group, fatMetrics, members, panel] = await Promise.all([
     groupEvaluationStats({ sede: sedeForQuery ?? null }),
-    getEvaluationCompliance(sedeForQuery, from, to),
     getBodyFatMetrics(sedeForQuery, from, to),
     getMembersEvalStatus(sedeForQuery, from, to),
+    params.socio ? loadEvalPanel(params.socio, from, to) : null,
   ]);
+
+  // Gauges come from the same rows as the table, so both always agree.
+  const compliance = (sedeForQuery ? [sedeForQuery] : [undefined, "FITNESS_CENTER", "XTREME"] as const).map((s) => {
+    const rows = s ? members.filter((m) => m.sede === s) : members;
+    const evaluated = rows.filter((m) => m.status === "evaluado").length;
+    return {
+      label: s === "FITNESS_CENTER" ? "Fitness Center" : s === "XTREME" ? "Xtreme" : "Ambas sedes",
+      totalActive: rows.length,
+      evaluated,
+      pct: rows.length ? Math.round((evaluated / rows.length) * 100) : 0,
+    };
+  });
+
+  const counts = { pendiente: 0, parcial: 0, evaluado: 0 } as Record<EvalStatus, number>;
+  for (const m of members) counts[m.status]++;
+
+  const openHref = (memberId: string) => buildUrl({ socio: memberId });
+  const closeHref = buildUrl({});
+  // Prev / next follow the table order, so the coach can go down the list.
+  const order = sortEvalRows(members).map((m) => m.memberId);
+  const at = panel ? order.indexOf(panel.member.id) : -1;
+  const prevHref = at > 0 ? openHref(order[at - 1]) : null;
+  const nextHref = at >= 0 && at < order.length - 1 ? openHref(order[at + 1]) : null;
+  const panelAllowed =
+    panel && (!scopedSede || panel.member.sede === scopedSede || members.some((m) => m.memberId === panel.member.id));
 
   return (
     <div className="p-8 space-y-8">
@@ -100,7 +128,7 @@ export default async function EvaluacionesPage({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           % Cumplimiento de evaluaciones
         </h2>
-        <div className="flex flex-wrap gap-8 items-center">
+        <div className="flex flex-wrap gap-4">
           {compliance.map((c) => (
             <ComplianceGauge
               key={c.label}
@@ -112,34 +140,31 @@ export default async function EvaluacionesPage({
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          Verde ≥ 90% · Amarillo ≥ 60% · Rojo &lt; 60% — período: {from} → {to}
+          Un socio está evaluado cuando su evaluación del período llega al {EVAL_COMPLETE_PCT}% (cada test pesa distinto).
+          Medidor: verde ≥ 90% · ámbar ≥ 60% · rojo &lt; 60% — período: {from} → {to}
         </p>
       </section>
 
       {/* Global metrics */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-lg border p-5 space-y-1">
+        <div className="rounded-xl border border-stone-200 bg-white p-5 space-y-1">
           <p className="text-3xl font-bold">{fatMetrics.totalKgFatLost} kg</p>
           <p className="text-sm text-muted-foreground">Grasa perdida (total global)</p>
           <p className="text-xs text-muted-foreground">
             Entre socios con 2+ mediciones en el período
           </p>
         </div>
-        <div className="rounded-lg border p-5 space-y-1">
+        <div className="rounded-xl border border-stone-200 bg-white p-5 space-y-1">
           <p className="text-3xl font-bold">{fatMetrics.membersImproved}</p>
           <p className="text-sm text-muted-foreground">Socios con pérdida de grasa</p>
           <p className="text-xs text-muted-foreground">
             De {members.length} socios activos
           </p>
         </div>
-        <div className="rounded-lg border p-5 space-y-1">
-          <p className="text-3xl font-bold">
-            {members.filter((m) => m.status === "evaluado").length}
-          </p>
-          <p className="text-sm text-muted-foreground">Evaluaciones completadas</p>
-          <p className="text-xs text-muted-foreground">
-            {members.filter((m) => m.status === "parcial").length} en progreso
-          </p>
+        <div className="rounded-xl border border-stone-200 bg-white p-5 space-y-1">
+          <p className="text-3xl font-bold">{counts.evaluado}</p>
+          <p className="text-sm text-muted-foreground">Evaluaciones completas (≥ {EVAL_COMPLETE_PCT}%)</p>
+          <p className="text-xs text-muted-foreground">{counts.parcial} en progreso</p>
         </div>
       </section>
 
@@ -172,20 +197,31 @@ export default async function EvaluacionesPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Socios — {members.length} activos
           </h2>
-          <div className="flex gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-red-400" /> Pendiente
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-amber-400" /> Parcial
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-400" /> Evaluado
-            </span>
+          <div className="flex gap-3 text-xs text-muted-foreground">
+            {(["pendiente", "parcial", "evaluado"] as const).map((k) => (
+              <span key={k} className="flex items-center gap-1.5">
+                <span className="inline-block size-2 rounded-full" style={{ backgroundColor: STATUS_COLOR[k] }} />
+                {STATUS_LABEL[k]} · {counts[k]}
+              </span>
+            ))}
           </div>
         </div>
-        <EvaluacionesTable members={members} from={from} to={to} />
+        <EvaluacionesTable members={members} openHref={openHref} />
       </section>
+
+      {panel && panelAllowed && (
+        <EvalPanel
+          key={panel.member.id}
+          data={panel}
+          from={from}
+          to={to}
+          closeHref={closeHref}
+          prevHref={prevHref}
+          nextHref={nextHref}
+          canEditTests={can.editTests(user)}
+          canEditBody={can.editTests(user) || can.editBodyComp(user)}
+        />
+      )}
     </div>
   );
 }
