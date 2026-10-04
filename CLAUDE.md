@@ -142,6 +142,11 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
+**Última sesión (4 oct 2026, tarde):** PR #132 en producción — Contabilidad rediseñada estilo QuickBooks:
+módulos Inicio · Clientes · Proveedores · Trabajadores · Caja y Bancos · Empresa · Reportes (`(finanzas)/modules.ts`),
+portada con flujo de trabajo y tarjetas con gráficos, vista consolidada, directorio de proveedores, estados consolidados.
+Sin esquema. Siguiente: empresas en BD (para vender la app a otros gimnasios) y nómina — ver `docs/contabilidad-v2.md`.
+
 **Última sesión (3–4 oct 2026):** PRs #123–#130 en producción (main `96812c1`):
 - **Ficha única por persona** (socios y leads, `src/components/ficha/`, timeline en `src/lib/ficha/timeline.ts`) con pestaña WhatsApp (responder y plantillas), edición en línea de propiedades y segmentos (automáticos + listas manuales: tablas `Segment`/`SegmentEntry`, migración `20261004000000_segment_lists` ya aplicada).
 - **Menú lateral** grafito con grupos plegables, escondible (click o `[`).
