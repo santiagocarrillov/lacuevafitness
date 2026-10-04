@@ -2,6 +2,7 @@
 // Used by lib/actions/bank.ts and by scripts/test-banco.ts, which runs the
 // write paths inside a rolled-back transaction.
 
+import { resolveSupplier } from "@/lib/finance/suppliers";
 import { PRIVATE_CATEGORIES } from "@/lib/expenses/core";
 import { prisma } from "@/lib/prisma";
 import { ecuadorDateString } from "@/lib/timezone";
@@ -240,6 +241,7 @@ export async function classifyInTx(
         const e = await tx.expense.create({
           data: {
             sede, category: decision.category, description: decision.description || line.description,
+            supplierId: await resolveSupplier(tx, { name: decision.supplierName }),
             supplierName: decision.supplierName || null, amountCents: abs, date: day, paidAt: day, status: "PAID",
             paymentMethod: payMethodFor(line.description, decision.category), bankTransactionId: line.id, createdById: userId,
             isPrivate: PRIVATE_CATEGORIES.includes(decision.category),

@@ -5,7 +5,7 @@ import { ecuadorDateString } from "@/lib/timezone";
 import { getExpenseForEdit, getReceiptUrl } from "@/lib/actions/expenses";
 import { PayExpenseForm } from "./pay-form";
 import { ExpenseEditor } from "../expense-editor";
-import { expenseScope } from "../shared";
+import { expenseScope, supplierOptions } from "../shared";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,11 @@ export default async function EditarGastoPage({ params }: { params: Promise<{ id
       <div>
         <Link href={`/dashboard/gastos?mes=${ymd(e.date)!.slice(0, 7)}`} className="text-sm text-muted-foreground hover:underline">← Gastos</Link>
         <h1 className="text-2xl font-semibold">{editable ? "Editar gasto" : "Gasto"}</h1>
+        {e.supplierId && (
+          <Link href={`/dashboard/finanzas/proveedores/${e.supplierId}`} className="text-sm text-primary hover:underline">
+            Ver proveedor: {e.supplierName ?? "—"}
+          </Link>
+        )}
         {e.voidedAt && <p className="text-sm text-destructive">Anulado: {e.voidReason}</p>}
         {!editable && !e.voidedAt && <p className="text-sm text-muted-foreground">Ya fue revisado: si hay que corregir algo, avísale a Isabel.</p>}
         {receiptUrl && (
@@ -51,9 +56,11 @@ export default async function EditarGastoPage({ params }: { params: Promise<{ id
           accounts={scope.accounts}
           isAdmin={!scope.full}
           today={ecuadorDateString()}
+          suppliers={await supplierOptions()}
           initial={{
             id: e.id,
             sede: e.sede,
+            supplierId: e.supplierId,
             supplierName: e.supplierName,
             supplierRuc: e.supplierRuc,
             documentType: e.documentType,

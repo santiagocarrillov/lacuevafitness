@@ -17,7 +17,7 @@ import { PageHeader } from "../(finanzas)/page-header";
 import { Panel, Stat } from "../(finanzas)/blocks";
 import { PoolEntryForm } from "./pool-form";
 import { VoidPaymentButton } from "./void-button";
-import { RangeFilter } from "./range-filter";
+import { RangeFilter } from "@/components/list/range-filter";
 
 export const dynamic = "force-dynamic";
 

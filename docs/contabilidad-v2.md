@@ -70,3 +70,17 @@ Cada punto toca el esquema: se discute antes de construir (regla del repo).
 - **Anular o cambiar monto/fecha de un cobro** (`assertCanChange` en `src/lib/actions/payments.ts`): bloqueado si
   está conciliado con el banco (deshacer conciliación primero), si tiene factura vigente (anularla primero) o si su
   mes está cerrado. Un cobro confirmado solo lo toca contabilidad; recepción puede corregir su propio cobro el mismo día.
+
+## Proveedores — 4 oct 2026
+
+- Tabla `Supplier` (migración `20261004180000_suppliers`, aplicada): razón social, nombre comercial, RUC/cédula
+  (único), contacto, plazo de pago, cuenta de gasto habitual. `Expense.supplierId` + copia de nombre/RUC.
+- **Nadie registra proveedores antes**: cada gasto se enlaza solo al guardar (`resolveSupplier` en
+  `src/lib/finance/suppliers.ts`): por RUC, o por nombre sin tildes/mayúsculas; si no existe, se crea. Igual al
+  importar XML del SRI y al clasificar un débito del banco como gasto.
+- Editor de gastos: busca en el directorio; al elegir, propone su cuenta habitual y el vencimiento según su plazo.
+- Gastos con filtros en la URL (`src/lib/expenses/filters.ts`): rango, empresa, categoría, documento, estado
+  (pagado / por pagar / vencido / anulado), proveedor, antigüedad y búsqueda.
+- **Antigüedad de cuentas por pagar** (Por vencer · 1–30 · 31–60 · 61–90 · +90) por proveedor, como el A/P Aging
+  de QuickBooks: en Gastos › Por pagar, en Proveedores y en la ficha de cada proveedor.
+- Pendiente: pagar varias facturas de un proveedor a la vez, pagos parciales y retenciones en la fuente.

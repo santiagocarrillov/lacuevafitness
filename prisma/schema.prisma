@@ -840,8 +840,11 @@ model Expense {
   date              DateTime          @db.Date // fecha del gasto / emisión del documento
   recurring         Boolean           @default(false) // Gasto fijo mensual
   notes             String?
-  supplierName      String?
+  supplierName      String? // copia al registrar (el documento no cambia si se edita el proveedor)
   supplierRuc       String?
+  // Proveedor del directorio (4 oct 2026). Se asigna solo al guardar (por RUC o nombre).
+  supplierId        String?
+  supplier          Supplier?         @relation(fields: [supplierId], references: [id])
   documentType      ExpenseDocType    @default(SIN_DOCUMENTO)
   documentNumber    String? // 001-001-000000123
   sriAccessKey      String?           @unique // clave de acceso de 49 dígitos (Fase 2)
@@ -871,6 +874,30 @@ model Expense {
   @@index([status])
   @@index([bankTransactionId])
   @@index([sede, isPrivate])
+  @@index([supplierId])
+}
+
+// Directorio de proveedores (4 oct 2026): a quién le compra la empresa. Cada
+// gasto se enlaza solo por RUC (o por nombre si no tiene). Plazo de pago y
+// cuenta habitual llenan el gasto nuevo.
+model Supplier {
+  id                 String     @id @default(cuid())
+  name               String // razón social (o nombre, si no tiene RUC)
+  tradeName          String? // nombre comercial
+  taxIdType          TaxIdType?
+  taxId              String?    @unique // RUC o cédula
+  email              String?
+  phone              String?
+  address            String?
+  contactName        String?
+  defaultAccountCode String? // cuenta de gasto habitual, p. ej. "5.3.01"
+  paymentTermsDays   Int? // plazo de pago: vencimiento sugerido = fecha + días
+  notes              String?
+  active             Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  expenses Expense[]
 }
 
 // Líneas de un gasto (estilo QuickBooks): cada una a su cuenta de gasto o de

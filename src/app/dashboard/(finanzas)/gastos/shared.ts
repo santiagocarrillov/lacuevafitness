@@ -16,3 +16,13 @@ export async function expenseScope(user: User) {
   ) as Record<Sede, { code: string; name: string; category: string | null }[]>;
   return { full, sedes, accounts };
 }
+
+/** Active suppliers for the expense editor's picker. */
+export function supplierOptions() {
+  return prisma.supplier.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, tradeName: true, taxId: true, defaultAccountCode: true, paymentTermsDays: true },
+    take: 2000,
+  });
+}

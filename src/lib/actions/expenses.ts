@@ -5,6 +5,10 @@
 // only on their sede and never sees or records personnel costs (5.2.x).
 // Design: docs/gastos-modulo3.md. Expenses are voided, never deleted.
 
+import { SEARCH_SOURCES, idsMatching } from "@/lib/text-search";
+import { expenseWhere, overdueWhere, type ExpenseListFilters } from "@/lib/expenses/filters";
+import { ecuadorDateString } from "@/lib/timezone";
+import { resolveSupplier } from "@/lib/finance/suppliers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
@@ -136,6 +140,8 @@ export async function getUploadedReceiptUrl(path: string) {
 export type ExpenseDraft = {
   id?: string;
   sede: Sede;
+  /** Picked from the directory; otherwise found/created by RUC or name. */
+  supplierId?: string | null;
   supplierName: string;
   supplierRuc?: string;
   documentType: ExpenseDocType;
@@ -200,6 +206,7 @@ export async function saveExpense(input: ExpenseDraft): Promise<{ id: string }> 
   const data = {
     sede: input.sede,
     category,
+    supplierId: await resolveSupplier(prisma, { id: input.supplierId, name: supplierName, taxId: supplierRuc }),
     description: description.slice(0, 200),
     amountCents: totals.totalCents,
     subtotalCents: totals.subtotalCents,
@@ -300,6 +307,54 @@ export async function listExpensesScoped(ym: string, opts: ExpenseFilters = {}) 
   });
   const name = new Map(users.map((u) => [u.id, u.fullName]));
   return rows.map((r) => ({ ...r, createdByName: r.createdById ? name.get(r.createdById) ?? null : null }));
+}
+
+/** Gastos list with its URL filters, plus totals of the whole filtered set. */
+export async function listExpensesFiltered(f: ExpenseListFilters, pageSize = 100) {
+  const acc = await requireExpenses();
+  const today = ecuadorDateString();
+  const matchIds = f.q ? await idsMatching(SEARCH_SOURCES.expense, f.q) : null;
+  const where: Prisma.ExpenseWhereInput = { AND: [visibleWhere(acc), expenseWhere({ ...f, sede: acc.sede ?? f.sede }, today, matchIds)] };
+  const live: Prisma.ExpenseWhereInput = { AND: [where, { voidedAt: null }] };
+  const [rows, total, sum, payable, overdue, deductible] = await Promise.all([
+    prisma.expense.findMany({
+      where,
+      include: {
+        lines: { orderBy: { position: "asc" }, include: { account: { select: { code: true, name: true } } } },
+        supplier: { select: { id: true, name: true, tradeName: true } },
+      },
+      orderBy: f.view === "porpagar" ? [{ dueDate: { sort: "asc", nulls: "last" } }, { date: "asc" }] : [{ date: "desc" }, { createdAt: "desc" }],
+      skip: (f.page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.expense.count({ where }),
+    prisma.expense.aggregate({ where: live, _sum: { amountCents: true }, _count: { _all: true } }),
+    prisma.expense.aggregate({ where: { AND: [live, { status: "PENDING" }] }, _sum: { amountCents: true }, _count: { _all: true } }),
+    prisma.expense.aggregate({ where: { AND: [where, overdueWhere(today)] }, _sum: { amountCents: true }, _count: { _all: true } }),
+    prisma.expense.aggregate({
+      where: { AND: [live, { documentType: { in: ["FACTURA", "LIQUIDACION_COMPRA"] }, supplierRuc: { not: null } }] },
+      _sum: { amountCents: true },
+    }),
+  ]);
+  const users = await prisma.user.findMany({
+    where: { id: { in: [...new Set(rows.map((r) => r.createdById).filter((x): x is string => !!x))] } },
+    select: { id: true, fullName: true },
+  });
+  const name = new Map(users.map((u) => [u.id, u.fullName]));
+  return {
+    rows: rows.map((r) => ({ ...r, createdByName: r.createdById ? name.get(r.createdById) ?? null : null })),
+    total,
+    page: f.page,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    amountCents: sum._sum.amountCents ?? 0,
+    count: sum._count._all,
+    payableCents: payable._sum.amountCents ?? 0,
+    payableCount: payable._count._all,
+    overdueCents: overdue._sum.amountCents ?? 0,
+    overdueCount: overdue._count._all,
+    deductibleCents: deductible._sum.amountCents ?? 0,
+    full: acc.full,
+  };
 }
 
 export async function countPendingReview() {
