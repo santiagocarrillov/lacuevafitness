@@ -139,12 +139,13 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
-**Última sesión (3–4 oct 2026):** PRs #123–#128 en producción (main `c768ff9`):
+**Última sesión (3–4 oct 2026):** PRs #123–#130 en producción (main `96812c1`):
 - **Ficha única por persona** (socios y leads, `src/components/ficha/`, timeline en `src/lib/ficha/timeline.ts`) con pestaña WhatsApp (responder y plantillas), edición en línea de propiedades y segmentos (automáticos + listas manuales: tablas `Segment`/`SegmentEntry`, migración `20261004000000_segment_lists` ya aplicada).
 - **Menú lateral** grafito con grupos plegables, escondible (click o `[`).
 - **Listas Leads/Socios** estilo Gambit (`src/components/list/`): vistas, resumen clicable, filtros en la URL. Los números del embudo del Resumen abren Leads filtrado.
 - **Asistencia → Calendario** (`?vista=calendario`).
 - **WhatsApp tipo CRM**: tres paneles, tarjeta del contacto, Nota interna y vista **Tablero** por etapa (`?vista=tablero`).
+- **Seguridad** (#130): admins con sede solo editan y notifican socios de su sede; las notas de socios no se borran.
 
 **Próximo paso concreto:**
 - QA con datos reales (nada de lo anterior se vio con login): fichas, edición en línea, listas, plantilla a un número propio, chat + tarjeta del contacto en el inbox, tablero, filtros, calendario.
