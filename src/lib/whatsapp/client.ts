@@ -146,6 +146,8 @@ export async function sendTemplate(
   variables: string[] = [],
   /** Payloads for the template's quick-reply buttons, in button order. */
   quickReplies: string[] = [],
+  /** Dynamic suffix of the template's URL button (first button), e.g. a booking code. */
+  urlButton?: string,
 ): Promise<SendResult> {
   const components: unknown[] = [];
   if (variables.length) {
@@ -153,6 +155,9 @@ export async function sendTemplate(
       type: "body",
       parameters: variables.map((v) => ({ type: "text", text: v })),
     });
+  }
+  if (urlButton) {
+    components.push({ type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: urlButton }] });
   }
   quickReplies.forEach((payload, index) => {
     components.push({

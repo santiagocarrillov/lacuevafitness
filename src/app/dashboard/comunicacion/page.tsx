@@ -31,6 +31,9 @@ export default async function ComunicacionPage({
         </div>
         {user.role === "OWNER" && (
           <div className="flex shrink-0 items-center gap-4 text-xs font-medium">
+            <Link href="/dashboard/comunicacion/avisos" className="text-primary hover:underline">
+              Avisos
+            </Link>
             <Link href="/dashboard/comunicacion/plantillas" className="text-primary hover:underline">
               Plantillas
             </Link>

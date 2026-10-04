@@ -30,6 +30,7 @@
     "test:nutricion-barcode": "tsx scripts/test-nutricion-barcode.ts",
     "test:nutricion-horarios": "tsx --env-file=.env scripts/test-nutricion-horarios.ts",
     "test:evaluaciones-grupo": "tsx --env-file=.env scripts/test-evaluaciones-grupo.ts",
+    "test:avisos": "tsx --env-file=.env scripts/test-avisos.ts",
     "test:finanzas": "tsx scripts/test-finanzas.ts",
     "test:banco": "tsx scripts/test-banco.ts",
     "test:sri": "tsx scripts/test-sri.ts",

@@ -133,6 +133,24 @@ estado de revisión (`GET /{WABA}/message_templates`). Ya no hace falta el edito
 | `socio_medicion_pendiente` | Utility | nombre, semanas | URL de agendamiento |
 
 El `{{1}}` del botón es el código de agendamiento del socio (página `/cita/[código]`).
-Pendiente al aprobarse: que `sendTemplate` mande el parámetro del botón URL y los disparadores
-automáticos (ausencia 3 días, < 3 visitas/semana en 2 semanas, cumpleaños, tests pendientes tras el
-intento del admin, citas por agendar).
+### Envíos automáticos (5 oct 2026)
+
+`src/lib/whatsapp/member-notices.ts` + cron `/api/cron/member-notices` (10:00 Ecuador, 15:00 UTC).
+Pantalla **WhatsApp › Avisos** (`/dashboard/comunicacion/avisos`, OWNER): interruptor por aviso
+(`MemberNoticeSetting`; apagado = modo prueba, muestra a quién le escribiría) y últimos enviados.
+Sale de verdad solo si está prendido **y** Meta aprobó la plantilla. Cada aviso tiene una clave única
+(`MemberNotice.key`): nunca sale dos veces. Máx. 25 por aviso por día. La respuesta del socio llega al
+inbox con el bot en pausa (la atiende el staff).
+
+| Aviso | Regla |
+|---|---|
+| Días sin venir | Paga, venía seguido (≥ 6 visitas en 30 días), al 3.er día sin venir sin contar domingos. Una vez por ausencia. |
+| Menos de 3 por semana | 3–5 visitas en 14 días. Máx. una al mes; no si recibió "días sin venir" esa semana. |
+| Cumpleaños | Activos y en evaluación con fecha de nacimiento. |
+| Cita del trial | Por agendar (trial $9) con fecha límite futura; crea el enlace `/cita/[código]` del botón. |
+| Medición pendiente | Por agendar (18 semanas sin medir); con enlace. |
+| Recordatorio | Citas de mañana. |
+| Faltan tests | Solo a mano: botón "Ya intentamos: avisar" en SRXFIT › Evaluaciones (lista sin datos en dos ciclos). |
+
+`sendTemplate(..., urlButton)` manda el código del botón URL. Pruebas: `npm run test:avisos` (modo prueba).
+Primer corte (5 oct, modo prueba): 5 días sin venir, 28 menos de 3/semana, 7 trials, 4 mediciones, 2 recordatorios.
