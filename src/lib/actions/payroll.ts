@@ -209,6 +209,9 @@ export async function reopenPayrollRun(runId: string) {
   await requirePayroll();
   const run = await prisma.payrollRun.findUniqueOrThrow({ where: { id: runId } });
   if (run.status !== "APPROVED") throw new Error("Solo se reabre un rol aprobado y sin pagar.");
+  if (await prisma.payrollLine.count({ where: { runId, bankTransactionId: { not: null } } })) {
+    throw new Error("Ya hay sueldos de este rol conciliados con el banco: deshaz esa conciliación en Caja y Bancos primero.");
+  }
   const [y, m] = run.period.split("-").map(Number);
   await assertOpen(prisma, run.sede, new Date(Date.UTC(y, m, 0)));
   await prisma.payrollRun.update({ where: { id: runId }, data: { status: "DRAFT", approvedAt: null, approvedById: null } });

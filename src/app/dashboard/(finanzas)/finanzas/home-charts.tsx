@@ -48,8 +48,8 @@ export function DonutChart({ slices, totalLabel }: { slices: { label: string; ce
   );
 }
 
-/** Money in vs. money out, last 12 months. Clicking a month opens it. */
-export function CashFlowChart({ data, current }: { data: { ym: string; incomeCents: number; expensesCents: number }[]; current: string }) {
+/** Money in vs. money out, last 12 months. Clicking a month opens it (`basePath?mes=`). */
+export function CashFlowChart({ data, current, basePath = "/dashboard/finanzas" }: { data: { ym: string; incomeCents: number; expensesCents: number }[]; current: string; basePath?: string }) {
   const router = useRouter();
   const rows = data.map((d) => ({ ...d, label: monthShort(d.ym) }));
   return (
@@ -61,7 +61,7 @@ export function CashFlowChart({ data, current }: { data: { ym: string; incomeCen
         margin={{ top: 8, right: 4, left: 4, bottom: 0 }}
         onClick={(s) => {
           const i = Number((s as { activeTooltipIndex?: number | string }).activeTooltipIndex);
-          if (Number.isFinite(i) && rows[i]) router.push(`/dashboard/finanzas?mes=${rows[i].ym}`);
+          if (Number.isFinite(i) && rows[i]) router.push(`${basePath}${basePath.includes("?") ? "&" : "?"}mes=${rows[i].ym}`);
         }}
         className="cursor-pointer"
       >

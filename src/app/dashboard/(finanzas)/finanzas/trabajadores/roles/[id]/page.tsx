@@ -52,6 +52,8 @@ export default async function RolPage({ params }: { params: Promise<{ id: string
     (l) => (l.employee.monthlyDecimoTercero ? 0 : l.decimoTerceroCents) + (l.employee.monthlyDecimoCuarto ? 0 : l.decimoCuartoCents) + l.vacationCents,
   );
   const cost = sum((l) => l.grossCents + l.iessEmployerCents + l.fondosReservaCents + l.decimoTerceroCents + l.decimoCuartoCents + l.vacationCents);
+  const payable = runLines.filter((l) => l.netCents > 0).length;
+  const bankPaid = runLines.filter((l) => l.netCents > 0 && l.bankTransactionId).length;
   const [y, m] = run.period.split("-").map(Number);
   const planillaDue = new Date(Date.UTC(y, m, PAYROLL_DEADLINES.iessPlanillaDay)).toISOString().slice(0, 10);
 
@@ -93,7 +95,15 @@ export default async function RolPage({ params }: { params: Promise<{ id: string
         <Panel title="En la contabilidad">
           <p className="text-sm text-muted-foreground">
             Asiento del rol al {new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10)}: sueldos (5.2.01) y beneficios con aporte patronal (5.2.03) contra sueldos
-            por pagar, IESS, décimos, vacaciones y retenciones. {run.status === "PAID" ? "El pago de sueldos salió de la cuenta puente hasta conciliarlo con el banco." : ""}{" "}
+            por pagar, IESS, décimos, vacaciones y retenciones.{" "}
+            {bankPaid === payable && payable > 0
+              ? "Todos los sueldos están conciliados con el banco."
+              : bankPaid > 0
+                ? `${bankPaid} de ${payable} sueldos ya salieron del banco (conciliados en Caja y Bancos).`
+                : run.status === "PAID"
+                  ? "El pago de sueldos salió de la cuenta puente hasta conciliarlo con el banco."
+                  : "Si pagas por transferencia, concilia cada débito en Caja y Bancos › Conciliar (opción «Sueldos») y el rol queda pagado solo."}{" "}
+            <Link href="/dashboard/finanzas/banco/conciliar" className="text-[#2f6fb0] hover:underline">Conciliar ›</Link>{" "}
             <Link href={`/dashboard/contabilidad?tab=diario&mes=${run.period}&entidad=${run.sede}`} className="text-[#2f6fb0] hover:underline">Ver en el libro diario ›</Link>
           </p>
         </Panel>

@@ -36,6 +36,7 @@ export const SEARCH_SOURCES = {
   payer: table("Payer", ["name", "taxId", "email"]),
   recipe: table("Recipe", ["title"]),
   supplier: table("Supplier", ["name", "tradeName", "taxId", "email", "contactName"]),
+  bankTxn: table("BankTransaction", ["description", "counterparty", "reference", "notes"]),
   expense: {
     from: `"Expense" e LEFT JOIN "Supplier" s ON s."id" = e."supplierId"`,
     id: `e."id"`,

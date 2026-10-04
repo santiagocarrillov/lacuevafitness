@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useState, useTransition } from "react";
@@ -11,12 +12,20 @@ import {
   applySafeSuggestions,
   classifyLine,
   createBankAccount,
+  deactivateBankAccount,
   deactivateRule,
   importStatement,
   undoLine,
 } from "@/lib/actions/bank";
 import type { InboxLine } from "@/lib/finance/bank-core";
-import { decisionLabel, type Decision } from "@/lib/finance/bank-suggest";
+import {
+  LIABILITY_CODES,
+  LIABILITY_LABELS,
+  decisionLabel,
+  duePeriod,
+  type Decision,
+  type LiabilityTo,
+} from "@/lib/finance/bank-suggest";
 import {
   CAPITAL_KIND_LABELS,
   ENTITIES,
@@ -42,7 +51,7 @@ function errMsg(err: unknown) {
 export function AccountForm() {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const done = () => router.push("/dashboard/finanzas/banco");
+  const done = () => router.push("/dashboard/finanzas/banco/cuentas");
   return (
         <form
           className="space-y-3"
@@ -101,7 +110,8 @@ export function AccountForm() {
   );
 }
 
-export function ImportForm({ accounts }: { accounts: { id: string; name: string }[] }) {
+export function ImportForm({ accounts, defaultAccountId }: { accounts: { id: string; name: string }[]; defaultAccountId?: string }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   return (
     <form
@@ -118,7 +128,7 @@ export function ImportForm({ accounts }: { accounts: { id: string; name: string 
                 (r.duplicates ? ` · ${r.duplicates} ya estaban` : "") +
                 (r.autoApplied ? ` · ${r.autoApplied} clasificados por reglas` : ""),
             );
-            form.reset();
+            router.push(`/dashboard/finanzas/banco/conciliar?cuenta=${fd.get("accountId")}`);
           } catch (err) {
             toast.error(errMsg(err));
           }
@@ -127,7 +137,7 @@ export function ImportForm({ accounts }: { accounts: { id: string; name: string 
     >
       <div className="space-y-1">
         <Label className="text-xs">Cuenta</Label>
-        <select name="accountId" className={`${selectCls} min-w-48`} required>
+        <select name="accountId" className={`${selectCls} min-w-48`} defaultValue={defaultAccountId} required>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>{a.name}</option>
           ))}
@@ -167,7 +177,7 @@ export function ApplySafeButton({ accountId, count }: { accountId?: string; coun
 
 // ── Inbox row ───────────────────────────────────────────────────────────────
 
-type Mode = "MEMBER" | "UNASSIGNED" | "OTHER_INCOME" | "EXPENSE" | "CAPITAL" | "LOAN" | "PERSONAL" | "INTERNAL" | "IGNORE";
+type Mode = "MEMBER" | "UNASSIGNED" | "OTHER_INCOME" | "EXPENSE" | "PAYROLL" | "LIABILITY" | "CAPITAL" | "LOAN" | "PERSONAL" | "INTERNAL" | "IGNORE";
 
 const CREDIT_MODES: { key: Mode; label: string }[] = [
   { key: "MEMBER", label: "Pago de socio" },
@@ -180,6 +190,8 @@ const CREDIT_MODES: { key: Mode; label: string }[] = [
 ];
 const DEBIT_MODES: { key: Mode; label: string }[] = [
   { key: "EXPENSE", label: "Gasto" },
+  { key: "PAYROLL", label: "Sueldos" },
+  { key: "LIABILITY", label: "IESS / SRI" },
   { key: "LOAN", label: "Cuota de préstamo" },
   { key: "CAPITAL", label: "Devolución / retiro" },
   { key: "PERSONAL", label: "Personal" },
@@ -195,6 +207,8 @@ function modeOf(d: Decision | undefined, credit: boolean): Mode {
     case "EXPENSE": return "EXPENSE";
     case "CAPITAL": return "CAPITAL";
     case "LOAN_PAYMENT": return "LOAN";
+    case "PAYROLL_NET": return "PAYROLL";
+    case "LIABILITY_PAYMENT": return "LIABILITY";
     case "PERSONAL": return "PERSONAL";
     case "INTERNAL_TRANSFER": return "INTERNAL";
     case "IGNORE": return "IGNORE";
@@ -206,16 +220,44 @@ function day(d: Date) {
   return new Date(d).toLocaleDateString("es-EC", { day: "2-digit", month: "short", timeZone: "America/Guayaquil" });
 }
 
-export function InboxRow({ line }: { line: InboxLine }) {
+const cents = (v: string) => Math.round(Number(v.replace(",", ".") || 0) * 100);
+const usd = (c: number) => (c / 100).toFixed(2);
+
+export function InboxRow({
+  line,
+  loanAccounts = [],
+  canEdit = true,
+  defaultOpen = false,
+}: {
+  line: InboxLine;
+  loanAccounts?: { code: string; name: string }[];
+  canEdit?: boolean;
+  defaultOpen?: boolean;
+}) {
   const credit = line.amountCents > 0;
+  const abs = Math.abs(line.amountCents);
   const s = line.suggestion;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [mode, setMode] = useState<Mode>(modeOf(s?.decision, credit));
   const [pending, start] = useTransition();
 
   const initialIds = s?.decision.type === "MEMBER_PAYMENTS" ? s.decision.paymentIds : [];
   const [paymentIds, setPaymentIds] = useState<string[]>(initialIds);
   const isCard = s?.decision.type === "MEMBER_PAYMENTS" && !!s.decision.commission;
+  const [payrollIds, setPayrollIds] = useState<string[]>(s?.decision.type === "PAYROLL_NET" ? s.decision.lineIds : []);
+
+  // IESS / SRI breakdown: starts from the suggestion, else from what the books owe.
+  const sugLiab = s?.decision.type === "LIABILITY_PAYMENT" ? s.decision : null;
+  const initialTo: LiabilityTo = sugLiab?.to ?? line.due?.to ?? (/sri/i.test(`${line.description} ${line.counterparty ?? ""}`) ? "SRI" : "IESS");
+  const [liabTo, setLiabTo] = useState<LiabilityTo>(initialTo);
+  const partsFor = (to: LiabilityTo) => {
+    const src = sugLiab?.to === to ? sugLiab.parts : line.due?.to === to ? line.due.parts : [];
+    return Object.fromEntries(LIABILITY_CODES[to].map((c) => [c, usd(Math.abs(src.find((p) => p.code === c)?.cents ?? 0))]));
+  };
+  const [liabParts, setLiabParts] = useState<Record<string, string>>(partsFor(initialTo));
+  const [liabExtra, setLiabExtra] = useState(sugLiab ? usd(sugLiab.extraCents) : "0.00");
+  const liabTotal =
+    LIABILITY_CODES[liabTo].reduce((a, c) => a + (c === "1.3.01" ? -1 : 1) * cents(liabParts[c] ?? "0"), 0) + cents(liabExtra);
 
   function run(decision: Decision, remember?: { pattern: string }) {
     start(async () => {
@@ -240,7 +282,19 @@ export function InboxRow({ line }: { line: InboxLine }) {
       case "OTHER_INCOME": d = { type: "OTHER_INCOME", category: get("otherCategory") as OtherIncomeCategory, description: get("description") }; break;
       case "EXPENSE": d = { type: "EXPENSE", category: get("category") as ExpenseCategory, description: get("description"), supplierName: get("supplierName") || undefined }; break;
       case "CAPITAL": d = { type: "CAPITAL", kind: get("capitalKind") as CapitalKind, person: get("person") }; break;
-      case "LOAN": d = { type: "LOAN_PAYMENT", interestCents: Math.round(Number(get("interest").replace(",", ".") || 0) * 100) }; break;
+      case "LOAN": d = { type: "LOAN_PAYMENT", interestCents: cents(get("interest")), principalCode: get("principalCode") || undefined }; break;
+      case "PAYROLL": d = { type: "PAYROLL_NET", lineIds: payrollIds }; break;
+      case "LIABILITY":
+        d = {
+          type: "LIABILITY_PAYMENT",
+          to: liabTo,
+          period: get("period"),
+          parts: LIABILITY_CODES[liabTo]
+            .map((c) => ({ code: c, cents: (c === "1.3.01" ? -1 : 1) * cents(liabParts[c] ?? "0"), label: LIABILITY_LABELS[c] }))
+            .filter((p) => p.cents !== 0),
+          extraCents: cents(liabExtra),
+        };
+        break;
       case "PERSONAL": d = { type: "PERSONAL" }; break;
       case "INTERNAL": d = { type: "INTERNAL_TRANSFER" }; break;
       default: d = { type: "IGNORE" };
@@ -253,14 +307,15 @@ export function InboxRow({ line }: { line: InboxLine }) {
     ? line.sede === "XTREME" ? ["SHAREHOLDER_LOAN", "CONTRIBUTION"] : ["CONTRIBUTION"]
     : line.sede === "XTREME" ? ["LOAN_REPAYMENT"] : ["WITHDRAWAL"];
   const selectedSum = line.candidates.filter((c) => paymentIds.includes(c.id)).reduce((a, c) => a + c.amountCents, 0);
-  const canRemember = mode !== "MEMBER" && mode !== "UNASSIGNED" && mode !== "LOAN" && mode !== "IGNORE";
+  const payrollSum = line.payroll.filter((p) => payrollIds.includes(p.id)).reduce((a, p) => a + p.netCents, 0);
+  const canRemember = ["OTHER_INCOME", "EXPENSE", "CAPITAL", "PERSONAL", "INTERNAL"].includes(mode);
 
   return (
     <li className="border-b last:border-0 py-3">
       <div className="flex flex-wrap items-start gap-x-4 gap-y-1">
         <div className="w-16 shrink-0 text-xs text-muted-foreground pt-0.5">{day(line.postedAt)}</div>
         <div className="flex-1 min-w-48">
-          <p className="text-sm">{line.counterparty ?? line.description}</p>
+          <Link href={`/dashboard/finanzas/banco/movimientos/${line.id}`} className="text-sm hover:underline">{line.counterparty ?? line.description}</Link>
           <p className="text-xs text-muted-foreground">
             {line.counterparty ? `${line.description} · ` : ""}{line.accountName}
           </p>
@@ -274,16 +329,18 @@ export function InboxRow({ line }: { line: InboxLine }) {
               <span className={`text-xs rounded px-2 py-0.5 ${s.confident ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`} title={decisionLabel(s.decision)}>
                 {s.reason}
               </span>
-              {!(sd?.type === "MEMBER_PAYMENTS" && sd.paymentIds.length === 0) && (
+              {canEdit && !(sd?.type === "MEMBER_PAYMENTS" && sd.paymentIds.length === 0) && (
                 <Button size="xs" disabled={pending} onClick={() => run(s.decision)}>Aceptar</Button>
               )}
             </>
           )}
-          <Button size="xs" variant="outline" onClick={() => setOpen((v) => !v)}>{open ? "Cerrar" : s ? "Otra" : "Clasificar"}</Button>
+          {canEdit && !defaultOpen && (
+            <Button size="xs" variant="outline" onClick={() => setOpen((v) => !v)}>{open ? "Cerrar" : s ? "Otra" : "Clasificar"}</Button>
+          )}
         </div>
       </div>
 
-      {open && (
+      {open && canEdit && (
         <form onSubmit={submit} className="mt-3 ml-0 md:ml-20 rounded-md border bg-muted/30 p-3 space-y-3">
           <div className="flex flex-wrap gap-1">
             {(credit ? CREDIT_MODES : DEBIT_MODES).map((m) => (
@@ -371,10 +428,90 @@ export function InboxRow({ line }: { line: InboxLine }) {
           )}
 
           {mode === "LOAN" && (
-            <div className="flex items-center gap-2">
-              <Label className="text-xs whitespace-nowrap">Interés incluido (USD)</Label>
-              <Input name="interest" inputMode="decimal" placeholder="0.00" className="w-32" />
-              <span className="text-xs text-muted-foreground">El resto es capital: no es gasto.</span>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Label className="text-xs whitespace-nowrap">Interés incluido (USD)</Label>
+                <Input name="interest" inputMode="decimal" placeholder="0.00" className="w-32" />
+                <span className="text-xs text-muted-foreground">El resto es capital: no es gasto.</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Label className="text-xs whitespace-nowrap">El capital baja</Label>
+                {loanAccounts.length === 0 ? (
+                  <span className="text-xs text-amber-700">Esta empresa no tiene préstamos en su plan de cuentas.</span>
+                ) : (
+                  <select name="principalCode" className={`${selectCls} w-auto`} defaultValue={sd?.type === "LOAN_PAYMENT" ? sd.principalCode : loanAccounts.find((a) => a.code === "2.2.02")?.code}>
+                    {loanAccounts.map((a) => <option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mode === "PAYROLL" && (
+            <div className="space-y-2">
+              {line.payroll.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No hay sueldos aprobados pendientes de pago. Aprueba el rol en Trabajadores › Roles de pago, o clasifícalo como Gasto si es un honorario.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {line.payroll.map((p) => (
+                    <li key={p.id}>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={payrollIds.includes(p.id)}
+                          onChange={(e) => setPayrollIds((ids) => (e.target.checked ? [...ids, p.id] : ids.filter((x) => x !== p.id)))}
+                        />
+                        <span className="flex-1">{p.employeeName}</span>
+                        <span className="text-xs text-muted-foreground">Rol {p.period}</span>
+                        <span className={`tabular-nums text-xs ${p.netCents === abs ? "font-semibold" : ""}`}>{fmtMoney(p.netCents, { decimals: true })}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Seleccionado {fmtMoney(payrollSum, { decimals: true })} de {fmtMoney(abs, { decimals: true })}. Cancela el sueldo por pagar del rol (no es un gasto nuevo).
+              </p>
+            </div>
+          )}
+
+          {mode === "LIABILITY" && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {(["IESS", "SRI"] as LiabilityTo[]).map((to) => (
+                  <button
+                    key={to}
+                    type="button"
+                    onClick={() => {
+                      setLiabTo(to);
+                      setLiabParts(partsFor(to));
+                    }}
+                    className={`text-xs rounded-md border px-2.5 py-1 ${liabTo === to ? "border-primary bg-primary/10 font-medium" : "bg-background"}`}
+                  >
+                    {to === "IESS" ? "Planilla del IESS" : "Pago al SRI"}
+                  </button>
+                ))}
+                <Label className="ml-2 text-xs">Mes que paga</Label>
+                <Input name="period" type="month" defaultValue={sugLiab?.period ?? line.due?.period ?? duePeriod(new Date(line.postedAt))} className="h-8 w-40" required />
+              </div>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {LIABILITY_CODES[liabTo].map((c) => (
+                  <label key={c} className="flex items-center justify-between gap-2 text-xs">
+                    <span>{LIABILITY_LABELS[c]} <span className="text-muted-foreground">{c}</span></span>
+                    <Input value={liabParts[c] ?? ""} onChange={(e) => setLiabParts((p) => ({ ...p, [c]: e.target.value }))} inputMode="decimal" className="h-7 w-28 text-right text-xs" />
+                  </label>
+                ))}
+                <label className="flex items-center justify-between gap-2 text-xs">
+                  <span>Intereses y multas (gasto)</span>
+                  <Input value={liabExtra} onChange={(e) => setLiabExtra(e.target.value)} inputMode="decimal" className="h-7 w-28 text-right text-xs" />
+                </label>
+              </div>
+              <p className={`text-xs ${liabTotal === abs ? "text-emerald-700" : "text-amber-700"}`}>
+                Suma {fmtMoney(liabTotal, { decimals: true })} de {fmtMoney(abs, { decimals: true })}.{" "}
+                {line.due ? "Propuesto con lo que dicen los libros del mes." : "Sin rol aprobado ni IVA calculado para ese mes: escribe el desglose del comprobante."}
+              </p>
             </div>
           )}
 
@@ -419,6 +556,29 @@ export function UndoButton({ id }: { id: string }) {
       }
     >
       Deshacer
+    </button>
+  );
+}
+
+export function DeactivateAccountButton({ id }: { id: string }) {
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      className="text-xs text-red-700 hover:underline"
+      onClick={() =>
+        start(async () => {
+          try {
+            await deactivateBankAccount(id);
+            toast.success("Cuenta desactivada.");
+          } catch (err) {
+            toast.error(errMsg(err));
+          }
+        })
+      }
+    >
+      Desactivar
     </button>
   );
 }

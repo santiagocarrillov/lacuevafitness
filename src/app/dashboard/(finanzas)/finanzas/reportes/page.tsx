@@ -74,7 +74,7 @@ const FAMILIES: Family[] = [
     icon: FileSpreadsheet,
     color: "#3a8fd1",
     reports: [
-      { title: "Conciliación bancaria", detail: "Movimientos del extracto por clasificar y ya clasificados.", href: "/dashboard/finanzas/banco" },
+      { title: "Conciliación bancaria", detail: "Movimientos del extracto por clasificar y ya clasificados.", href: "/dashboard/finanzas/banco/movimientos" },
       { title: "Dueños y accionistas", detail: "Aportes, préstamos y retiros acumulados por persona.", href: "/dashboard/finanzas/aportes" },
     ],
   },

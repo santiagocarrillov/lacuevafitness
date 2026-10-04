@@ -11,10 +11,14 @@ import { readSheet } from "read-excel-file/universal";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can } from "@/lib/auth";
 import { ecuadorDateString } from "@/lib/timezone";
-import type { BankAccountKind, BankStatementFormat } from "@/generated/prisma/client";
+import type { BankAccountKind, BankStatementFormat, Prisma, Sede } from "@/generated/prisma/client";
+import { natural } from "@/lib/accounting/reports";
+import { idsMatching, SEARCH_SOURCES } from "@/lib/text-search";
+import type { TxnFilters } from "@/lib/finance/bank-filters";
 import { FORMAT_LABELS, parseStatement, type Cell } from "@/lib/finance/bank-parsers";
 import type { Decision } from "@/lib/finance/bank-suggest";
 import { buildInbox, classifyInTx, undoInTx, type InboxLine } from "@/lib/finance/bank-core";
+import { ENTITY_ORDER } from "@/lib/finance/entities";
 
 const PATH = "/dashboard/finanzas";
 
@@ -145,9 +149,207 @@ export async function importStatement(fd: FormData): Promise<ImportResult> {
   };
 }
 
-export async function getInbox(accountId?: string): Promise<InboxLine[]> {
+export async function getInbox(accountId?: string, sedes: Sede[] = ENTITY_ORDER): Promise<InboxLine[]> {
   await requireView();
-  return buildInbox(accountId ? { accountId } : {});
+  return buildInbox(accountId ? { accountId } : { account: { sede: { in: sedes } } });
+}
+
+// ── Overview (Caja y Bancos › Resumen) ──────────────────────────────────────
+
+export type AccountSummary = {
+  id: string;
+  name: string;
+  bank: string;
+  last4: string | null;
+  sede: Sede;
+  kind: BankAccountKind;
+  lines: number;
+  pendingCount: number;
+  pendingCents: number;
+  /** Personal and ignored lines: in the statement, never in the books. */
+  offBooksCents: number;
+  firstPostedAt: Date | null;
+  lastPostedAt: Date | null;
+  bankCents: number | null;
+  bankAsOf: Date | null;
+  /** null when the account is not wired to the chart of accounts. */
+  bookCents: number | null;
+  ledgerAccountId: string | null;
+};
+
+export type BankOverview = {
+  accounts: AccountSummary[];
+  /** Ledger balances per entity: cash on hand, the bridge, transfers in transit. */
+  ledger: { sede: Sede; code: string; name: string; accountId: string; cents: number }[];
+  /** Money in/out through the banks by month (personal, ignored and transfers left out). */
+  months: { ym: string; inCents: number; outCents: number }[];
+};
+
+export async function bankOverview(sedes: Sede[], monthsBack = 6): Promise<BankOverview> {
+  await requireView();
+  const accounts = await prisma.bankAccount.findMany({
+    where: { active: true, sede: { in: sedes } },
+    orderBy: [{ sede: "asc" }, { name: "asc" }],
+    include: { ledgerAccounts: { select: { id: true } } },
+  });
+  const ids = accounts.map((a) => a.id);
+  const [byStatus, range, offBooks] = await Promise.all([
+    prisma.bankTransaction.groupBy({ by: ["accountId", "status"], where: { accountId: { in: ids } }, _count: { _all: true }, _sum: { amountCents: true } }),
+    prisma.bankTransaction.groupBy({ by: ["accountId"], where: { accountId: { in: ids } }, _min: { postedAt: true }, _max: { postedAt: true } }),
+    prisma.bankTransaction.groupBy({
+      by: ["accountId"],
+      where: { accountId: { in: ids }, OR: [{ status: "IGNORED" }, { kind: "PERSONAL" }] },
+      _sum: { amountCents: true },
+    }),
+  ]);
+  const summaries = await Promise.all(
+    accounts.map(async (a): Promise<AccountSummary> => {
+      const ledgerIds = a.ledgerAccounts.map((l) => l.id);
+      const [last, book] = await Promise.all([
+        prisma.bankTransaction.findFirst({
+          where: { accountId: a.id, balanceCents: { not: null } },
+          orderBy: [{ postedAt: "desc" }, { createdAt: "desc" }],
+          select: { balanceCents: true, postedAt: true },
+        }),
+        ledgerIds.length
+          ? prisma.journalLine.aggregate({ where: { accountId: { in: ledgerIds }, entry: { status: "POSTED" } }, _sum: { debitCents: true, creditCents: true } })
+          : null,
+      ]);
+      const st = byStatus.filter((g) => g.accountId === a.id);
+      const pending = st.find((g) => g.status === "PENDING");
+      const r = range.find((g) => g.accountId === a.id);
+      return {
+        id: a.id, name: a.name, bank: a.bank, last4: a.last4, sede: a.sede, kind: a.kind,
+        lines: st.reduce((n, g) => n + g._count._all, 0),
+        pendingCount: pending?._count._all ?? 0,
+        pendingCents: pending?._sum.amountCents ?? 0,
+        offBooksCents: offBooks.find((g) => g.accountId === a.id)?._sum.amountCents ?? 0,
+        firstPostedAt: r?._min.postedAt ?? null,
+        lastPostedAt: r?._max.postedAt ?? null,
+        bankCents: last?.balanceCents ?? null,
+        bankAsOf: last?.postedAt ?? null,
+        bookCents: book ? natural("ASSET", book._sum.debitCents ?? 0, book._sum.creditCents ?? 0) : null,
+        ledgerAccountId: ledgerIds[0] ?? null,
+      };
+    }),
+  );
+
+  const codes = ["1.1.01", "1.1.05", "1.1.07"];
+  const ledgerAccounts = await prisma.ledgerAccount.findMany({ where: { sede: { in: sedes }, code: { in: codes } } });
+  const sums = await prisma.journalLine.groupBy({
+    by: ["accountId"],
+    where: { accountId: { in: ledgerAccounts.map((l) => l.id) }, entry: { status: "POSTED" } },
+    _sum: { debitCents: true, creditCents: true },
+  });
+  const ledger = ledgerAccounts
+    .map((l) => {
+      const g = sums.find((x) => x.accountId === l.id);
+      return { sede: l.sede, code: l.code, name: l.name, accountId: l.id, cents: natural("ASSET", g?._sum.debitCents ?? 0, g?._sum.creditCents ?? 0) };
+    })
+    .sort((a, b) => a.code.localeCompare(b.code) || a.sede.localeCompare(b.sede));
+
+  const today = ecuadorDateString();
+  const [y, m] = today.slice(0, 7).split("-").map(Number);
+  const firstYm = new Date(Date.UTC(y, m - monthsBack, 1));
+  const flows = await prisma.bankTransaction.findMany({
+    where: {
+      accountId: { in: ids },
+      postedAt: { gte: firstYm },
+      status: { not: "IGNORED" },
+      OR: [{ kind: null }, { kind: { notIn: ["PERSONAL", "INTERNAL_TRANSFER"] } }],
+    },
+    select: { postedAt: true, amountCents: true },
+  });
+  const months = Array.from({ length: monthsBack }, (_, i) => {
+    const d = new Date(Date.UTC(y, m - monthsBack + i, 1));
+    return { ym: d.toISOString().slice(0, 7), inCents: 0, outCents: 0 };
+  });
+  for (const f of flows) {
+    const row = months.find((x) => x.ym === ecuadorDateString(f.postedAt).slice(0, 7));
+    if (!row) continue;
+    if (f.amountCents > 0) row.inCents += f.amountCents;
+    else row.outCents -= f.amountCents;
+  }
+  return { accounts: summaries, ledger, months };
+}
+
+// ── Movimientos (every statement line, with filters) ────────────────────────
+
+const PAGE_SIZE = 50;
+const dayStart = (ymd: string) => new Date(`${ymd}T05:00:00.000Z`); // 00:00 in Ecuador
+
+export async function listTransactions(f: TxnFilters, sedes: Sede[]) {
+  await requireView();
+  const matchIds = f.q ? await idsMatching(SEARCH_SOURCES.bankTxn, f.q) : null;
+  const end = new Date(dayStart(f.hasta).getTime() + 86_400_000);
+  const where: Prisma.BankTransactionWhereInput = {
+    account: { active: true, sede: { in: f.sede ? [f.sede] : sedes } },
+    postedAt: { gte: dayStart(f.desde), lt: end },
+    ...(f.cuenta ? { accountId: f.cuenta } : {}),
+    ...(f.estado ? { status: f.estado === "pendiente" ? "PENDING" : f.estado === "ignorado" ? "IGNORED" : "CLASSIFIED" } : {}),
+    ...(f.tipo ? { kind: f.tipo } : {}),
+    ...(f.dir ? { amountCents: f.dir === "entradas" ? { gt: 0 } : { lt: 0 } } : {}),
+    ...(matchIds ? { id: { in: matchIds } } : {}),
+  };
+  const [total, rows, ins, outs] = await Promise.all([
+    prisma.bankTransaction.count({ where }),
+    prisma.bankTransaction.findMany({
+      where,
+      include: { account: { select: { name: true, last4: true, sede: true } } },
+      orderBy: [{ postedAt: "desc" }, { createdAt: "desc" }],
+      skip: (f.page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.bankTransaction.aggregate({ where: { AND: [where, { amountCents: { gt: 0 } }] }, _sum: { amountCents: true } }),
+    prisma.bankTransaction.aggregate({ where: { AND: [where, { amountCents: { lt: 0 } }] }, _sum: { amountCents: true } }),
+  ]);
+  return {
+    rows,
+    total,
+    page: f.page,
+    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    inCents: ins._sum.amountCents ?? 0,
+    outCents: -(outs._sum.amountCents ?? 0),
+  };
+}
+
+// ── One movement: what it is and everything it created ──────────────────────
+
+export async function getTransaction(id: string) {
+  await requireView();
+  const line = await prisma.bankTransaction.findUnique({
+    where: { id },
+    include: {
+      account: true,
+      payments: { include: { member: { select: { id: true, firstName: true, lastName: true } } } },
+      expenses: { select: { id: true, description: true, amountCents: true, category: true, voidedAt: true, supplierName: true } },
+      capitalMovements: { select: { id: true, person: true, kind: true, amountCents: true, voidedAt: true } },
+      otherIncomes: { select: { id: true, description: true, amountCents: true, voidedAt: true } },
+      payrollLines: { include: { run: { select: { id: true, period: true } }, employee: { select: { firstName: true, lastName: true } } } },
+    },
+  });
+  if (!line) return null;
+  const [inbox, entries, classifiedBy] = await Promise.all([
+    line.status === "PENDING" ? buildInbox({ id }, 1).then((r) => r[0] ?? null) : null,
+    prisma.journalEntry.findMany({
+      where: { sede: line.account.sede, status: "POSTED", OR: [{ source: "BANK", sourceId: id }, { source: "PAYROLL", sourceId: { endsWith: `:banco:${id}` } }] },
+      include: { lines: { include: { account: { select: { code: true, name: true } } } } },
+      orderBy: { number: "asc" },
+    }),
+    line.classifiedById ? prisma.user.findUnique({ where: { id: line.classifiedById }, select: { fullName: true } }) : null,
+  ]);
+  return { line, inbox, entries, classifiedByName: classifiedBy?.fullName ?? null };
+}
+
+/** Liability accounts a loan instalment's principal can reduce, per entity. */
+export async function loanAccounts(sedes: Sede[]) {
+  await requireView();
+  const rows = await prisma.ledgerAccount.findMany({
+    where: { sede: { in: sedes }, type: "LIABILITY", postable: true, active: true, role: { notIn: ["PAYROLL_LIABILITIES"] } },
+    select: { sede: true, code: true, name: true },
+    orderBy: { code: "asc" },
+  });
+  return rows.filter((r) => !["2.1.06", "2.1.07"].includes(r.code));
 }
 
 export async function listClassified(accountId?: string) {

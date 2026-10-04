@@ -142,6 +142,10 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
+**Última sesión (5 oct 2026):** Caja y Bancos v2 (ver `docs/contabilidad-v2.md` § Caja y Bancos). Migración
+`20261005120000_caja_bancos` aplicada + seed del plan (cuenta 1.1.07). Al 5 oct **no hay ningún extracto importado**
+en prod: el siguiente paso es subir los extractos desde el 1 ene 2026 de cada cuenta y conciliar.
+
 **Última sesión (4 oct 2026, tarde):** PRs #132–#138 en producción (main `b84180f`). Migraciones aplicadas:
 `20261004120000_payers_and_payment_void`, `20261004180000_suppliers`, `20261004220000_nomina` (+ seed del plan de cuentas).
 - **Contabilidad en módulos** estilo QuickBooks (`(finanzas)/modules.ts`): portada con flujo y gráficos, consolidado. Visión y fases: `docs/contabilidad-v2.md`.

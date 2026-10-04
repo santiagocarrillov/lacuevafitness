@@ -4,6 +4,7 @@
 // that already existed keeps its URL; this file only says where it belongs.
 
 import {
+  ArrowLeftRight,
   BookOpen,
   BookPlus,
   Building2,
@@ -15,6 +16,7 @@ import {
   IdCard,
   Landmark,
   LayoutDashboard,
+  ListChecks,
   ListTree,
   Package,
   PiggyBank,
@@ -22,8 +24,10 @@ import {
   Scale,
   ShoppingCart,
   Truck,
+  Upload,
   Users,
   WalletCards,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -129,7 +133,19 @@ export const FINANCE_MODULES: FinanceModule[] = [
     icon: Landmark,
     color: "#3a8fd1",
     href: "/dashboard/finanzas/banco",
-    subs: [],
+    subs: [
+      { label: "Resumen", href: "/dashboard/finanzas/banco", icon: ChartPie, active: (l) => l.path === "/dashboard/finanzas/banco" },
+      { label: "Conciliar", href: "/dashboard/finanzas/banco/conciliar", icon: ListChecks, active: (l) => under(l.path, "/dashboard/finanzas/banco/conciliar") },
+      { label: "Movimientos", href: "/dashboard/finanzas/banco/movimientos", icon: ArrowLeftRight, active: (l) => under(l.path, "/dashboard/finanzas/banco/movimientos") },
+      { label: "Subir extracto", href: "/dashboard/finanzas/banco/importar", icon: Upload, active: (l) => under(l.path, "/dashboard/finanzas/banco/importar") },
+      { label: "Reglas", href: "/dashboard/finanzas/banco/reglas", icon: Wand2, active: (l) => under(l.path, "/dashboard/finanzas/banco/reglas") },
+      {
+        label: "Cuentas",
+        href: "/dashboard/finanzas/banco/cuentas",
+        icon: Landmark,
+        active: (l) => under(l.path, "/dashboard/finanzas/banco/cuentas") || under(l.path, "/dashboard/finanzas/banco/nueva-cuenta"),
+      },
+    ],
   },
   {
     key: "empresa",

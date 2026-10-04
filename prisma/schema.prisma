@@ -1041,6 +1041,8 @@ enum BankTxnKind {
   INTERNAL_TRANSFER
   PERSONAL // Movimiento personal en cuenta mixta: fuera de la contabilidad
   LOAN_PAYMENT
+  PAYROLL // Sueldos netos o planilla del IESS: cancela lo que el rol dejó por pagar
+  TAXES // Pago al SRI: cancela IVA y retenciones por pagar
 }
 
 // Una línea del estado de cuenta (Fase 1b: importación y conciliación).
@@ -1070,6 +1072,7 @@ model BankTransaction {
   expenses         Expense[]
   capitalMovements CapitalMovement[]
   otherIncomes     OtherIncome[]
+  payrollLines     PayrollLine[]
 
   @@index([accountId, postedAt])
   @@index([status])
@@ -2221,6 +2224,11 @@ model PayrollLine {
   vacationCents      Int @default(0) // provisión 1/24
   netCents           Int @default(0) // a recibir
 
+  // Débito del banco con el que se pagó el neto (Caja y Bancos).
+  bankTransactionId String?
+  bankTransaction   BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+
   @@unique([runId, employeeId])
   @@index([employeeId])
+  @@index([bankTransactionId])
 }

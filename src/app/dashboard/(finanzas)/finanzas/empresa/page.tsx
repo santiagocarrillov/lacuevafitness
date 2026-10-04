@@ -82,7 +82,7 @@ export default async function EmpresaPage() {
                     banks.map((b, i) => (
                       <span key={b.id}>
                         {i > 0 && " · "}
-                        <Link href={`/dashboard/finanzas/banco?cuenta=${b.id}`} className="hover:underline">{b.name}{b.last4 ? ` ··${b.last4}` : ""}</Link>
+                        <Link href={`/dashboard/finanzas/banco/movimientos?cuenta=${b.id}`} className="hover:underline">{b.name}{b.last4 ? ` ··${b.last4}` : ""}</Link>
                       </span>
                     ))
                   ) : (
