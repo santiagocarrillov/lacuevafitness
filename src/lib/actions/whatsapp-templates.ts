@@ -19,8 +19,6 @@ async function requireOwner() {
   return user;
 }
 
-export type { MetaTemplate };
-
 export async function listMetaTemplates(): Promise<{ templates: MetaTemplate[]; error: string | null }> {
   await requireOwner();
   return fetchMetaTemplates();
