@@ -1,26 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import { updateLeadStage, convertLeadToMember } from "@/lib/actions/leads";
-import { LEAD_STAGES as allStages, STAGE_COLOR, STAGE_LABEL } from "@/lib/leads/stages";
+import { updateLeadStage } from "@/lib/actions/leads";
+import { LEAD_STAGES, MEMBER_OWNED_STAGES, STAGE_COLOR, STAGE_LABEL } from "@/lib/leads/stages";
 import type { LeadStage } from "@/generated/prisma/client";
-
-// La fila llega con `stage: string` (viene serializada del servidor), así que se
-// indexa con un cast controlado en vez de ensuciar los mapas con index signatures.
-const stageLabels = (s: string) => STAGE_LABEL[s as LeadStage] ?? s;
-const stageColors = (s: string) => STAGE_COLOR[s as LeadStage] ?? "";
-import { getMembershipPlans } from "@/lib/actions/members";
+import { DataTable, PersonCell, relativeDays, td, th } from "@/components/list/list-ui";
 
 type LeadRow = {
   id: string;
@@ -34,16 +20,10 @@ type LeadRow = {
   adSourceId: string | null;
   adHeadline: string | null;
   createdAt: Date;
+  lastActivityAt: Date | null;
   owner: { fullName: string } | null;
   interactions: { summary: string; occurredAt: Date }[];
   member: { id: string; status: string } | null;
-};
-
-type Plan = {
-  id: string;
-  name: string;
-  priceCents: number;
-  durationDays: number;
 };
 
 const sourceLabels: Record<string, string> = {
@@ -58,191 +38,96 @@ const sourceLabels: Record<string, string> = {
   OTHER: "Otro",
 };
 
+const sedeShort: Record<string, string> = { FITNESS_CENTER: "Fitness", XTREME: "Xtreme" };
 
+const dateFmt = (d: Date) =>
+  new Date(d).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Guayaquil" });
 
-export function LeadTable({
-  leads,
-  total,
-  page,
-  totalPages,
-}: {
-  leads: LeadRow[];
-  total: number;
-  page: number;
-  totalPages: number;
-}) {
+export function LeadTable({ leads }: { leads: LeadRow[] }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-  const [convertingLead, setConvertingLead] = useState<LeadRow | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [pending, start] = useTransition();
 
-  function goToPage(p: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", p.toString());
-    router.push(`/dashboard/leads?${params.toString()}`);
-  }
-
-  async function handleStageChange(lead: LeadRow, newStage: string) {
-    // If marking as CONVERTED and no member yet → open dialog to pick plan
-    if (newStage === "CONVERTED" && !lead.member) {
-      const fetched = await getMembershipPlans();
-      setPlans(fetched);
-      setConvertingLead(lead);
+  function changeStage(lead: LeadRow, next: string) {
+    // "Socio activo" is not a label: converting means registering the plan.
+    if (next === "CONVERTED" && !lead.member) {
+      router.push(`/dashboard/leads/${lead.id}/convertir`);
       return;
     }
-
-    startTransition(async () => {
-      await updateLeadStage(lead.id, newStage as LeadStage);
-      toast.success(`Etapa actualizada a ${stageLabels(newStage)}`);
+    start(async () => {
+      await updateLeadStage(lead.id, next as LeadStage);
+      toast.success(`Etapa: ${STAGE_LABEL[next as LeadStage]}`);
       router.refresh();
     });
   }
 
-  function handleConvert(planId: string) {
-    if (!convertingLead) return;
-    startTransition(async () => {
-      const member = await convertLeadToMember(convertingLead.id, planId);
-      toast.success(`Convertido a socio: ${member.firstName} ${member.lastName}`);
-      setConvertingLead(null);
-      router.push(`/dashboard/socios/${member.id}`);
-    });
-  }
-
   return (
-    <div className="space-y-3">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Fuente</TableHead>
-              <TableHead>Etapa</TableHead>
-              <TableHead>Contacto</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Última interacción</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No hay leads que coincidan con los filtros.
-                </TableCell>
-              </TableRow>
-            ) : (
-              leads.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      href={l.member ? `/dashboard/socios/${l.member.id}` : `/dashboard/leads/${l.id}`}
-                      className="hover:underline"
-                    >
-                      {l.firstName} {l.lastName ?? ""}
-                    </Link>
-                    {l.member && (
-                      <Badge variant="outline" className="ml-2 text-xs text-emerald-600 border-emerald-200">
-                        Socio
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {sourceLabels[l.source] ?? l.source}
-                    </Badge>
-                    {(l.adSourceId || l.adHeadline) && (
-                      <div
-                        className="mt-1 max-w-[220px] text-xs text-muted-foreground"
-                        title={l.adSourceId ? `Anuncio ID ${l.adSourceId}` : undefined}
-                      >
-                        <span className="font-medium text-foreground">Anuncio:</span>{" "}
-                        <span className="truncate">{l.adHeadline ?? "(sin título)"}</span>
-                        {l.adSourceId && (
-                          <div className="font-mono text-[10px] truncate">ID {l.adSourceId}</div>
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <select
-                      value={l.stage}
-                      onChange={(e) => handleStageChange(l, e.target.value)}
-                      disabled={isPending}
-                      className={`text-xs rounded-md border px-2 py-1 ${stageColors(l.stage)}`}
-                    >
-                      {allStages.map((s) => (
-                        <option key={s} value={s}>
-                          {stageLabels(s)}
-                        </option>
-                      ))}
-                    </select>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {l.email ?? l.phone ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(l.createdAt).toLocaleDateString("es-EC")}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                    {l.interactions[0]?.summary ?? "Sin interacciones"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>{total} leads encontrados</span>
-        {totalPages > 1 && (
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
-              Anterior
-            </Button>
-            <span className="px-2 py-1">{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>
-              Siguiente
-            </Button>
-          </div>
+    <DataTable>
+      <thead>
+        <tr>
+          <th className={th}>Nombre</th>
+          <th className={th}>Teléfono</th>
+          <th className={th}>Canal</th>
+          <th className={th}>Etapa</th>
+          <th className={th}>Responsable</th>
+          <th className={th}>Última actividad</th>
+          <th className={th}>Creado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {leads.length === 0 ? (
+          <tr>
+            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+              No hay leads que coincidan con los filtros.
+            </td>
+          </tr>
+        ) : (
+          leads.map((l) => {
+            const name = `${l.firstName} ${l.lastName ?? ""}`.trim();
+            return (
+              <tr key={l.id} className="transition hover:bg-muted/40">
+                <td className={td}>
+                  <PersonCell
+                    href={l.member ? `/dashboard/socios/${l.member.id}` : `/dashboard/leads/${l.id}`}
+                    name={name}
+                    sub={l.member ? "Ya es socio" : l.email}
+                  />
+                </td>
+                <td className={`${td} whitespace-nowrap text-muted-foreground`}>{l.phone ?? "--"}</td>
+                <td className={td}>
+                  <span className="whitespace-nowrap">{sourceLabels[l.source] ?? l.source}</span>
+                  <span className="ml-1.5 text-xs text-muted-foreground">{sedeShort[l.sede]}</span>
+                  {(l.adHeadline || l.adSourceId) && (
+                    <span className="block max-w-[220px] truncate text-xs text-muted-foreground" title={l.adHeadline ?? `Anuncio ${l.adSourceId}`}>
+                      Anuncio: {l.adHeadline ?? "(sin título)"}
+                    </span>
+                  )}
+                </td>
+                <td className={td}>
+                  <select
+                    value={l.stage}
+                    disabled={pending || !!l.member}
+                    title={l.member ? "Es socio: su estado se ve en su ficha" : "Cambiar etapa"}
+                    onChange={(e) => changeStage(l, e.target.value)}
+                    className={`rounded-full border px-2 py-0.5 text-xs font-medium ${STAGE_COLOR[l.stage as LeadStage] ?? ""}`}
+                  >
+                    {LEAD_STAGES.map((s) => (
+                      <option key={s} value={s} disabled={MEMBER_OWNED_STAGES.includes(s) && s !== "CONVERTED" && s !== l.stage}>
+                        {STAGE_LABEL[s]}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className={`${td} whitespace-nowrap`}>{l.owner?.fullName ?? <span className="text-muted-foreground">--</span>}</td>
+                <td className={`${td} whitespace-nowrap`} title={l.interactions[0]?.summary}>
+                  {relativeDays(l.lastActivityAt)}
+                </td>
+                <td className={`${td} whitespace-nowrap text-muted-foreground`}>{dateFmt(l.createdAt)}</td>
+              </tr>
+            );
+          })
         )}
-      </div>
-
-      {/* Convert lead dialog */}
-      <Dialog open={!!convertingLead} onOpenChange={(o) => !o && setConvertingLead(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Convertir a socio</DialogTitle>
-            <DialogDescription>
-              {convertingLead && (
-                <>
-                  Selecciona el plan que contrató{" "}
-                  <strong>{convertingLead.firstName} {convertingLead.lastName ?? ""}</strong>.
-                  Se creará el socio con el lead vinculado para mantener el origen.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            {plans.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleConvert(p.id)}
-                disabled={isPending}
-                className="w-full flex items-center justify-between p-3 rounded-md border hover:bg-accent transition text-sm text-left"
-              >
-                <span className="font-medium">{p.name}</span>
-                <span className="text-muted-foreground">
-                  ${(p.priceCents / 100).toFixed(2)} · {p.durationDays}d
-                </span>
-              </button>
-            ))}
-            {plans.length === 0 && (
-              <p className="text-sm text-muted-foreground">Cargando planes…</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+      </tbody>
+    </DataTable>
   );
 }
+

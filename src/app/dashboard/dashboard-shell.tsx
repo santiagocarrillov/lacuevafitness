@@ -3,7 +3,20 @@
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  BarChart3,
+  CalendarCheck,
+  ChevronDown,
+  Dumbbell,
+  Home,
+  Megaphone,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { StaffPushToggle } from "./staff-push-toggle";
 import { BackButton, useTrackNavigation } from "./back-button";
@@ -11,6 +24,16 @@ import { SIDEBAR_COOKIE } from "./sidebar-cookie";
 
 type NavItem = { href: string; label: string; badge?: number; match?: string[] };
 type NavGroup = { label?: string; items: NavItem[] };
+
+const GROUP_ICON: Record<string, LucideIcon> = {
+  Contactos: Users,
+  Marketing: Megaphone,
+  "Día a día": CalendarCheck,
+  SRXFIT: Dumbbell,
+  Finanzas: Wallet,
+  Reportes: BarChart3,
+  "Configuración": Settings,
+};
 
 type Props = {
   children: ReactNode;
@@ -57,6 +80,17 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
   const best = Math.max(...nav.map(score));
   const activeHref = best >= 0 ? nav.find((i) => score(i) === best)?.href : undefined;
   const current = nav.find((i) => i.href === activeHref);
+  // Groups fold like HubSpot's menu: click the title to open/close. The group of
+  // the page you're on is always open.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const activeGroup = groupOf(activeHref);
+  const toggleGroup = (label: string) =>
+    setOpenGroups((s) => {
+      const n = new Set(s);
+      if (n.has(label)) n.delete(label);
+      else n.add(label);
+      return n;
+    });
 
   // Auto-close drawer when navigating
   useEffect(() => {
@@ -99,29 +133,29 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
       {/* Sidebar */}
       <aside
         className={`
-          fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 shrink-0 border-r border-border bg-background md:bg-muted/30 flex flex-col
+          fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col
           transform transition-transform duration-200
           ${open ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0 ${collapsed ? "md:hidden" : ""}
         `}
       >
-        <div className="px-6 py-5 border-b border-border flex items-center justify-between">
+        <div className="px-5 py-5 border-b border-sidebar-border flex items-center justify-between">
           <div>
-            <p className="text-xs tracking-[0.3em] text-muted-foreground uppercase">La Cueva</p>
-            <p className="font-heading text-base font-semibold uppercase tracking-wide">Dashboard SRXFit</p>
+            <p className="text-xs tracking-[0.3em] text-sidebar-foreground/55 uppercase">La Cueva</p>
+            <p className="font-heading text-base font-semibold uppercase tracking-wide text-white">Dashboard SRXFit</p>
           </div>
           <button
             onClick={toggleCollapsed}
             aria-label="Esconder menú"
             title="Esconder menú ( [ )"
-            className="hidden md:inline-flex p-1 -mr-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
+            className="hidden md:inline-flex p-1 -mr-1 rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-white transition"
           >
             <PanelLeftClose className="size-4" />
           </button>
           <button
             onClick={() => setOpen(false)}
             aria-label="Cerrar menú"
-            className="md:hidden p-1 -mr-1 rounded-md hover:bg-accent transition"
+            className="md:hidden p-1 -mr-1 rounded-md hover:bg-sidebar-accent transition"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -129,42 +163,63 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
             </svg>
           </button>
         </div>
-        <nav className="flex-1 px-3 py-3 text-sm overflow-y-auto">
-          {groups.map((group, gi) => (
-            <div key={group.label ?? gi} className={gi > 0 ? "mt-4" : ""}>
-              {group.label && (
-                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {group.label}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={item.href === activeHref ? "page" : undefined}
-                    className={`flex items-center justify-between px-3 py-1.5 rounded-md transition ${
-                      item.href === activeHref ? "bg-accent font-medium text-foreground" : "hover:bg-accent"
-                    }`}
-                  >
-                    {item.label}
-                    {item.badge ? (
-                      <span
-                        className="min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-medium leading-5 text-white"
-                        title="Tareas tuyas o de tu recepción para hoy o vencidas"
-                      >
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </Link>
-                ))}
+        <nav className="flex-1 px-2.5 py-3 text-sm overflow-y-auto">
+          {groups.map((group, gi) => {
+            const link = (item: NavItem, icon?: LucideIcon) => {
+              const Icon = icon;
+              const active = item.href === activeHref;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 transition ${
+                    active ? "bg-sidebar-accent font-medium text-white" : "text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-white"
+                  }`}
+                >
+                  {Icon && <Icon className="size-4 shrink-0 opacity-80" />}
+                  <span className={`flex-1 truncate ${Icon ? "" : "pl-[26px]"}`}>{item.label}</span>
+                  {item.badge ? (
+                    <span
+                      className="min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-medium leading-5 text-white"
+                      title="Tareas tuyas o de tu recepción para hoy o vencidas"
+                    >
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            };
+            // Loose items (Resumen) render as plain links with their own icon.
+            if (!group.label) return <div key={gi} className="mb-2 space-y-0.5">{group.items.map((i) => link(i, Home))}</div>;
+            const Icon = GROUP_ICON[group.label];
+            const isOpen = group.label === activeGroup || openGroups.has(group.label);
+            const badge = group.items.reduce((n, i) => n + (i.badge ?? 0), 0);
+            return (
+              <div key={group.label} className="mt-1">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label!)}
+                  aria-expanded={isOpen}
+                  className={`flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left transition hover:bg-sidebar-accent/70 hover:text-white ${
+                    isOpen ? "text-white" : "text-sidebar-foreground/85"
+                  }`}
+                >
+                  {Icon && <Icon className="size-4 shrink-0 opacity-80" />}
+                  <span className="flex-1 font-medium">{group.label}</span>
+                  {!isOpen && badge > 0 && (
+                    <span className="min-w-5 rounded-full bg-destructive px-1.5 text-center text-[11px] font-medium leading-5 text-white">{badge}</span>
+                  )}
+                  <ChevronDown className={`size-3.5 opacity-60 transition ${isOpen ? "" : "-rotate-90"}`} />
+                </button>
+                {isOpen && <div className="mt-0.5 space-y-0.5">{group.items.map((i) => link(i))}</div>}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
-        <div className="border-t border-border p-4 space-y-2">
+        <div className="border-t border-sidebar-border p-4 space-y-2 [&_.text-foreground]:text-sidebar-foreground [&_.text-muted-foreground]:text-sidebar-foreground/60 [&_.text-primary]:text-white">
           <div>
-            <p className="text-sm font-medium truncate">{userName}</p>
+            <p className="text-sm font-medium truncate text-white">{userName}</p>
             <p className="text-xs text-muted-foreground truncate">{userMeta}</p>
           </div>
           {showAthleteView && (
@@ -182,14 +237,14 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
                 ? "/dashboard/cuenta/contrasena"
                 : `/dashboard/cuenta/contrasena?volver=${encodeURIComponent(pathname)}`
             }
-            className="block w-full text-left text-xs text-muted-foreground hover:text-foreground transition"
+            className="block w-full text-left text-xs text-muted-foreground hover:text-white transition"
           >
             Cambiar contraseña
           </Link>
           <form action={signOut}>
             <button
               type="submit"
-              className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition"
+              className="w-full text-left text-xs text-muted-foreground hover:text-white transition"
             >
               Cerrar sesión
             </button>

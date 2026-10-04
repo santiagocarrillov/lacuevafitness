@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import type { Sex, TaxIdType, User } from "@/generated/prisma/client";
 import { guessTaxIdType, taxIdError } from "@/lib/invoicing/core";
+import { presetStart } from "@/lib/list-filters";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createPasswordRecovery, sendPortalInviteEmail } from "@/lib/account/recovery";
 
@@ -49,12 +50,22 @@ export async function getMembers({
   sede,
   status,
   search,
+  membership,
+  frequency,
+  joined,
   page = 1,
   pageSize = 50,
 }: {
   sede?: Sede;
-  status?: MemberStatus;
+  /** One or more MemberStatus, comma separated. */
+  status?: string;
   search?: string;
+  /** al_dia | por_vencer (≤7 días) | vencida | sin_plan */
+  membership?: string;
+  /** Visits in the last 30 days: 0 | 1-4 | 5-11 | 12+ */
+  frequency?: string;
+  /** Joined since (list-filters preset). */
+  joined?: string;
   page?: number;
   pageSize?: number;
 }) {
@@ -62,8 +73,40 @@ export async function getMembers({
   const effectiveSede = getSedeScope(user) ?? sede;
 
   const where: any = {};
+  const and: any[] = [];
   if (effectiveSede) where.sede = effectiveSede;
-  if (status) where.status = status;
+  const statuses = (status ?? "").split(",").filter((s) => (Object.values(MemberStatus) as string[]).includes(s));
+  if (statuses.length) where.status = { in: statuses };
+  const joinedSince = presetStart(joined);
+  if (joinedSince) where.joinedAt = { gte: joinedSince };
+
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 86_400_000);
+  // Daily passes are billed apart: they never count as "the plan".
+  const realPlan = { plan: { billingCycle: { not: "ONE_TIME" as const } } };
+  if (membership === "al_dia") and.push({ memberships: { some: { ...realPlan, state: "ACTIVE", endsAt: { gt: in7 } } } });
+  else if (membership === "por_vencer") and.push({ memberships: { some: { ...realPlan, state: "ACTIVE", endsAt: { gte: now, lte: in7 } } } });
+  else if (membership === "vencida")
+    and.push(
+      { memberships: { some: realPlan } },
+      { memberships: { none: { ...realPlan, state: "ACTIVE", endsAt: { gte: now } } } },
+    );
+  else if (membership === "sin_plan") and.push({ memberships: { none: realPlan } });
+
+  if (frequency) {
+    const ranges: Record<string, [number, number]> = { "1-4": [1, 4], "5-11": [5, 11], "12+": [12, Infinity] };
+    const visits = await prisma.attendance.groupBy({
+      by: ["memberId"],
+      where: { recordedAt: { gte: new Date(now.getTime() - 30 * 86_400_000) } },
+      _count: { _all: true },
+    });
+    if (frequency === "0") and.push({ id: { notIn: visits.map((v) => v.memberId) } });
+    else if (ranges[frequency]) {
+      const [lo, hi] = ranges[frequency];
+      and.push({ id: { in: visits.filter((v) => v._count._all >= lo && v._count._all <= hi).map((v) => v.memberId) } });
+    }
+  }
+  if (and.length) where.AND = and;
   // Hide ONLY the empty auto-provisioned preview stubs (created so a staff
   // member can open the socio app without a real ficha): linked to a staff user,
   // still status LEAD, and with no memberships AND no attendance. Any staff

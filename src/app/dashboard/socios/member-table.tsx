@@ -1,18 +1,7 @@
-"use client";
-
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { FrequencyBadge } from "@/components/frequency-badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, PersonCell, td, th } from "@/components/list/list-ui";
+import { MEMBER_STATUS_COLOR, MEMBER_STATUS_LABEL } from "@/lib/leads/stages";
+import type { MemberStatus } from "@/generated/prisma/client";
 
 type MemberRow = {
   id: string;
@@ -31,144 +20,73 @@ type MemberRow = {
   _count?: { attendance: number };
 };
 
-const statusColors: Record<string, string> = {
-  ACTIVE: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  TRIAL: "text-blue-700 bg-blue-50 border-blue-200",
-  PAUSED: "text-amber-700 bg-amber-50 border-amber-200",
-  CHURNED: "text-red-700 bg-red-50 border-red-200",
-  LEAD: "text-zinc-600 bg-zinc-50 border-zinc-200",
-};
+const sedeLabels: Record<string, string> = { FITNESS_CENTER: "Fitness Center", XTREME: "Xtreme" };
+const dateFmt = (d: Date) =>
+  new Date(d).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Guayaquil" });
 
-const statusLabels: Record<string, string> = {
-  ACTIVE: "Activo",
-  TRIAL: "Trial",
-  PAUSED: "Pausado",
-  CHURNED: "Baja",
-  LEAD: "Sin plan",
-};
-
-const sedeLabels: Record<string, string> = {
-  FITNESS_CENTER: "Fitness Center",
-  XTREME: "Xtreme",
-};
-
-export function MemberTable({
-  members,
-  total,
-  page,
-  totalPages,
-}: {
-  members: MemberRow[];
-  total: number;
-  page: number;
-  totalPages: number;
-}) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  function goToPage(p: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", p.toString());
-    router.push(`/dashboard/socios?${params.toString()}`);
-  }
-
+export function MemberTable({ members }: { members: MemberRow[] }) {
   const now = new Date();
-
   return (
-    <div className="space-y-3">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Sede</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Frecuencia</TableHead>
-              <TableHead>Plan actual</TableHead>
-              <TableHead>Vencimiento</TableHead>
-              <TableHead>Contacto</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  No hay socios que coincidan con los filtros.
-                </TableCell>
-              </TableRow>
-            ) : (
-              members.map((m) => {
-                const membership = m.memberships[0];
-                const isExpired = membership && new Date(membership.endsAt) < now;
-                return (
-                  <TableRow key={m.id} className="cursor-pointer hover:bg-accent">
-                    <TableCell>
-                      <Link href={`/dashboard/socios/${m.id}`} className="font-medium hover:underline">
-                        {m.lastName}, {m.firstName}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {sedeLabels[m.sede] ?? m.sede}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={statusColors[m.status] ?? ""}>
-                        {statusLabels[m.status] ?? m.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <FrequencyBadge visitsLast30={m._count?.attendance ?? 0} showCount />
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {membership?.plan.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {membership ? (
-                        <span className={isExpired ? "text-red-600 font-medium" : ""}>
-                          {new Date(membership.endsAt).toLocaleDateString("es-EC")}
-                          {isExpired && " (vencida)"}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {m.email ?? m.phone ?? "—"}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>{total} socios encontrados</span>
-        {totalPages > 1 && (
-          <div className="flex gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => goToPage(page - 1)}
-            >
-              Anterior
-            </Button>
-            <span className="px-2 py-1">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => goToPage(page + 1)}
-            >
-              Siguiente
-            </Button>
-          </div>
+    <DataTable>
+      <thead>
+        <tr>
+          <th className={th}>Nombre</th>
+          <th className={th}>Teléfono</th>
+          <th className={th}>Sede</th>
+          <th className={th}>Estado</th>
+          <th className={th}>Asistencia 30 d</th>
+          <th className={th}>Plan actual</th>
+          <th className={th}>Vence</th>
+          <th className={th}>Socio desde</th>
+        </tr>
+      </thead>
+      <tbody>
+        {members.length === 0 ? (
+          <tr>
+            <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+              No hay socios que coincidan con los filtros.
+            </td>
+          </tr>
+        ) : (
+          members.map((m) => {
+            const membership = m.memberships[0];
+            const expired = membership && new Date(membership.endsAt) < now;
+            return (
+              <tr key={m.id} className="transition hover:bg-muted/40">
+                <td className={td}>
+                  <PersonCell href={`/dashboard/socios/${m.id}`} name={`${m.firstName} ${m.lastName}`.trim()} sub={m.email} />
+                </td>
+                <td className={`${td} whitespace-nowrap text-muted-foreground`}>{m.phone ?? "--"}</td>
+                <td className={`${td} whitespace-nowrap`}>{sedeLabels[m.sede] ?? m.sede}</td>
+                <td className={td}>
+                  <span
+                    className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${
+                      MEMBER_STATUS_COLOR[m.status as MemberStatus] ?? ""
+                    }`}
+                  >
+                    {MEMBER_STATUS_LABEL[m.status as MemberStatus] ?? m.status}
+                  </span>
+                </td>
+                <td className={td}>
+                  <FrequencyBadge visitsLast30={m._count?.attendance ?? 0} showCount />
+                </td>
+                <td className={`${td} whitespace-nowrap`}>{membership?.plan.name ?? <span className="text-muted-foreground">--</span>}</td>
+                <td className={`${td} whitespace-nowrap`}>
+                  {membership ? (
+                    <span className={expired ? "font-medium text-destructive" : ""}>
+                      {dateFmt(membership.endsAt)}
+                      {expired && " · vencida"}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">--</span>
+                  )}
+                </td>
+                <td className={`${td} whitespace-nowrap text-muted-foreground`}>{dateFmt(m.joinedAt)}</td>
+              </tr>
+            );
+          })
         )}
-      </div>
-    </div>
+      </tbody>
+    </DataTable>
   );
 }

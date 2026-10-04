@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { applyPlanToMember } from "@/lib/member-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
-import { Sede, LeadSource, LeadStage, type User } from "@/generated/prisma/client";
+import { Prisma, Sede, LeadSource, LeadStage, type User } from "@/generated/prisma/client";
+import { presetStart } from "@/lib/list-filters";
 import { STAGE_LABEL } from "@/lib/leads/stages";
 
 // ── Guards ──────────────────────────────────────────────────────────
@@ -27,36 +28,102 @@ async function assertLeadInScope(user: User, leadId: string) {
 
 // ── List / Search ───────────────────────────────────────────────────
 
+export type LeadListFilters = {
+  sede?: Sede;
+  stage?: string; // one or more LeadStage, comma separated
+  source?: string; // one or more LeadSource, comma separated
+  search?: string;
+  /** Created since: hoy | 7d | mes | 30d | 90d | anio */
+  created?: string;
+  /** Last activity: 7d | 30d | sin30 | nunca */
+  activity?: string;
+  /** Owner user id, or "none" */
+  owner?: string;
+  /** How far in the funnel (counts every stage passed): agendaron | asistieron | convertidos */
+  funnel?: string;
+  /** Evaluation date: hoy | proximas | sin_registrar (past, attendance not recorded) */
+  evaluation?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+// Same cuts as the Resumen funnel (lib/home-panels.ts): a lead counts in every stage it passed.
+const FUNNEL_STAGES: Record<string, LeadStage[]> = {
+  agendaron: ["SCHEDULED_TRIAL", "TRIAL_ATTENDED", "TRIAL_NO_SHOW", "NEGOTIATING", "CONVERTED"],
+  asistieron: ["TRIAL_ATTENDED", "NEGOTIATING", "CONVERTED"],
+  convertidos: ["CONVERTED"],
+};
+
 export async function getLeads({
   sede,
   stage,
   source,
   search,
+  created,
+  activity,
+  owner,
+  funnel,
+  evaluation,
   page = 1,
   pageSize = 50,
-}: {
-  sede?: Sede;
-  stage?: LeadStage;
-  source?: LeadSource;
-  search?: string;
-  page?: number;
-  pageSize?: number;
-}) {
+}: LeadListFilters) {
   const user = await requireLeadManager();
   const effectiveSede = getSedeScope(user) ?? sede;
 
-  const where: any = {};
-  if (effectiveSede) where.sede = effectiveSede;
-  if (stage) where.stage = stage;
-  if (source) where.source = source;
-  if (search) {
-    where.OR = [
-      { firstName: { contains: search, mode: "insensitive" } },
-      { lastName: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { phone: { contains: search, mode: "insensitive" } },
-    ];
+  const and: Prisma.LeadWhereInput[] = [];
+  if (effectiveSede) and.push({ sede: effectiveSede });
+  const stages = (stage ?? "").split(",").filter((s): s is LeadStage => (Object.values(LeadStage) as string[]).includes(s));
+  if (stages.length) and.push({ stage: { in: stages } });
+  if (funnel && FUNNEL_STAGES[funnel]) and.push({ stage: { in: FUNNEL_STAGES[funnel] } });
+  const sources = (source ?? "").split(",").filter((s): s is LeadSource => (Object.values(LeadSource) as string[]).includes(s));
+  if (sources.length) and.push({ source: { in: sources } });
+  if (owner === "none") and.push({ ownerUserId: null });
+  else if (owner) and.push({ ownerUserId: owner });
+  const since = presetStart(created);
+  if (since) and.push({ createdAt: { gte: since } });
+
+  if (activity) {
+    const day = 86_400_000;
+    const cut = activity === "7d" ? new Date(Date.now() - 7 * day) : new Date(Date.now() - 30 * day);
+    const recent: Prisma.LeadWhereInput = {
+      OR: [
+        { interactions: { some: { occurredAt: { gte: cut } } } },
+        { conversation: { lastInboundAt: { gte: cut } } },
+        { conversation: { lastOutboundAt: { gte: cut } } },
+      ],
+    };
+    const any: Prisma.LeadWhereInput = {
+      OR: [
+        { interactions: { some: {} } },
+        { conversation: { lastInboundAt: { not: null } } },
+        { conversation: { lastOutboundAt: { not: null } } },
+      ],
+    };
+    if (activity === "7d" || activity === "30d") and.push(recent);
+    else if (activity === "sin30") and.push({ NOT: recent }, any);
+    else if (activity === "nunca") and.push({ NOT: any });
   }
+
+  if (evaluation) {
+    const today = presetStart("hoy")!;
+    const tomorrow = new Date(today.getTime() + 86_400_000);
+    // Same cut as the Resumen ("evaluaciones agendadas hoy"): lost leads don't count.
+    if (evaluation === "hoy") and.push({ trialScheduledAt: { gte: today, lt: tomorrow }, stage: { notIn: ["LOST", "DISQUALIFIED"] } });
+    else if (evaluation === "proximas") and.push({ trialScheduledAt: { gte: new Date() } });
+    else if (evaluation === "sin_registrar") and.push({ trialScheduledAt: { lt: new Date() }, trialAttended: null });
+  }
+
+  if (search) {
+    and.push({
+      OR: [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+      ],
+    });
+  }
+  const where: Prisma.LeadWhereInput = { AND: and };
 
   const [leads, total] = await Promise.all([
     prisma.lead.findMany({
@@ -68,13 +135,19 @@ export async function getLeads({
         owner: { select: { fullName: true } },
         interactions: { orderBy: { occurredAt: "desc" }, take: 1 },
         member: { select: { id: true, status: true } },
+        conversation: { select: { lastInboundAt: true, lastOutboundAt: true } },
       },
     }),
     prisma.lead.count({ where }),
   ]);
 
   return {
-    leads,
+    leads: leads.map((l) => {
+      const dates = [l.interactions[0]?.occurredAt, l.conversation?.lastInboundAt, l.conversation?.lastOutboundAt].filter(
+        (d): d is Date => !!d,
+      );
+      return { ...l, lastActivityAt: dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null };
+    }),
     total,
     page,
     pageSize,
