@@ -61,8 +61,8 @@ export function EditLeadForm({ lead, staff }: { lead: LeadForm; staff: { id: str
           notes: form.notes,
           lostReason: form.lostReason,
           // Ecuador no tiene horario de verano: la hora local es siempre UTC-5.
-          trialScheduledAt: form.trialScheduledAt ? `${form.trialScheduledAt}:00-05:00` : undefined,
-          trialAttended: form.trialAttended ?? undefined,
+          trialScheduledAt: form.trialScheduledAt ? `${form.trialScheduledAt}:00-05:00` : "",
+          trialAttended: form.trialAttended,
           ownerUserId: form.ownerUserId || null,
         });
         toast.success("Lead actualizado.");

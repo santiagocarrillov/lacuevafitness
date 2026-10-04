@@ -183,12 +183,16 @@ export async function updateLead(
     notes?: string;
     lostReason?: string;
     trialScheduledAt?: string;
-    trialAttended?: boolean;
+    trialAttended?: boolean | null;
     ownerUserId?: string | null;
+    sede?: Sede;
   },
 ) {
   const user = await requireLeadManager();
   await assertLeadInScope(user, id);
+  const scope = getSedeScope(user);
+  if (data.sede && scope && data.sede !== scope) throw new Error("No puedes mover el lead a otra sede.");
+  if (data.firstName !== undefined && !data.firstName.trim()) throw new Error("El nombre no puede quedar vacío.");
   if (data.ownerUserId) {
     const owner = await prisma.user.findUnique({ where: { id: data.ownerUserId }, select: { role: true } });
     if (!owner || owner.role === "MEMBER") throw new Error("Responsable no válido");
@@ -205,9 +209,10 @@ export async function updateLead(
       phone: blank(data.phone),
       notes: blank(data.notes),
       lostReason: blank(data.lostReason),
-      trialScheduledAt: data.trialScheduledAt
-        ? new Date(data.trialScheduledAt)
-        : undefined,
+      firstName: data.firstName?.trim(),
+      // "" borra la cita; ausente la deja como está.
+      trialScheduledAt:
+        data.trialScheduledAt === undefined ? undefined : data.trialScheduledAt ? new Date(data.trialScheduledAt) : null,
     },
   });
 

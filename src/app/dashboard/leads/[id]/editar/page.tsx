@@ -2,26 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuth, can } from "@/lib/auth";
 import { getLead, getStaffUsers } from "@/lib/actions/leads";
 import { FormPage } from "@/app/dashboard/form-page";
-import { ECUADOR_TZ } from "@/lib/timezone";
+import { ecuadorDateTimeInput as localInput } from "@/lib/timezone";
 import { EditLeadForm } from "./edit-lead-form";
 
 export const dynamic = "force-dynamic";
-
-/** "YYYY-MM-DDTHH:mm" en hora de Ecuador, para <input type="datetime-local">. */
-function localInput(d: Date | null) {
-  if (!d) return "";
-  const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: ECUADOR_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(d);
-  const g = (t: string) => p.find((x) => x.type === t)?.value ?? "";
-  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
-}
 
 export default async function EditLeadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

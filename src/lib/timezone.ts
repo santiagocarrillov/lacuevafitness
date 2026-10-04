@@ -62,3 +62,19 @@ export const ATTENDANCE_CUTOFF_MIN = 21 * 60 + 30;
 export function isAttendanceWindowOpen(d: Date = new Date()): boolean {
   return ecuadorTimeOfDayMinutes(d) <= ATTENDANCE_CUTOFF_MIN;
 }
+
+/** "YYYY-MM-DDTHH:mm" in Ecuador time, for <input type="datetime-local">. */
+export function ecuadorDateTimeInput(d: Date | null): string {
+  if (!d) return "";
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ECUADOR_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const g = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return `${g("year")}-${g("month")}-${g("day")}T${g("hour")}:${g("minute")}`;
+}
