@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ecuadorDateString } from "@/lib/timezone";
+import { formatDocNumber } from "@/lib/invoicing/core";
 import { InvoiceEditor, type EditorPayment } from "./invoice-editor";
 
 export const dynamic = "force-dynamic";
@@ -44,8 +45,27 @@ export default async function NuevaFacturaPage({
       method: payment.method,
       paidAt: (payment.paidAt ?? payment.createdAt).toISOString().slice(0, 10),
       bankReference: payment.bankReference,
+      depositorName: payment.depositorName,
+      status: payment.status,
     };
   }
+
+  // Members whose membership was already invoiced this month (one per month
+  // unless another confirmed collection backs a new invoice).
+  const ym = ecuadorDateString().slice(0, 7);
+  const monthStart = new Date(`${ym}-01T00:00:00Z`);
+  const invoiced = await prisma.invoice.findMany({
+    where: {
+      memberId: { not: null },
+      status: { not: "VOIDED" },
+      issueDate: { gte: monthStart },
+      lines: { some: { OR: [{ membershipId: { not: null } }, { incomeAccountCode: "4.1.01" }] } },
+    },
+    select: { memberId: true, sequential: true, emissionPoint: { select: { establishment: true, point: true } } },
+  });
+  const invoicedThisMonth = Object.fromEntries(
+    invoiced.map((i) => [i.memberId!, formatDocNumber(i.emissionPoint.establishment, i.emissionPoint.point, i.sequential)]),
+  );
 
   return (
     <div className="p-4 md:p-8 space-y-4 max-w-5xl">
@@ -70,6 +90,7 @@ export default async function NuevaFacturaPage({
         defaultMemberId={existing?.memberId ?? params.socio ?? null}
         existingPayment={existing}
         today={ecuadorDateString()}
+        invoicedThisMonth={invoicedThisMonth}
       />
     </div>
   );

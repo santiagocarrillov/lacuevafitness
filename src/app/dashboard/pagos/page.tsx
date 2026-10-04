@@ -1,427 +1,395 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Banknote, CircleCheck, Clock3, FileText, Hourglass, Landmark, Lock, Plus, Receipt, Upload, type LucideIcon } from "lucide-react";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import {
-  getMemberPayments,
   getPoolEntries,
   getPendingMemberPayments,
   getPaymentSummary,
+  listPayments,
+  deletePoolEntry,
+  deletePendingPayment,
+  deletePayment,
 } from "@/lib/actions/payments";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ENTITIES, ENTITY_ORDER, fmtMoney } from "@/lib/finance/entities";
+import { formatDocNumber } from "@/lib/invoicing/core";
+import { METHOD_LABELS, parsePaymentFilters } from "@/lib/payments/filters";
+import { ecuadorDateString } from "@/lib/timezone";
+import { FilterBar, Pager, type FilterDef } from "@/components/list/filter-bar";
+import { PageHeader } from "../(finanzas)/page-header";
+import { Panel, Stat } from "../(finanzas)/blocks";
 import { PoolEntryForm } from "./pool-form";
 import { DeleteButton } from "./delete-button";
-import { deletePoolEntry, deletePendingPayment, deletePayment } from "@/lib/actions/payments";
+import { RangeFilter } from "./range-filter";
 
 export const dynamic = "force-dynamic";
 
-const METHOD_LABELS: Record<string, string> = {
-  CASH: "Efectivo",
-  BANK_TRANSFER: "Transferencia",
-  STRIPE_CARD: "TC Stripe",
-  STRIPE_LINK: "Stripe Link",
-  OTHER: "Otro",
+const TEAL = "#0f9f8f";
+
+const STATUS: Record<string, { label: string; cls: string; icon: LucideIcon }> = {
+  PENDING: { label: "Sin depositar", cls: "bg-amber-50 text-amber-800 ring-amber-200", icon: Hourglass },
+  SUCCEEDED: { label: "Confirmado", cls: "bg-emerald-50 text-emerald-800 ring-emerald-200", icon: CircleCheck },
+  FAILED: { label: "Fallido", cls: "bg-red-50 text-red-800 ring-red-200", icon: Clock3 },
+  REFUNDED: { label: "Reembolsado", cls: "bg-stone-100 text-stone-600 ring-stone-200", icon: Clock3 },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Fondos sin depositar",
-  SUCCEEDED: "Confirmado",
-  FAILED: "Fallido",
-  REFUNDED: "Reembolsado",
-};
+const SEDE_SHORT: Record<string, string> = { FITNESS_CENTER: "Fitness", XTREME: "Xtreme" };
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: "text-amber-700 bg-amber-50 border-amber-200",
-  SUCCEEDED: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  FAILED: "text-red-700 bg-red-50 border-red-200",
-  REFUNDED: "text-zinc-600 bg-zinc-100 border-zinc-200",
-};
-
-const SEDE_LABELS: Record<string, string> = {
-  FITNESS_CENTER: "Fitness Center",
-  XTREME: "Xtreme",
-};
-
-function fmt(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-function fmtDate(d: string | Date | null | undefined) {
+const fmtDay = (d: Date | null) => {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("es-EC");
-}
+  const isDateOnly = d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+  const ymd = isDateOnly ? d.toISOString().slice(0, 10) : ecuadorDateString(d);
+  return new Date(`${ymd}T12:00:00Z`).toLocaleDateString("es-EC", { day: "2-digit", month: "short", timeZone: "UTC" });
+};
 
 type Tab = "pagos" | "sin-asignar" | "ingresar";
+type Params = Record<string, string | undefined>;
 
-export default async function PagosPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string; page?: string }>;
-}) {
+const FILTERS: FilterDef[] = [
+  { name: "estado", title: "Estado", options: [{ value: "confirmado", label: "Confirmado" }, { value: "pendiente", label: "Sin depositar" }] },
+  { name: "metodo", title: "Forma de pago", multi: true, options: Object.entries(METHOD_LABELS).map(([value, label]) => ({ value, label })) },
+  { name: "factura", title: "Factura", options: [{ value: "con", label: "Facturado" }, { value: "sin", label: "Sin factura" }] },
+  { name: "banco", title: "Banco", options: [{ value: "conciliado", label: "Conciliado" }, { value: "sin", label: "Sin conciliar" }] },
+];
+
+export default async function PagosPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireAuth();
   if (!can.viewPayments(user)) redirect("/dashboard?forbidden=1");
 
-  // Access control: OWNER, ACCOUNTING, ADMIN
-  const allowed = user.role === "OWNER" || user.role === "ACCOUNTING" || user.role === "ADMIN";
-  if (!allowed) {
-    return (
-      <div className="p-8">
-        <p className="text-sm text-muted-foreground">No tienes acceso a esta sección.</p>
-      </div>
-    );
-  }
-
   const scopedSede = getSedeScope(user);
-  const isAccountingOrOwner = can.editFinancials(user);
-  const defaultSede = user.sede ?? "FITNESS_CENTER";
-
+  const isAccounting = can.editFinancials(user);
   const params = await searchParams;
-  const activeTab = (params.tab as Tab) ?? "pagos";
-  const page = parseInt(params.page ?? "1", 10);
+  const tab: Tab = params.tab === "sin-asignar" || (params.tab === "ingresar" && isAccounting) ? (params.tab as Tab) : "pagos";
+  const f = parsePaymentFilters(params, scopedSede);
 
-  // Load data for the active tab
-  const [summary, paymentsData, poolEntries, pendingPayments] = await Promise.all([
+  const [summary, list, poolEntries, pendingPayments] = await Promise.all([
     getPaymentSummary(scopedSede ?? undefined),
-    activeTab === "pagos"
-      ? getMemberPayments({ sede: scopedSede ?? undefined, page })
-      : Promise.resolve({ payments: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }),
-    activeTab === "sin-asignar" || activeTab === "pagos"
-      ? getPoolEntries(scopedSede ?? undefined)
-      : Promise.resolve([]),
-    activeTab === "sin-asignar" || activeTab === "pagos"
-      ? getPendingMemberPayments(scopedSede ?? undefined)
-      : Promise.resolve([]),
+    tab === "pagos" ? listPayments(f) : null,
+    tab === "sin-asignar" ? getPoolEntries(scopedSede ?? undefined) : Promise.resolve([]),
+    tab === "sin-asignar" ? getPendingMemberPayments(scopedSede ?? undefined) : Promise.resolve([]),
   ]);
 
+  // Links keep the current filters; `patch` overrides some of them.
+  const href = (patch: Record<string, string | null>) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v && k !== "page") q.set(k, v);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) q.set(k, v);
+      else q.delete(k);
+    }
+    return `/dashboard/pagos${q.size ? `?${q}` : ""}`;
+  };
+  const here = href({});
 
-  const tabs = [
-    { key: "pagos", label: "Pagos registrados" },
-    { key: "sin-asignar", label: `Sin asignar${summary.poolCount > 0 ? ` (${summary.poolCount})` : ""}` },
-    ...(isAccountingOrOwner ? [{ key: "ingresar", label: "Ingresar del banco" }] : []),
+  const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "pagos", label: "Cobros registrados" },
+    { key: "sin-asignar", label: "Sin asignar", count: summary.poolCount + summary.pendingCount },
+    ...(isAccounting ? [{ key: "ingresar" as Tab, label: "Ingresar del banco" }] : []),
   ];
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Pagos</h1>
-          <p className="text-sm text-muted-foreground">
-            Registro de cobros, transferencias y confirmación de pagos.
-            {scopedSede && ` · ${SEDE_LABELS[scopedSede]}`}
-          </p>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          {isAccountingOrOwner && (
-            <Link href="/dashboard/facturas/nueva" className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted">
-              Cobrar y facturar
-            </Link>
-          )}
-          <Link href="/dashboard/pagos/nuevo" className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            + Registrar pago
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
+      <PageHeader
+        title="Cobros de socios"
+        subtitle={`Lo que pagan los socios, si ya está en el banco y si ya tiene factura.${scopedSede ? ` · ${ENTITIES[scopedSede].name}` : ""}`}
+      >
+        {isAccounting && (
+          <Link
+            href="/dashboard/facturas/nueva"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3.5 text-sm font-medium hover:border-stone-500"
+          >
+            <FileText className="size-4" /> Cobrar y facturar
           </Link>
-        </div>
-      </div>
+        )}
+        <Link
+          href="/dashboard/pagos/nuevo"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-white shadow-sm hover:opacity-90"
+          style={{ backgroundColor: TEAL }}
+        >
+          <Plus className="size-4" /> Registrar pago
+        </Link>
+      </PageHeader>
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Cobrado este mes</p>
-            <p className="text-2xl font-semibold">{fmt(summary.monthTotalCents)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Fondos sin depositar</p>
-            <p className={`text-2xl font-semibold ${summary.pendingCount > 0 ? "text-amber-600" : ""}`}>
-              {summary.pendingCount}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Sin asignar (banco)</p>
-            <p className={`text-2xl font-semibold ${summary.poolCount > 0 ? "text-amber-600" : ""}`}>
-              {summary.poolCount}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b flex gap-1">
+      <nav className="flex gap-1 border-b" aria-label="Vistas de pagos">
         {tabs.map((t) => (
           <Link
             key={t.key}
-            href={`/dashboard/pagos?tab=${t.key}`}
-            className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition ${
-              activeTab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+            href={t.key === "pagos" ? "/dashboard/pagos" : `/dashboard/pagos?tab=${t.key}`}
+            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition ${
+              tab === t.key ? "font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
+            style={tab === t.key ? { borderColor: TEAL } : undefined}
           >
             {t.label}
+            {!!t.count && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold text-amber-800">{t.count}</span>}
           </Link>
         ))}
-      </div>
+      </nav>
 
-      {/* ── Tab: Pagos registrados ──────────────────────────────────────────── */}
-      {activeTab === "pagos" && (
-        <div className="space-y-4">
-          {paymentsData.payments.length === 0 ? (
-            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No hay pagos registrados aún.
-            </div>
-          ) : (
-            <>
-              <div className="rounded-md border overflow-hidden">
+      {tab === "pagos" && list && (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <RangeFilter desde={f.desde} hasta={f.hasta} rango={f.rango} />
+            {!scopedSede && (
+              <div className="flex rounded-full border bg-stone-50 p-0.5 text-xs" role="tablist" aria-label="Sede">
+                {[null, ...ENTITY_ORDER].map((s) => (
+                  <Link
+                    key={s ?? "todas"}
+                    href={href({ sede: s })}
+                    role="tab"
+                    aria-selected={f.sede === s}
+                    className={`rounded-full px-3 py-1.5 font-medium transition ${f.sede === s ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {s ? SEDE_SHORT[s] : "Todas las sedes"}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Cobrado y confirmado"
+              value={fmtMoney(list.confirmedCents)}
+              sub={`${list.confirmedCount} cobros`}
+              href={href({ estado: "confirmado" })}
+              icon={Banknote}
+              color={TEAL}
+            />
+            <Stat
+              label="Sin depositar"
+              value={fmtMoney(list.pendingCents)}
+              sub={`${list.pendingCount} por confirmar con el banco`}
+              href={href({ estado: "pendiente" })}
+              icon={Hourglass}
+              color={list.pendingCount ? "#d97e0a" : TEAL}
+            />
+            <Stat
+              label="Sin factura"
+              value={String(list.uninvoiced)}
+              sub="Se factura al cobrar"
+              href={href({ factura: "sin" })}
+              icon={Receipt}
+              color={list.uninvoiced ? "#e5533f" : TEAL}
+            />
+            <Stat
+              label="Sin conciliar con el banco"
+              value={String(list.unreconciled)}
+              sub="Transferencias y tarjetas"
+              href={href({ banco: "sin" })}
+              icon={Landmark}
+              color={list.unreconciled ? "#2f6fb0" : TEAL}
+            />
+          </div>
+
+          <section className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <FilterBar filters={FILTERS} searchPlaceholder="Socio, quien pagó o referencia…" />
+            {list.rows.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">No hay cobros con estos filtros.</p>
+            ) : (
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-muted/50 border-b">
-                      <th className="text-left font-medium px-3 py-2">Fecha</th>
-                      <th className="text-left font-medium px-3 py-2">Socio</th>
-                      <th className="text-left font-medium px-3 py-2">Membresía</th>
-                      <th className="text-left font-medium px-3 py-2">Método</th>
-                      <th className="text-right font-medium px-3 py-2">Monto</th>
-                      <th className="text-left font-medium px-3 py-2">Estado</th>
-                      <th className="text-left font-medium px-3 py-2">Depositante</th>
-                      <th className="text-left font-medium px-3 py-2">Referencia</th>
-                      <th className="text-left font-medium px-3 py-2">Banco</th>
-                      {isAccountingOrOwner && (
-                        <th className="text-left font-medium px-3 py-2">Sede</th>
-                      )}
-                      <th className="text-right font-medium px-3 py-2">Acciones</th>
+                    <tr className="border-b bg-stone-50/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                      <th className="px-4 py-2.5 font-medium">Fecha</th>
+                      <th className="px-3 py-2.5 font-medium">Socio</th>
+                      <th className="hidden px-3 py-2.5 font-medium lg:table-cell">Pagó</th>
+                      <th className="hidden px-3 py-2.5 font-medium md:table-cell">Forma</th>
+                      <th className="px-3 py-2.5 font-medium">Estado</th>
+                      <th className="hidden px-3 py-2.5 font-medium sm:table-cell">Banco</th>
+                      <th className="px-3 py-2.5 font-medium">Factura</th>
+                      {!scopedSede && <th className="hidden px-3 py-2.5 font-medium xl:table-cell">Sede</th>}
+                      <th className="px-3 py-2.5 text-right font-medium">Monto</th>
+                      <th className="px-4 py-2.5 text-right font-medium" aria-label="Acciones" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
-                    {paymentsData.payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-muted/20">
-                        <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                          {fmtDate(p.paidAt ?? p.createdAt)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {p.member ? (
-                            <Link
-                              href={`/dashboard/socios/${p.member.id}`}
-                              className="hover:underline text-primary"
-                            >
-                              {p.member.firstName} {p.member.lastName}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {p.membership?.plan?.name ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 text-xs">
-                          {METHOD_LABELS[p.method] ?? p.method}
-                        </td>
-                        <td className="px-3 py-2 text-right font-medium tabular-nums">
-                          {fmt(p.amountCents)}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${STATUS_COLORS[p.status] ?? ""}`}
-                          >
-                            {STATUS_LABELS[p.status] ?? p.status}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {p.depositorName ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground font-mono">
-                          {p.bankReference ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {p.bankEntity ?? "—"}
-                        </td>
-                        {isAccountingOrOwner && (
-                          <td className="px-3 py-2 text-xs text-muted-foreground">
-                            {SEDE_LABELS[p.sede] ?? p.sede}
+                  <tbody>
+                    {list.rows.map((p) => {
+                      const st = STATUS[p.status] ?? STATUS.PENDING;
+                      const StIcon = st.icon;
+                      const invoice = p.invoice && p.invoice.status !== "VOIDED" ? p.invoice : null;
+                      const reconciled = !!(p.bankTransactionId || p.reconciledAt);
+                      const memberName = p.member ? `${p.member.firstName} ${p.member.lastName}` : "";
+                      const billedOther = invoice && invoice.buyerName.toLowerCase() !== memberName.toLowerCase() ? invoice.buyerName : null;
+                      const locked = invoice ? "Tiene factura: anúlala primero en Facturación." : reconciled ? "Conciliado con el banco: deshaz la conciliación primero." : null;
+                      return (
+                        <tr key={p.id} className="border-b last:border-0 hover:bg-stone-50">
+                          <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-muted-foreground">{fmtDay(p.paidAt ?? p.createdAt)}</td>
+                          <td className="px-3 py-2.5">
+                            {p.member ? (
+                              <Link href={`/dashboard/socios/${p.member.id}`} className="font-medium hover:underline">{memberName}</Link>
+                            ) : (
+                              "—"
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {p.membership?.plan?.name ?? "Sin membresía"}
+                              {billedOther && <> · factura a <span className="text-foreground">{billedOther}</span></>}
+                            </p>
                           </td>
-                        )}
-                        <td className="px-3 py-2 text-right">
-                          <div className="flex items-center justify-end gap-3">
-                            {isAccountingOrOwner &&
-                              (p.invoice && p.invoice.status !== "VOIDED" ? (
-                                <Link href={`/dashboard/facturas/${p.invoice.id}`} className="text-xs text-primary hover:underline">
-                                  factura
-                                </Link>
+                          <td className="hidden max-w-44 truncate px-3 py-2.5 text-muted-foreground lg:table-cell" title={p.bankReference ? `Ref. ${p.bankReference}` : undefined}>
+                            {p.depositorName ?? "—"}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-muted-foreground md:table-cell">{METHOD_LABELS[p.method] ?? p.method}</td>
+                          <td className="px-3 py-2.5">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${st.cls}`}>
+                              <StIcon className="size-3" />
+                              {st.label}
+                            </span>
+                          </td>
+                          <td className="hidden px-3 py-2.5 sm:table-cell">
+                            {reconciled ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-[#2f6fb0]"><Landmark className="size-3.5" />Conciliado</span>
+                            ) : p.method === "CASH" ? (
+                              <span className="text-xs text-muted-foreground">Efectivo</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5">
+                            {invoice ? (
+                              <Link href={`/dashboard/facturas/${invoice.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline">
+                                <CircleCheck className="size-3.5" />
+                                <span title={formatDocNumber(invoice.emissionPoint.establishment, invoice.emissionPoint.point, invoice.sequential)}>N.º {invoice.sequential}</span>
+                              </Link>
+                            ) : isAccounting ? (
+                              <Link
+                                href={`/dashboard/facturas/nueva?pago=${p.id}`}
+                                className="inline-flex items-center gap-1 rounded-full border border-[#0f9f8f]/40 px-2 py-0.5 text-xs font-medium text-[#0b7d71] hover:bg-[#0f9f8f]/10"
+                              >
+                                <Upload className="size-3" /> Facturar
+                              </Link>
+                            ) : (
+                              <span className="text-xs text-amber-700">Sin factura</span>
+                            )}
+                          </td>
+                          {!scopedSede && <td className="hidden px-3 py-2.5 text-muted-foreground xl:table-cell">{SEDE_SHORT[p.sede]}</td>}
+                          <td className="px-3 py-2.5 text-right font-medium tabular-nums">{fmtMoney(p.amountCents, { decimals: true })}</td>
+                          <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              <Link href={`/dashboard/pagos/${p.id}?volver=${encodeURIComponent(here)}`} className="text-xs text-muted-foreground hover:text-foreground">
+                                editar
+                              </Link>
+                              {locked ? (
+                                <span title={locked} className="text-muted-foreground/60"><Lock className="size-3.5" /></span>
                               ) : (
-                                <Link href={`/dashboard/facturas/nueva?pago=${p.id}`} className="text-xs text-primary hover:underline">
-                                  facturar
-                                </Link>
-                              ))}
-                            <Link href={`/dashboard/pagos/${p.id}`} className="text-xs text-muted-foreground hover:text-foreground">
-                              editar
-                            </Link>
-                            <DeleteButton
-                              action={deletePayment.bind(null, p.id)}
-                              label="eliminar"
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                                <DeleteButton
+                                  action={deletePayment.bind(null, p.id)}
+                                  label="eliminar"
+                                  confirmText={`¿Eliminar el cobro de ${memberName} por ${fmtMoney(p.amountCents, { decimals: true })}? Sale de la contabilidad del mes.`}
+                                />
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+            )}
+            <div className="border-t">
+              <Pager page={list.page} totalPages={list.totalPages} total={list.total} noun="cobros" />
+            </div>
+          </section>
 
-              {/* Pagination */}
-              {paymentsData.totalPages > 1 && (
-                <div className="flex items-center gap-2 text-sm">
-                  {page > 1 && (
-                    <Link href={`/dashboard/pagos?tab=pagos&page=${page - 1}`} className="text-primary hover:underline">
-                      ← Anterior
-                    </Link>
-                  )}
-                  <span className="text-muted-foreground">
-                    Página {page} de {paymentsData.totalPages} · {paymentsData.total} pagos
-                  </span>
-                  {page < paymentsData.totalPages && (
-                    <Link href={`/dashboard/pagos?tab=pagos&page=${page + 1}`} className="text-primary hover:underline">
-                      Siguiente →
-                    </Link>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Tab: Sin asignar (Isabel's pool) ───────────────────────────────── */}
-      {activeTab === "sin-asignar" && (
-        <div className="space-y-6">
-          {/* Fondos sin depositar (admin's pending member payments) */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                ⏳ Fondos sin depositar
-                <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
-                  {pendingPayments.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Pagos de socios registrados por admin pero aún no confirmados en el banco.
-              </p>
-            </CardHeader>
-            <CardContent className="p-0">
-              {pendingPayments.length === 0 ? (
-                <p className="px-4 pb-4 text-sm text-muted-foreground">Sin fondos pendientes.</p>
-              ) : (
-                <div className="divide-y">
-                  {pendingPayments.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                      <div className="space-y-0.5">
-                        <p className="font-medium">
-                          {p.member?.firstName} {p.member?.lastName}
-                          {p.membership && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              · {p.membership.plan.name}
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {METHOD_LABELS[p.method] ?? p.method}
-                          {p.depositorName && ` · ${p.depositorName}`}
-                          {p.bankReference && ` · Ref: ${p.bankReference}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold tabular-nums">{fmt(p.amountCents)}</span>
-                        <Link href={`/dashboard/pagos/${p.id}/confirmar?volver=${encodeURIComponent("/dashboard/pagos?tab=sin-asignar")}`} className="text-xs font-medium text-primary hover:underline">
-                          Confirmar
-                        </Link>
-                        <DeleteButton
-                          action={deletePendingPayment.bind(null, p.id)}
-                          label="eliminar"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Isabel's pool (bank entries not yet matched) */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                🏦 Pagos bancarios sin asignar
-                <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-200">
-                  {poolEntries.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Transferencias y pagos ingresados por Isabel que aún no están vinculados a un socio.
-              </p>
-            </CardHeader>
-            <CardContent className="p-0">
-              {poolEntries.length === 0 ? (
-                <p className="px-4 pb-4 text-sm text-muted-foreground">
-                  Sin registros bancarios pendientes.{" "}
-                  {isAccountingOrOwner && (
-                    <Link href="/dashboard/pagos?tab=ingresar" className="text-primary hover:underline">
-                      Ingresar del banco →
-                    </Link>
-                  )}
-                </p>
-              ) : (
-                <div className="divide-y">
-                  {poolEntries.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                      <div className="space-y-0.5">
-                        <p className="font-medium">{p.depositorName ?? "—"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {fmtDate(p.paidAt)}
-                          {p.bankEntity && ` · ${p.bankEntity}`}
-                          {p.bankReference && ` · Ref: ${p.bankReference}`}
-                          {isAccountingOrOwner && ` · ${SEDE_LABELS[p.sede] ?? p.sede}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold tabular-nums">{fmt(p.amountCents)}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {METHOD_LABELS[p.method] ?? p.method}
-                        </Badge>
-                        {isAccountingOrOwner && (
-                          <DeleteButton
-                            action={deletePoolEntry.bind(null, p.id)}
-                            label="eliminar"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* ── Tab: Ingresar del banco (Isabel) ────────────────────────────────── */}
-      {activeTab === "ingresar" && isAccountingOrOwner && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ingresar pagos del banco / Stripe</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Copia y pega desde el extracto bancario o Stripe. Los pagos guardados aparecerán en <strong>Sin asignar</strong>.
+          {list.byMethod.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Por forma de pago:{" "}
+              {list.byMethod.map((m, i) => (
+                <span key={m.method}>
+                  {i > 0 && " · "}
+                  <Link href={href({ metodo: m.method })} className="hover:underline">
+                    {METHOD_LABELS[m.method]} {fmtMoney(m.cents)}
+                  </Link>
+                </span>
+              ))}
             </p>
-          </CardHeader>
-          <CardContent>
-            <PoolEntryForm
-              defaultSede={defaultSede}
-              canPickSede={isAccountingOrOwner}
-            />
-          </CardContent>
-        </Card>
+          )}
+        </>
+      )}
+
+      {tab === "sin-asignar" && (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Panel title={`Fondos sin depositar · ${pendingPayments.length}`}>
+            <p className="-mt-1 mb-3 text-xs text-muted-foreground">Cobros registrados en recepción que aún no se confirman en el banco.</p>
+            {pendingPayments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin fondos pendientes.</p>
+            ) : (
+              <ul className="divide-y">
+                {pendingPayments.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {p.member?.firstName} {p.member?.lastName}
+                        {p.membership && <span className="ml-1 text-xs font-normal text-muted-foreground">· {p.membership.plan.name}</span>}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {fmtDay(p.paidAt ?? p.createdAt)} · {METHOD_LABELS[p.method] ?? p.method}
+                        {p.depositorName && ` · ${p.depositorName}`}
+                        {p.bankReference && ` · Ref. ${p.bankReference}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="font-semibold tabular-nums">{fmtMoney(p.amountCents, { decimals: true })}</span>
+                      <Link
+                        href={`/dashboard/pagos/${p.id}/confirmar?volver=${encodeURIComponent("/dashboard/pagos?tab=sin-asignar")}`}
+                        className="rounded-full border border-[#0f9f8f]/40 px-2.5 py-0.5 text-xs font-medium text-[#0b7d71] hover:bg-[#0f9f8f]/10"
+                      >
+                        Confirmar
+                      </Link>
+                      <DeleteButton action={deletePendingPayment.bind(null, p.id)} label="eliminar" confirmText="¿Eliminar este cobro sin depositar?" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel title={`Depósitos del banco sin asignar · ${poolEntries.length}`}>
+            <p className="-mt-1 mb-3 text-xs text-muted-foreground">Transferencias y pagos que entraron al banco y aún no se vinculan a un socio.</p>
+            {poolEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Sin depósitos pendientes.{" "}
+                {isAccounting && (
+                  <Link href="/dashboard/pagos?tab=ingresar" className="text-[#2f6fb0] hover:underline">
+                    Ingresar del banco ›
+                  </Link>
+                )}
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {poolEntries.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{p.depositorName ?? "—"}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {fmtDay(p.paidAt)}
+                        {p.bankEntity && ` · ${p.bankEntity}`}
+                        {p.bankReference && ` · Ref. ${p.bankReference}`}
+                        {!scopedSede && ` · ${SEDE_SHORT[p.sede]}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="font-semibold tabular-nums">{fmtMoney(p.amountCents, { decimals: true })}</span>
+                      <span className="text-xs text-muted-foreground">{METHOD_LABELS[p.method] ?? p.method}</span>
+                      {isAccounting && <DeleteButton action={deletePoolEntry.bind(null, p.id)} label="eliminar" confirmText="¿Eliminar este depósito sin asignar?" />}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
+      )}
+
+      {tab === "ingresar" && isAccounting && (
+        <Panel title="Ingresar pagos del banco o de la pasarela">
+          <p className="-mt-1 mb-4 text-sm text-muted-foreground">
+            Copia y pega desde el extracto bancario o la pasarela. Lo guardado aparece en <strong>Sin asignar</strong>.
+          </p>
+          <PoolEntryForm defaultSede={user.sede ?? "FITNESS_CENTER"} canPickSede={isAccounting} />
+        </Panel>
       )}
     </div>
   );
 }
-

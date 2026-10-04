@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import type { Sede, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
+import { assertOpen, postingDay } from "@/lib/accounting/posting";
+import { ecuadorDateString } from "@/lib/timezone";
+import { paymentsWhere, type PaymentFilters } from "@/lib/payments/filters";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -111,6 +114,50 @@ export async function getPendingMemberPayments(sedeFilter?: Sede) {
       membership: { include: { plan: { select: { name: true } } } },
     },
   });
+}
+
+/**
+ * Payments list with the filters of the Pagos screen, plus the totals of the
+ * whole filtered set (not just the page).
+ */
+export async function listPayments(f: PaymentFilters, pageSize = 50) {
+  const user = await requireAuth();
+  if (!canManagePayments(user)) throw new Error("No autorizado");
+  const scoped = getSedeScope(user);
+  const where = paymentsWhere({ ...f, sede: scoped ?? f.sede });
+
+  const [rows, total, byStatus, uninvoiced, unreconciled, byMethod] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      orderBy: [{ paidAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
+      skip: (f.page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        member: { select: { id: true, firstName: true, lastName: true } },
+        membership: { include: { plan: { select: { name: true } } } },
+        invoice: { select: { id: true, status: true, buyerName: true, sequential: true, emissionPoint: { select: { establishment: true, point: true } } } },
+      },
+    }),
+    prisma.payment.count({ where }),
+    prisma.payment.groupBy({ by: ["status"], where, _sum: { amountCents: true }, _count: { _all: true } }),
+    prisma.payment.count({ where: { AND: [where, { OR: [{ invoiceId: null }, { invoice: { status: "VOIDED" } }] }] } }),
+    prisma.payment.count({ where: { AND: [where, { bankTransactionId: null, reconciledAt: null, method: { not: "CASH" } }] } }),
+    prisma.payment.groupBy({ by: ["method"], where, _sum: { amountCents: true } }),
+  ]);
+  const st = (s: PaymentStatus) => byStatus.find((b) => b.status === s);
+  return {
+    rows,
+    total,
+    page: f.page,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    confirmedCents: st("SUCCEEDED")?._sum.amountCents ?? 0,
+    confirmedCount: st("SUCCEEDED")?._count._all ?? 0,
+    pendingCents: st("PENDING")?._sum.amountCents ?? 0,
+    pendingCount: st("PENDING")?._count._all ?? 0,
+    uninvoiced,
+    unreconciled,
+    byMethod: byMethod.map((m) => ({ method: m.method, cents: m._sum.amountCents ?? 0 })).sort((a, b) => b.cents - a.cents),
+  };
 }
 
 // ─── Isabel: bulk pool entry ──────────────────────────────────────────────────
@@ -296,7 +343,7 @@ export async function deletePendingPayment(id: string) {
 
   const scopedSede = getSedeScope(user);
   if (scopedSede && p.sede !== scopedSede) throw new Error("No autorizado");
-  await assertNotInvoiced(id, "eliminar el cobro");
+  await assertCanChange(user, p, "eliminar el cobro");
 
   await prisma.payment.delete({ where: { id } });
   revalidatePath("/dashboard/pagos");
@@ -462,6 +509,33 @@ async function assertNotInvoiced(paymentId: string, what: string) {
   }
 }
 
+/**
+ * What every accounting system enforces before a recorded collection changes
+ * its amount/date or disappears (QuickBooks, Xero): it must not be matched to
+ * a bank line (undo the match first), its month must be open, and once the
+ * bank confirmed it only accounting can touch it.
+ */
+async function assertCanChange(
+  user: Parameters<typeof can.editFinancials>[0],
+  p: {
+    id: string; sede: Sede; status: PaymentStatus; paidAt: Date | null; createdAt: Date;
+    bankTransactionId: string | null; reconciledAt: Date | null; recordedByUserId: string | null;
+  },
+  what: string,
+) {
+  if (p.bankTransactionId || p.reconciledAt) {
+    throw new Error(`Este cobro ya está conciliado con el banco: primero deshaz la conciliación en Caja y Bancos antes de ${what}.`);
+  }
+  // Front desk may fix its own typo the same day (e.g. cash entered as $40
+  // instead of $45); after that a confirmed collection is accounting's.
+  const ownSameDay = p.recordedByUserId === user.id && ecuadorDateString(p.createdAt) === ecuadorDateString();
+  if (p.status === "SUCCEEDED" && !can.editFinancials(user) && !ownSameDay) {
+    throw new Error(`Este cobro ya fue confirmado: solo contabilidad puede ${what}. Pídeselo a Isabel.`);
+  }
+  await assertOpen(prisma, p.sede, postingDay(p.paidAt ?? p.createdAt));
+  await assertNotInvoiced(p.id, what);
+}
+
 // ─── Update / delete any payment (admin can fix mistakes) ─────────────────────
 
 export async function updatePayment(
@@ -483,7 +557,12 @@ export async function updatePayment(
   const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
   const scopedSede = getSedeScope(user);
   if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
-  if (data.amountCents !== undefined && data.amountCents !== existing.amountCents) await assertNotInvoiced(id, "cambiar el monto");
+  if (data.amountCents !== undefined && data.amountCents !== existing.amountCents) await assertCanChange(user, existing, "cambiar el monto");
+  const newPaidAt = data.paidAt === undefined ? undefined : data.paidAt ? new Date(data.paidAt) : null;
+  if (newPaidAt !== undefined && (newPaidAt?.getTime() ?? null) !== (existing.paidAt?.getTime() ?? null)) {
+    await assertCanChange(user, existing, "cambiar la fecha");
+    if (newPaidAt) await assertOpen(prisma, existing.sede, postingDay(newPaidAt));
+  }
 
   const updated = await prisma.payment.update({
     where: { id },
@@ -513,7 +592,8 @@ export async function deletePayment(id: string) {
   const existing = await prisma.payment.findUniqueOrThrow({ where: { id } });
   const scopedSede = getSedeScope(user);
   if (scopedSede && existing.sede !== scopedSede) throw new Error("No autorizado");
-  await assertNotInvoiced(id, "eliminar el cobro");
+  if (existing.isPoolEntry) throw new Error("Es un depósito del banco: elimínalo desde Sin asignar.");
+  await assertCanChange(user, existing, "eliminar el cobro");
 
   await prisma.payment.delete({ where: { id } });
 
