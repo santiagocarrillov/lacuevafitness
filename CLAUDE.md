@@ -139,19 +139,17 @@ Los admins ven los mismos campos al registrar un pago.
 
 ## Dónde retomar (actualizar al cerrar cada sesión)
 
-**Última sesión (2–3 oct 2026):** PRs #112–#121 en producción: facturación electrónica con emisión
-directa al SRI (`docs/facturacion-sri.md`), gastos con líneas y lectura del comprobante por IA, activos
-fijos y depreciación (`docs/gastos-modulo3.md`), borrador del 104 y ATS (`docs/impuestos.md`), un solo
-menú de Finanzas + botón Atrás + todo enlazado + pantallas en vez de ventanas en toda la app, y permisos
-en todas las server actions.
+**Última sesión (3–4 oct 2026):** PRs #123–#128 en producción (main `c768ff9`):
+- **Ficha única por persona** (socios y leads, `src/components/ficha/`, timeline en `src/lib/ficha/timeline.ts`) con pestaña WhatsApp (responder y plantillas), edición en línea de propiedades y segmentos (automáticos + listas manuales: tablas `Segment`/`SegmentEntry`, migración `20261004000000_segment_lists` ya aplicada).
+- **Menú lateral** grafito con grupos plegables, escondible (click o `[`).
+- **Listas Leads/Socios** estilo Gambit (`src/components/list/`): vistas, resumen clicable, filtros en la URL. Los números del embudo del Resumen abren Leads filtrado.
+- **Asistencia → Calendario** (`?vista=calendario`).
+- **WhatsApp tipo CRM**: tres paneles, tarjeta del contacto, Nota interna y vista **Tablero** por etapa (`?vista=tablero`).
 
 **Próximo paso concreto:**
-- Cuando Santiago suba la firma .p12 (Facturación → Configuración) y ponga `SRI_CERT_PASSWORD_<SEDE>` en
-  Vercel: crear un punto de emisión de pruebas y hacer el primer envío real al SRI de pruebas.
-- Nómina (módulo 4): esperar los datos de Isabel (relación de dependencia vs. factura, quién la ve,
-  periodicidad, décimos).
-- Seguridad pendiente menor: `updateMember` y `sendPushBroadcast` sin límite de sede para admins;
-  `deleteMemberNote` borra en vez de anular; mensaje de `portalSignUp` revela si un correo es socio.
+- QA con datos reales (nada de lo anterior se vio con login): fichas, edición en línea, listas, plantilla a un número propio, chat + tarjeta del contacto en el inbox, tablero, filtros, calendario.
+- Sigue pendiente: firma .p12 + primer envío al SRI de pruebas; nómina (datos de Isabel); seguridad menor (`updateMember` sin límite de sede para admins, `deleteMemberNote` borra en vez de anular, mensaje de `portalSignUp`).
+- Para ver UI sin login: ruta temporal sin proteger `src/app/zz-preview/` con datos ficticios, borrarla antes del commit.
 
 **Regla para server actions:** toda función exportada de un archivo `"use server"` verifica sesión y
 permiso al inicio (son endpoints públicos). Nunca confiar en ocultar el botón.
