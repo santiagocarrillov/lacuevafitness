@@ -11,11 +11,12 @@ import { ecuadorDateString } from "@/lib/timezone";
 import { sameLines, validateLines, type LineInput } from "@/lib/accounting/journal";
 import { formatDocNumber } from "@/lib/invoicing/core";
 import { accumulatedThrough, chargeForMonth, monthEnd, monthIdx, ymOf } from "@/lib/accounting/depreciation";
+import type { Decision } from "@/lib/finance/bank-suggest";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
 export const IVA_RATE = 15; // %, prices include IVA (Santiago, 1 oct 2026)
-export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE", "DEPRECIATION", "PAYROLL"];
+export const AUTO_SOURCES: JournalSource[] = ["PAYMENT", "INVOICE", "OTHER_INCOME", "EXPENSE", "CAPITAL", "DEFERRED_REVENUE", "DEPRECIATION", "PAYROLL", "BANK"];
 
 /** Splits a VAT-inclusive total. $50 → net 43.48 + IVA 6.52. */
 export function splitIva(totalCents: number, rate = IVA_RATE) {
@@ -338,8 +339,27 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
         ],
       });
     }
+    // Net salaries matched to a bank debit leave from that bank, one entry per debit.
+    const byTxn = new Map<string, typeof run.lines>();
+    for (const l of run.lines) if (l.bankTransactionId && l.netCents > 0) byTxn.set(l.bankTransactionId, [...(byTxn.get(l.bankTransactionId) ?? []), l]);
+    for (const [txnId, paid] of byTxn) {
+      const t = await db.bankTransaction.findUnique({ where: { id: txnId }, select: { postedAt: true } });
+      if (!t || !inRange(postingDay(t.postedAt))) continue;
+      out.push({
+        source: "PAYROLL",
+        sourceId: `${run.id}:banco:${txnId}`,
+        date: postingDay(t.postedAt),
+        description: `Pago de sueldos ${run.period}`,
+        lines: [
+          ...paid.map((l) => ({ accountId: A.code("2.1.08"), debitCents: l.netCents, party: `${l.employee.firstName} ${l.employee.lastName}` })),
+          { accountId: (await bankLedger(txnId)) ?? A.code("1.1.05"), creditCents: paid.reduce((a, l) => a + l.netCents, 0) },
+        ],
+      });
+    }
+    // The rest, when the rol was marked paid by hand (cash, or a transfer not reconciled yet).
     if (run.status === "PAID" && run.paidAt && inRange(run.paidAt)) {
-      const net = run.lines.reduce((a, l) => a + l.netCents, 0);
+      const rest = run.lines.filter((l) => l.netCents > 0 && !l.bankTransactionId);
+      const net = rest.reduce((a, l) => a + l.netCents, 0);
       const cash = run.paidMethod === "CASH" ? A.code("1.1.01") : A.code("1.1.05");
       if (net > 0) {
         out.push({
@@ -348,8 +368,63 @@ export async function desiredEntries(db: Db, sede: Sede, from: Date, to: Date): 
           date: run.paidAt,
           description: `Pago de sueldos ${run.period}`,
           lines: [
-            ...run.lines.filter((l) => l.netCents > 0).map((l) => ({ accountId: A.code("2.1.08"), debitCents: l.netCents, party: `${l.employee.firstName} ${l.employee.lastName}` })),
+            ...rest.map((l) => ({ accountId: A.code("2.1.08"), debitCents: l.netCents, party: `${l.employee.firstName} ${l.employee.lastName}` })),
             { accountId: cash, creditCents: net },
+          ],
+        });
+      }
+    }
+  }
+
+  // Bank lines that move money without a document of their own: transfers
+  // between own accounts (each leg through 1.1.07, so both legs net to zero),
+  // the principal of a loan instalment, and IESS / SRI payments that cancel
+  // what the rol and the sales left owing. Interest and fines are expenses
+  // linked to the same line (posted above).
+  const bankLines = await db.bankTransaction.findMany({
+    where: { status: "CLASSIFIED", kind: { in: ["INTERNAL_TRANSFER", "LOAN_PAYMENT", "PAYROLL", "TAXES"] }, account: { sede }, postedAt: wide },
+    include: { account: { select: { name: true } } },
+  });
+  for (const t of bankLines) {
+    const date = postingDay(t.postedAt);
+    if (!inRange(date)) continue;
+    const d = (t.appliedJson as { decision?: Decision } | null)?.decision;
+    const bank = A.byBank.get(t.accountId) ?? A.code("1.1.05");
+    const abs = Math.abs(t.amountCents);
+    const outflow = t.amountCents < 0;
+    const party = t.counterparty ?? undefined;
+    if (d?.type === "INTERNAL_TRANSFER") {
+      out.push({
+        source: "BANK",
+        sourceId: t.id,
+        date,
+        description: `Transferencia entre cuentas · ${t.account.name}`,
+        lines: outflow
+          ? [{ accountId: A.code("1.1.07"), debitCents: abs }, { accountId: bank, creditCents: abs }]
+          : [{ accountId: bank, debitCents: abs }, { accountId: A.code("1.1.07"), creditCents: abs }],
+      });
+    } else if (d?.type === "LOAN_PAYMENT" && d.principalCode) {
+      const principal = abs - d.interestCents;
+      if (principal > 0) {
+        out.push({
+          source: "BANK",
+          sourceId: t.id,
+          date,
+          description: `Abono a capital del préstamo · ${t.description}`,
+          lines: [{ accountId: A.code(d.principalCode), debitCents: principal, party }, { accountId: bank, creditCents: principal }],
+        });
+      }
+    } else if (d?.type === "LIABILITY_PAYMENT") {
+      const paid = abs - d.extraCents;
+      if (paid > 0) {
+        out.push({
+          source: "BANK",
+          sourceId: t.id,
+          date,
+          description: `${d.to === "SRI" ? "Pago al SRI" : "Planilla del IESS"} · ${d.period}`,
+          lines: [
+            ...d.parts.map((p) => (p.cents >= 0 ? { accountId: A.code(p.code), debitCents: p.cents, memo: p.label } : { accountId: A.code(p.code), creditCents: -p.cents, memo: p.label })),
+            { accountId: bank, creditCents: paid },
           ],
         });
       }

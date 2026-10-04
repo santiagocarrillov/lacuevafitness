@@ -38,7 +38,7 @@ function buildLines(st: EntityStatement[], ym: string): Line[] {
   const lines: Line[] = [
     { label: "Ingresos", values: [], kind: "section" },
     { label: "Membresías confirmadas", values: v((s) => s.membershipsConfirmedCents), link: (sede) => contab(sede, "estados") },
-    { label: "Membresías sin conciliar con el banco", values: v((s) => s.membershipsUnreconciledCents), kind: "warn", link: () => "/dashboard/finanzas/banco" },
+    { label: "Membresías sin conciliar con el banco", values: v((s) => s.membershipsUnreconciledCents), kind: "warn", link: () => "/dashboard/finanzas/banco/conciliar" },
   ];
   if (st.some((s) => s.unassignedDepositsCents)) {
     lines.push({ label: "Depósitos sin asignar a un socio", values: v((s) => s.unassignedDepositsCents), kind: "warn", link: () => "/dashboard/pagos" });

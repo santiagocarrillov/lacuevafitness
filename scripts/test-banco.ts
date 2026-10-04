@@ -14,8 +14,10 @@ import fs from "fs";
 import { readSheet } from "read-excel-file/universal";
 import { prisma } from "../src/lib/prisma";
 import { parseStatement, type Cell } from "../src/lib/finance/bank-parsers";
-import { suggest, type CandidatePayment, type LineIn, type RuleIn } from "../src/lib/finance/bank-suggest";
+import { suggest, type CandidatePayment, type LiabilityDue, type LineIn, type RuleIn } from "../src/lib/finance/bank-suggest";
 import { classifyInTx, undoInTx } from "../src/lib/finance/bank-core";
+import { desiredEntries } from "../src/lib/accounting/posting";
+import { seedChart } from "../src/lib/accounting/chart";
 
 let fallos = 0;
 function check(nombre: string, ok: boolean, detalle = "") {
@@ -121,6 +123,38 @@ function partB() {
   check("regla aprendida (sin tildes/mayúsculas)", r1?.decision.type === "OTHER_INCOME" && r1.decision.category === "REIMBURSEMENT" && r1.confident);
   const r2 = suggest(L("c6", -2247, "Transferencia enviada", "PEREZ ESPINOZA CARINA VIVIANA"), { ...base, rules: [rule] }).suggestion;
   check("regla de créditos no aplica a débitos", r2?.decision.type !== "OTHER_INCOME");
+
+  // ── Caja y Bancos v2 ──
+  const out = L("t1", -30000, "TRANSFERENCIA A CTA 2203483", "CARRILLO VELASTEGUI SANTIAGO");
+  const tr = suggest(out, { ...base, sede: "FITNESS_CENTER", accountKind: "PERSONAL_MIXED", otherAccounts: [{ ...L("t2", 30000, "TRANSF. RECIBIDA", "CARRILLO VELASTEGUI SANTIAGO"), accountName: "Pichincha Santiago" }] }).suggestion;
+  check("la otra pata en otra cuenta propia → entre cuentas (seguro)", tr?.decision.type === "INTERNAL_TRANSFER" && tr.confident, tr?.reason);
+  const far = suggest(out, { ...base, otherAccounts: [{ ...L("t3", 30000, "TRANSF"), postedAt: new Date(t.getTime() + 6 * 86_400_000), accountName: "Otra" }] }).suggestion;
+  check("misma cifra 6 días después no es la otra pata", far?.decision.type !== "INTERNAL_TRANSFER");
+
+  const iessDue: LiabilityDue = { to: "IESS", period: "2026-08", parts: [{ code: "2.1.03", cents: 5856 }, { code: "2.1.04", cents: 4555 }], totalCents: 10411 };
+  const iessLine = L("ie", -10411, "Débitos · plani Ocp105-Iess Quito");
+  const li = suggest(iessLine, { ...base, due: iessDue, hasPayroll: true }).suggestion;
+  check("IESS que calza con el rol → cancela aportes (seguro)", li?.decision.type === "LIABILITY_PAYMENT" && li.decision.to === "IESS" && li.decision.extraCents === 0 && li.confident);
+  const li2 = suggest(L("ie2", -10611, "Débitos · plani Ocp105-Iess Quito"), { ...base, due: iessDue, hasPayroll: true }).suggestion;
+  check("IESS con $2 de más → multa aparte, no seguro", li2?.decision.type === "LIABILITY_PAYMENT" && li2.decision.extraCents === 200 && !li2.confident);
+  const li3 = suggest(iessLine, { ...base, hasPayroll: true }).suggestion;
+  check("IESS sin rol que calce (con nómina en la app) → no seguro", li3?.decision.type === "EXPENSE" && !li3.confident);
+  const sriDue: LiabilityDue = { to: "SRI", period: "2026-08", parts: [{ code: "2.1.06", cents: 39130 }, { code: "1.3.01", cents: -28048 }], totalCents: 11082 };
+  const ls = suggest(L("sr", -11082, "Débitos · Srisece1 . Ocp105-Pacifico"), { ...base, due: sriDue }).suggestion;
+  check("SRI que calza con el 104 → cancela IVA (seguro)", ls?.decision.type === "LIABILITY_PAYMENT" && ls.decision.to === "SRI" && ls.confident);
+  const ls2 = suggest(L("sr2", -11082, "Débitos · Srisece1 . Ocp105-Pacifico"), { ...base, due: iessDue }).suggestion;
+  check("propuesta del IESS no se usa para un débito del SRI", ls2?.decision.type === "EXPENSE" && !ls2.confident);
+
+  const pay = [
+    { id: "n1", runId: "r", period: "2026-09", employeeName: "Andrea Torres", netCents: 43645 },
+    { id: "n2", runId: "r", period: "2026-09", employeeName: "Luis Mena", netCents: 43645 },
+  ];
+  const sal = suggest(L("sa", -43645, "TRANSFERENCIA A TORRES ANDREA"), { ...base, payroll: pay }).suggestion;
+  check("sueldo por monto y nombre → esa persona (seguro)", sal?.decision.type === "PAYROLL_NET" && sal.decision.lineIds.join() === "n1" && sal.confident);
+  const all = suggest(L("sb", -87290, "PAGO NOMINA"), { ...base, payroll: pay }).suggestion;
+  check("un débito por todo el rol → todos los sueldos", all?.decision.type === "PAYROLL_NET" && all.decision.lineIds.length === 2 && !all.confident);
+  const amb2 = suggest(L("sc", -43645, "TRANSFERENCIA"), { ...base, payroll: pay }).suggestion;
+  check("dos sueldos iguales sin nombre → no adivina", amb2?.decision.type !== "PAYROLL_NET");
 }
 
 class Rollback extends Error {}
@@ -210,6 +244,89 @@ async function partC() {
         check("liquidación de tarjeta → comisión $1.97", fee3?.amountCents === 197 && fee3.category === "BANK_FEES");
       } else {
         console.log("   (no hay pagos PENDING de Xtreme: se omite el caso con pago real)");
+      }
+
+      // ── Caja y Bancos v2: entries against the real Pacífico ledger account.
+      await seedChart(tx, "XTREME"); // 1.1.07 may not exist yet in this DB
+      const pac = await tx.bankAccount.findFirst({ where: { sede: "XTREME", active: true, ledgerAccounts: { some: {} } }, include: { ledgerAccounts: true } });
+      if (!pac) {
+        console.log("   (Xtreme no tiene cuenta bancaria enlazada al plan: se omiten los asientos)");
+      } else {
+        const bankId = pac.ledgerAccounts[0].id;
+        const day = new Date("2026-09-20T00:00:00.000Z");
+        const mkP = (amountCents: number, description: string) =>
+          tx.bankTransaction.create({
+            data: { accountId: pac.id, postedAt: new Date("2026-09-20T15:00:00Z"), amountCents, description, reference: `P${++n}`, fingerprint: `test-${Date.now()}-p${n}` },
+          });
+        const entriesFor = async (pred: (e: { source: string; sourceId: string }) => boolean) =>
+          (await desiredEntries(tx, "XTREME", day, day)).filter((e) => pred(e));
+        const codeOf = async (id: string) => (await tx.ledgerAccount.findUnique({ where: { id } }))?.code;
+
+        // Transfer between own accounts → bank vs 1.1.07.
+        const trf = await mkP(-20000, "Transferencia a cuenta propia");
+        await classifyInTx(tx, uid, trf.id, { type: "INTERNAL_TRANSFER" });
+        const [te] = await entriesFor((e) => e.source === "BANK" && e.sourceId === trf.id);
+        const teCodes = te ? await Promise.all(te.lines.map((l) => codeOf(l.accountId))) : [];
+        check("transferencia: Dr 1.1.07 · Cr banco", !!te && teCodes.includes("1.1.07") && te.lines.some((l) => l.accountId === bankId && l.creditCents === 20000));
+
+        // Loan instalment: principal needs its liability.
+        const loan = await mkP(-50000, "Cuota préstamo");
+        await throws("cuota sin cuenta del préstamo → error", () => classifyInTx(tx, uid, loan.id, { type: "LOAN_PAYMENT", interestCents: 5000 }), /préstamo/);
+        await classifyInTx(tx, uid, loan.id, { type: "LOAN_PAYMENT", interestCents: 5000, principalCode: "2.2.02" });
+        const [le] = await entriesFor((e) => e.source === "BANK" && e.sourceId === loan.id);
+        check("cuota: capital $450 contra 2.2.02", !!le && le.lines.some((l) => l.debitCents === 45000) && le.lines.some((l) => l.accountId === bankId && l.creditCents === 45000));
+        check("cuota: interés $50 como gasto enlazado", (await tx.expense.findFirst({ where: { bankTransactionId: loan.id } }))?.amountCents === 5000);
+
+        // IESS planilla: cancels the aportes, fines as expense.
+        const iess = await mkP(-10611, "plani Ocp105-Iess Quito");
+        await throws(
+          "IESS: desglose que no suma → error",
+          () => classifyInTx(tx, uid, iess.id, { type: "LIABILITY_PAYMENT", to: "IESS", period: "2026-08", parts: [{ code: "2.1.03", cents: 5856 }], extraCents: 0 }),
+          /suma/,
+        );
+        await throws(
+          "IESS: cuenta del SRI no se paga al IESS",
+          () => classifyInTx(tx, uid, iess.id, { type: "LIABILITY_PAYMENT", to: "IESS", period: "2026-08", parts: [{ code: "2.1.06", cents: 10611 }], extraCents: 0 }),
+          /no se paga/,
+        );
+        await classifyInTx(tx, uid, iess.id, { type: "LIABILITY_PAYMENT", to: "IESS", period: "2026-08", parts: [{ code: "2.1.03", cents: 5856 }, { code: "2.1.04", cents: 4555 }], extraCents: 200 });
+        const [ie] = await entriesFor((e) => e.source === "BANK" && e.sourceId === iess.id);
+        const ieCodes = ie ? await Promise.all(ie.lines.map((l) => codeOf(l.accountId))) : [];
+        check("IESS: Dr 2.1.03 + 2.1.04 · Cr banco $104.11", !!ie && ieCodes.includes("2.1.03") && ieCodes.includes("2.1.04") && ie.lines.some((l) => l.accountId === bankId && l.creditCents === 10411));
+        check("IESS: multa $2 como gasto", (await tx.expense.findFirst({ where: { bankTransactionId: iess.id } }))?.amountCents === 200);
+        check("IESS: el movimiento queda como Sueldos e IESS", (await tx.bankTransaction.findUnique({ where: { id: iess.id } }))?.kind === "PAYROLL");
+
+        // SRI: IVA of sales less the credit applied.
+        const sri = await mkP(-11082, "Srisece1 . Ocp105-Pacifico");
+        await classifyInTx(tx, uid, sri.id, { type: "LIABILITY_PAYMENT", to: "SRI", period: "2026-08", parts: [{ code: "2.1.06", cents: 39130 }, { code: "1.3.01", cents: -28048 }], extraCents: 0 });
+        const [se] = await entriesFor((e) => e.source === "BANK" && e.sourceId === sri.id);
+        const credit1301 = se ? (await Promise.all(se.lines.map(async (l) => ((await codeOf(l.accountId)) === "1.3.01" ? l.creditCents ?? 0 : 0)))).reduce((a, b) => a + b, 0) : 0;
+        check("SRI: Dr 2.1.06 $391.30 · Cr 1.3.01 $280.48 · Cr banco $110.82", !!se && credit1301 === 28048 && se.lines.some((l) => l.accountId === bankId && l.creditCents === 11082));
+
+        // Net salaries: link the rol lines, the rol becomes paid; undo restores it.
+        const emp = await tx.employee.create({ data: { sede: "XTREME", firstName: "Test", lastName: "Rollback", startDate: new Date("2026-01-01") } });
+        const emp2 = await tx.employee.create({ data: { sede: "XTREME", firstName: "Otra", lastName: "Persona", startDate: new Date("2026-01-01") } });
+        const run = await tx.payrollRun.create({ data: { sede: "XTREME", period: "2099-09", status: "APPROVED", approvedAt: new Date() } });
+        const l1 = await tx.payrollLine.create({ data: { runId: run.id, employeeId: emp.id, netCents: 43645, grossCents: 48200 } });
+        const l2 = await tx.payrollLine.create({ data: { runId: run.id, employeeId: emp2.id, netCents: 30000, grossCents: 33000 } });
+        const s1 = await mkP(-43645, "Transferencia a Test Rollback");
+        await throws("sueldo que no suma → error", () => classifyInTx(tx, uid, s1.id, { type: "PAYROLL_NET", lineIds: [l1.id, l2.id] }), /suman/);
+        await classifyInTx(tx, uid, s1.id, { type: "PAYROLL_NET", lineIds: [l1.id] });
+        check("primer sueldo enlazado; el rol sigue aprobado", (await tx.payrollLine.findUnique({ where: { id: l1.id } }))?.bankTransactionId === s1.id && (await tx.payrollRun.findUnique({ where: { id: run.id } }))?.status === "APPROVED");
+        const s2 = await mkP(-30000, "Transferencia a Otra Persona");
+        await classifyInTx(tx, uid, s2.id, { type: "PAYROLL_NET", lineIds: [l2.id] });
+        const paidRun = await tx.payrollRun.findUnique({ where: { id: run.id } });
+        check("todos los sueldos enlazados → rol pagado por transferencia", paidRun?.status === "PAID" && paidRun.paidMethod === "BANK_TRANSFER");
+        const [pe] = await entriesFor((e) => e.source === "PAYROLL" && e.sourceId === `${run.id}:banco:${s1.id}`);
+        check("asiento del sueldo: Dr 2.1.08 · Cr banco", !!pe && pe.lines.some((l) => l.accountId === bankId && l.creditCents === 43645));
+        check("sin asiento duplicado contra la cuenta puente", (await entriesFor((e) => e.sourceId === `${run.id}:pago`)).length === 0);
+        await throws("no se enlaza dos veces el mismo sueldo", async () => {
+          const s3 = await mkP(-30000, "Otra vez");
+          await classifyInTx(tx, uid, s3.id, { type: "PAYROLL_NET", lineIds: [l2.id] });
+        }, /ya está enlazado/);
+        await undoInTx(tx, s2.id);
+        const back = await tx.payrollRun.findUnique({ where: { id: run.id } });
+        check("deshacer: el rol vuelve a aprobado y el sueldo queda libre", back?.status === "APPROVED" && back.paidAt === null && (await tx.payrollLine.findUnique({ where: { id: l2.id } }))?.bankTransactionId === null);
       }
 
       throw new Rollback("fin de la prueba");

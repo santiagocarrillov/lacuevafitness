@@ -159,7 +159,7 @@ export function BanksCard({ data }: { data: HomeData }) {
         <ul className="divide-y">
           {data.banks.map((b) => (
             <li key={b.id}>
-              <Link href={`/dashboard/finanzas/banco?cuenta=${b.id}`} className="group block py-2.5">
+              <Link href={`/dashboard/finanzas/banco/movimientos?cuenta=${b.id}`} className="group block py-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate text-sm font-medium group-hover:underline">
                     {b.name}

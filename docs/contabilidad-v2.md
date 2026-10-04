@@ -96,5 +96,28 @@ Cada punto toca el esquema: se discute antes de construir (regla del repo).
 - Rol mensual por empresa: borrador editable (días, horas extra 50/100 %, bonos, descuentos, retención IR sugerida),
   aprobar = asiento PAYROLL al último día del mes; registrar pago = asiento que cierra los netos (cuenta puente
   1.1.05 si fue por transferencia). Recibo individual imprimible.
-- Pendiente: pagar planilla IESS y décimos desde la app (hoy con asiento manual), utilidades (15 %), liquidaciones
-  de salida, Formulario 107, vacaciones gozadas, enlazar el pago de sueldos con la línea del banco.
+- Pendiente: décimos desde la app, utilidades (15 %), liquidaciones de salida, Formulario 107, vacaciones gozadas.
+  (El pago de sueldos y la planilla IESS ya se enlazan con el banco: ver Caja y Bancos.)
+
+## Caja y Bancos — 5 oct 2026
+
+- Submenú: **Resumen** (saldo según el banco vs. en libros por cuenta, con lo que explica la diferencia; caja,
+  cuenta puente 1.1.05 y transferencias en tránsito 1.1.07; entradas/salidas por mes) · **Conciliar** (bandeja) ·
+  **Movimientos** (todas las líneas con filtros y su ficha: qué se creó y el asiento) · **Subir extracto** (hasta
+  dónde está cada cuenta) · **Reglas** · **Cuentas**. El Resumen recontabiliza antes de mostrar saldos.
+- Clasificaciones nuevas (todas con deshacer exacto, `bank-core.ts`):
+  - **Entre cuentas propias**: cada pata va contra 1.1.07; si las dos están clasificadas, 1.1.07 queda en cero.
+    Se sugiere sola cuando la otra cuenta de la misma empresa tiene el monto contrario (±3 días).
+  - **Cuota de préstamo**: el capital baja la cuenta de pasivo elegida (2.2.02…); el interés es gasto.
+  - **Sueldos** (`PAYROLL_NET`): enlaza las líneas del rol (`PayrollLine.bankTransactionId`, migración
+    `20261005120000_caja_bancos`); cuando todos los netos están enlazados el rol queda pagado. Asiento por débito:
+    Dr 2.1.08 · Cr banco. No se puede reabrir un rol con sueldos conciliados.
+  - **IESS / SRI** (`LIABILITY_PAYMENT`): cancela los pasivos en vez de crear gasto. IESS: 2.1.03, 2.1.04, 2.1.05,
+    2.1.14 según el rol aprobado del mes anterior. SRI: Dr 2.1.06 (IVA del mes) · Cr 1.3.01 (crédito aplicado,
+    del borrador del 104) + 2.1.13. Intereses y multas: gasto aparte. Si la empresa no lleva nómina en la app, el
+    débito del IESS sigue sugiriéndose como gasto de sueldos.
+- Asientos con fuente `BANK` (transferencias, capital de préstamos, IESS/SRI) en `posting.ts`.
+- Las cuentas personales mezcladas no comparan saldos: lo personal no entra a la contabilidad.
+- Pruebas: `npx tsx --env-file=.env scripts/test-banco.ts` (todo dentro de una transacción revertida).
+- Para que los libros cuadren con el banco hay que subir los extractos desde el 1 de enero (Xtreme tiene saldo
+  inicial al 31-dic-2025).

@@ -25,7 +25,7 @@ const ACTIONS: { label: string; href: string; icon: LucideIcon }[] = [
   { label: "Factura", href: "/dashboard/facturas/nueva", icon: FileText },
   { label: "Gasto", href: "/dashboard/gastos/nuevo", icon: Receipt },
   { label: "Facturas del SRI", href: "/dashboard/gastos/importar-sri", icon: FileInput },
-  { label: "Extracto del banco", href: "/dashboard/finanzas/banco", icon: Upload },
+  { label: "Extracto del banco", href: "/dashboard/finanzas/banco/importar", icon: Upload },
   { label: "Asiento", href: "/dashboard/contabilidad?tab=nuevo", icon: BookPlus },
 ];
 

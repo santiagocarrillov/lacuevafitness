@@ -183,8 +183,8 @@ export function ProcessFlow({ data, ym, today }: { data: HomeData; ym: string; t
           title="Caja y Bancos"
           color={BLUE}
           nodes={[
-            { label: "Importar extracto", href: "/dashboard/finanzas/banco", icon: Upload },
-            { label: "Conciliar", href: "/dashboard/finanzas/banco", icon: Landmark, badge: t.bankPending, hint: "Movimientos del banco por clasificar" },
+            { label: "Importar extracto", href: "/dashboard/finanzas/banco/importar", icon: Upload },
+            { label: "Conciliar", href: "/dashboard/finanzas/banco/conciliar", icon: Landmark, badge: t.bankPending, hint: "Movimientos del banco por clasificar" },
             { label: "Dueños", href: `/dashboard/finanzas/aportes?mes=${ym}`, icon: Banknote },
           ]}
         />

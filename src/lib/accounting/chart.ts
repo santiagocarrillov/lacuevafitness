@@ -37,6 +37,9 @@ const COMMON_TOP: ChartRow[] = [
   // transfer). Bank reconciliation moves each item to the real bank account.
   { code: "1.1.05", name: "Cuenta puente: movimientos por conciliar con bancos", type: "ASSET" },
   { code: "1.1.06", name: "Cuentas por cobrar", type: "ASSET" },
+  // Money moving between two own accounts: each leg of the transfer passes
+  // through here, so it nets to zero once both statements are reconciled.
+  { code: "1.1.07", name: "Transferencias entre cuentas propias (en tránsito)", type: "ASSET" },
   { code: "1.2", name: "Propiedades, planta y equipo", type: "ASSET", group: true },
   { code: "1.2.01", name: "Instalaciones y adecuaciones", type: "ASSET", role: "FIXED_ASSET" },
   { code: "1.2.02", name: "Equipo de oficina", type: "ASSET", role: "FIXED_ASSET" },

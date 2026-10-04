@@ -42,7 +42,13 @@ export async function GET(req: Request) {
     case "CAPITAL":
       return go(`/dashboard/finanzas/aportes${mes ? `?mes=${mes}` : ""}`);
     case "BANK":
-      return go("/dashboard/finanzas/banco");
+      return go(`/dashboard/finanzas/banco/movimientos/${id}`);
+    case "PAYROLL": {
+      // `${runId}:rol`, `${runId}:pago` or `${runId}:banco:${bankTransactionId}`
+      const parts = raw.split(":");
+      if (parts[1] === "banco" && parts[2]) return go(`/dashboard/finanzas/banco/movimientos/${parts[2]}`);
+      return go(`/dashboard/finanzas/trabajadores/roles/${id}`);
+    }
     case "DEPRECIATION":
       return go(`/dashboard/contabilidad?tab=activos&entidad=${sede}`);
     default:
