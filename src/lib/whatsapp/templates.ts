@@ -16,6 +16,7 @@
  */
 
 import { SEDE_INFO } from "./agent";
+import { TEMPLATE_CATALOG } from "./template-catalog";
 import type { FollowupKind, Sede } from "@/generated/prisma/client";
 
 /** Idioma con el que se aprobaron las 5 plantillas. */
@@ -172,7 +173,7 @@ const TEMPLATE_BODIES: Record<string, string> = {
  * el historial mienta a que diga "no lo tengo".
  */
 export function renderTemplate(spec: TemplateSpec): string {
-  const body = TEMPLATE_BODIES[spec.name];
+  const body = TEMPLATE_BODIES[spec.name] ?? TEMPLATE_CATALOG.find((t) => t.name === spec.name)?.body;
   if (!body) return `[plantilla ${spec.name}: ${spec.variables.join(" · ")}]`;
   return spec.variables.reduce(
     (text, value, i) => text.replaceAll(`{{${i + 1}}}`, value),

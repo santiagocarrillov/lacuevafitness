@@ -142,6 +142,7 @@ model Member {
   challengeProgress     ChallengeProgress[]
   nutritionAppointments NutritionAppointment[]
   nutritionInvites      NutritionBookingInvite[]
+  notices               MemberNotice[]
   nutritionTarget       NutritionTarget?
   nutritionMessages     NutritionMessage[]
   foodLogEntries        FoodLogEntry[]
@@ -1555,6 +1556,34 @@ model NutritionTimeOff {
   createdAt   DateTime @default(now())
 
   @@index([staffUserId, startsAt])
+}
+
+// Avisos automáticos por WhatsApp a socios (ausencia, frecuencia, cumpleaños,
+// nutrición, tests). `key` hace que cada aviso salga una sola vez.
+model MemberNotice {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kind        String // AUSENCIA | FRECUENCIA | CUMPLEANOS | TESTS | NUTRI_TRIAL | NUTRI_MEDICION | NUTRI_RECORDATORIO
+  key         String   @unique
+  template    String
+  status      String // SENT | FAILED
+  error       String?
+  messageId   String?
+  createdById String? // null = automático
+  createdAt   DateTime @default(now())
+
+  @@index([memberId, createdAt])
+  @@index([kind, createdAt])
+}
+
+// Interruptor de cada aviso automático: apagado = modo prueba (solo muestra a
+// quién le escribiría). Lo prende el dueño en WhatsApp › Avisos.
+model MemberNoticeSetting {
+  kind        String   @id
+  live        Boolean  @default(false)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
 }
 
 // Enlace personal para elegir horario sin iniciar sesión (/cita/[código]),

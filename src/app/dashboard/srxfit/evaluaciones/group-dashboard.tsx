@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, CircleAlert, Scale, UserX, Users } from "lucide-react";
 import type { GroupStats } from "@/lib/srxfit/group-stats";
 import { BlockChart } from "./block-chart";
+import { SendTestsNoticeButton } from "./send-tests-notice";
 
 const SEDE: Record<string, string> = { FITNESS_CENTER: "Fitness", XTREME: "Xtreme" };
 
@@ -109,6 +110,7 @@ export function GroupDashboard({ s }: { s: GroupStats }) {
 
       <div id="sin-datos" className="overflow-hidden rounded-xl border border-stone-200 bg-white">
         <h3 className="border-b px-4 py-3 text-xs font-semibold uppercase tracking-wider text-stone-600">Pagan y asisten, sin datos en dos ciclos · {s.gaps.length}</h3>
+        {s.gaps.length > 0 && <p className="border-b bg-stone-50 px-4 py-2 text-xs text-muted-foreground">Cada uno tiene su tarea «Evaluar a…» en la sede. Si intentaron y no se pudo, mándale el WhatsApp «Faltan tus tests».</p>}
         {s.gaps.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Todos los que pagan y asisten tienen datos recientes.</p>
         ) : (
@@ -119,7 +121,8 @@ export function GroupDashboard({ s }: { s: GroupStats }) {
                   <td className="px-4 py-2"><Link href={`/dashboard/srxfit/evaluaciones/${g.memberId}`} className="font-medium hover:underline">{g.name}</Link></td>
                   <td className="px-2 py-2 text-xs text-muted-foreground">{SEDE[g.sede]}</td>
                   <td className="px-2 py-2 text-xs text-muted-foreground">{g.lastDataAt ? `Último dato: ${g.lastDataAt.toISOString().slice(0, 10)}` : "Nunca evaluado"}</td>
-                  <td className="px-4 py-2 text-right text-xs text-muted-foreground">{g.visits30} visitas en 30 días</td>
+                  <td className="px-2 py-2 text-right text-xs text-muted-foreground">{g.visits30} visitas en 30 días</td>
+                  <td className="px-4 py-2 text-right"><SendTestsNoticeButton memberId={g.memberId} /></td>
                 </tr>
               ))}
             </tbody>
