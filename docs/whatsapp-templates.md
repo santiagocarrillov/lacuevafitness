@@ -111,3 +111,28 @@ Marketing, reintentar como **Utility** (mensaje sobre su membresía/servicio vig
   `miembro_inasistencia` al socio; `reengagement_no_reply` y `noshow_recuperacion` al lead. Solo
   una sin respuesta cada 24h (`sendFichaTemplate`).
 - **Gotcha del editor de Meta:** al escribir `{{` el editor inserta la variable completa (`{{1}}`) y deja el cursor después. Escribir `{{1}}` a mano produce `{{1}}}}`, y usar el botón "Add variable" recorta el espacio anterior (`¡Hola{{1}}`). Lo que funciona: escribir el texto de corrido y solo `{{` donde va cada variable.
+
+---
+
+## Socios y nutrición (5 oct 2026) — se envían a Meta desde la app
+
+Textos aprobados por Santiago (con sus ajustes) en `src/lib/whatsapp/template-catalog.ts`.
+Se suben con **WhatsApp › Plantillas › Enviar a Meta** (`/dashboard/comunicacion/plantillas`, solo
+OWNER): la app llama a `POST /{WABA}/message_templates` con el token del servidor y muestra el
+estado de revisión (`GET /{WABA}/message_templates`). Ya no hace falta el editor de Meta.
+
+| Nombre | Categoría | Variables | Botón |
+|---|---|---|---|
+| `socio_ausencia` | Utility | nombre, días sin venir | — |
+| `socio_frecuencia_baja` | Utility | nombre, visitas por semana | — |
+| `socio_cumpleanos` | Marketing | nombre | — |
+| `socio_tests_pendientes` | Utility | nombre | — |
+| `nutricion_agenda_cita` | Utility | nombre | URL `https://lacuevasrxfit.com/cita/{{1}}` |
+| `nutricion_evaluacion_trial` | Utility | nombre, fecha límite | URL de agendamiento |
+| `nutricion_recordatorio_cita` | Utility | nombre, día, hora, sede de la cita | — |
+| `socio_medicion_pendiente` | Utility | nombre, semanas | URL de agendamiento |
+
+El `{{1}}` del botón es el código de agendamiento del socio (página `/cita/[código]`).
+Pendiente al aprobarse: que `sendTemplate` mande el parámetro del botón URL y los disparadores
+automáticos (ausencia 3 días, < 3 visitas/semana en 2 semanas, cumpleaños, tests pendientes tras el
+intento del admin, citas por agendar).
