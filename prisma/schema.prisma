@@ -57,6 +57,8 @@ model User {
   clinicalRecordsAuthored ClinicalRecord[]        @relation("ClinicalRecordAuthor")
   mealPlansAuthored       MealPlan[]              @relation("MealPlanAuthor")
   nutritionAppointments   NutritionAppointment[]  @relation("NutritionAppointmentStaff")
+  nutritionAvailability   NutritionAvailability[]
+  nutritionTimeOff        NutritionTimeOff[]
   staffTasksDone          StaffTask[]             @relation("StaffTaskDoneBy")
   staffTasksAssigned      StaffTask[]             @relation("StaffTaskAssignee")
   staffTasksCreated       StaffTask[]             @relation("StaffTaskCreatedBy")
@@ -139,6 +141,7 @@ model Member {
   pushSubscriptions     PushSubscription[]
   challengeProgress     ChallengeProgress[]
   nutritionAppointments NutritionAppointment[]
+  nutritionInvites      NutritionBookingInvite[]
   nutritionTarget       NutritionTarget?
   nutritionMessages     NutritionMessage[]
   foodLogEntries        FoodLogEntry[]
@@ -1520,6 +1523,56 @@ model NutritionAppointment {
 
   @@index([startsAt])
   @@index([memberId, startsAt])
+}
+
+// Horario semanal en que la nutricionista atiende (Nutrición › Horarios). Los
+// socios eligen un espacio libre de aquí, en la app o con su enlace /cita/[código].
+model NutritionAvailability {
+  id          String   @id @default(cuid())
+  staffUserId String
+  staff       User     @relation(fields: [staffUserId], references: [id])
+  sede        Sede
+  weekday     Int // 1 = lunes … 7 = domingo
+  startMinute Int // minutos desde las 00:00 de Ecuador (17:00 = 1020)
+  endMinute   Int
+  slotMinutes Int      @default(30)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([staffUserId, active])
+}
+
+// Días u horas en que no atiende (vacaciones, feriados, un compromiso).
+model NutritionTimeOff {
+  id          String   @id @default(cuid())
+  staffUserId String
+  staff       User     @relation(fields: [staffUserId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  reason      String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([staffUserId, startsAt])
+}
+
+// Enlace personal para elegir horario sin iniciar sesión (/cita/[código]),
+// enviado por WhatsApp. Solo deja agendar (o cambiar) la cita de ese socio.
+model NutritionBookingInvite {
+  id            String          @id @default(cuid())
+  code          String          @unique
+  memberId      String
+  member        Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kind          AppointmentKind @default(FOLLOW_UP)
+  reason        String // TRIAL | MEASUREMENT | MANUAL
+  deadline      DateTime?       @db.Date // fecha límite sugerida (trial: un día antes de que venza)
+  expiresAt     DateTime
+  appointmentId String?         @unique
+  createdById   String?
+  createdAt     DateTime        @default(now())
+
+  @@index([memberId])
 }
 
 // ─────────────────────────────────────────────────────────────

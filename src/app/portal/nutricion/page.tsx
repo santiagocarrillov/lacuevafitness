@@ -3,7 +3,7 @@ import { requireMember } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalShell } from "@/components/portal/portal-shell";
 import { MealCheck } from "@/components/portal/MealCheck";
-import { NextAppointmentCard } from "@/components/portal/next-appointment-card";
+import { BookAppointmentCard, NextAppointmentCard } from "@/components/portal/next-appointment-card";
 import { PlanToday, type Check } from "@/components/portal/nutrition/plan-today";
 import { PlanFull } from "@/components/portal/nutrition/plan-full";
 import { NutritionChat } from "@/components/portal/nutrition/nutrition-chat";
@@ -189,7 +189,7 @@ export default async function NutricionPage({ searchParams }: { searchParams: Pr
 
       {tab === "hoy" && (
         <>
-          {nextAppt && <NextAppointmentCard appointment={nextAppt} />}
+          {nextAppt ? <NextAppointmentCard appointment={nextAppt} /> : <BookAppointmentCard />}
           {focus && (
             <section className="portal-card" style={{ marginBottom: 14, borderLeft: "3px solid var(--pt-green, #16a34a)" }}>
               <div className="portal-kicker">Prioridad de la semana</div>

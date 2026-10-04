@@ -127,7 +127,7 @@ estado de revisión (`GET /{WABA}/message_templates`). Ya no hace falta el edito
 | `socio_frecuencia_baja` | Utility | nombre, visitas por semana | — |
 | `socio_cumpleanos` | Marketing | nombre | — |
 | `socio_tests_pendientes` | Utility | nombre | — |
-| `nutricion_agenda_cita` | Utility | nombre | URL `https://lacuevasrxfit.com/cita/{{1}}` |
+| `nutricion_agenda_cita` | Utility | nombre | URL `https://www.lacuevasrxfit.com/cita/{{1}}` |
 | `nutricion_evaluacion_trial` | Utility | nombre, fecha límite | URL de agendamiento |
 | `nutricion_recordatorio_cita` | Utility | nombre, día, hora, sede de la cita | — |
 | `socio_medicion_pendiente` | Utility | nombre, semanas | URL de agendamiento |

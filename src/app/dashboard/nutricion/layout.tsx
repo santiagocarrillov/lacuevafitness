@@ -13,7 +13,7 @@ export default async function NutricionLayout({ children }: { children: ReactNod
         <div>
           <h1 className="text-2xl font-semibold">Nutrición</h1>
           <p className="text-sm text-muted-foreground">
-            Agenda de consultas, seguimiento de socios y contenido para la app.
+            Sesiones, socios por agendar, horarios y planes de alimentación.
           </p>
         </div>
         <NutricionTabs showClinical={can.manageNutrition(user)} />

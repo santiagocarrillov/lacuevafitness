@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/dashboard/nutricion", label: "Agenda", clinical: false },
+  { href: "/dashboard/nutricion", label: "Inicio", clinical: false },
+  { href: "/dashboard/nutricion/agenda", label: "Agenda", clinical: false },
+  { href: "/dashboard/nutricion/horarios", label: "Horarios", clinical: false },
   { href: "/dashboard/nutricion/cobertura", label: "Cobertura", clinical: false },
   { href: "/dashboard/nutricion/app", label: "App", clinical: false },
   { href: "/dashboard/nutricion/socios", label: "Socios", clinical: true },
@@ -23,8 +25,10 @@ export function NutricionTabs({ showClinical }: { showClinical: boolean }) {
       {TABS.filter((t) => showClinical || !t.clinical).map((t) => {
         const active =
           t.href === "/dashboard/nutricion"
-            ? pathname === t.href || pathname.startsWith("/dashboard/nutricion/citas")
-            : pathname.startsWith(t.href);
+            ? pathname === t.href
+            : t.href === "/dashboard/nutricion/agenda"
+              ? pathname.startsWith(t.href) || pathname.startsWith("/dashboard/nutricion/citas")
+              : pathname.startsWith(t.href);
         return (
           <Link
             key={t.href}
