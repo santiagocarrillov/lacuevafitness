@@ -10,12 +10,13 @@ import { sendPushBroadcast } from "@/lib/actions/push";
 
 type Audience = { total: number; fitness: number; xtreme: number };
 
-export function BroadcastForm({ audience }: { audience: Audience }) {
+/** `lockedSede`: an admin with a sede only writes to that sede's socios (the server enforces it too). */
+export function BroadcastForm({ audience, lockedSede }: { audience: Audience; lockedSede?: "FITNESS_CENTER" | "XTREME" | null }) {
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("");
-  const [sede, setSede] = useState<"" | "FITNESS_CENTER" | "XTREME">("");
+  const [sede, setSede] = useState<"" | "FITNESS_CENTER" | "XTREME">(lockedSede ?? "");
 
   const target =
     sede === "FITNESS_CENTER" ? audience.fitness : sede === "XTREME" ? audience.xtreme : audience.total;
@@ -64,12 +65,13 @@ export function BroadcastForm({ audience }: { audience: Audience }) {
               <Label className="text-xs">Audiencia</Label>
               <select
                 value={sede}
+                disabled={!!lockedSede}
                 onChange={(e) => setSede(e.target.value as typeof sede)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-full"
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-full disabled:opacity-70"
               >
-                <option value="">Todos ({audience.total})</option>
-                <option value="FITNESS_CENTER">Fitness Center ({audience.fitness})</option>
-                <option value="XTREME">Xtreme ({audience.xtreme})</option>
+                {!lockedSede && <option value="">Todos ({audience.total})</option>}
+                {(!lockedSede || lockedSede === "FITNESS_CENTER") && <option value="FITNESS_CENTER">Fitness Center ({audience.fitness})</option>}
+                {(!lockedSede || lockedSede === "XTREME") && <option value="XTREME">Xtreme ({audience.xtreme})</option>}
               </select>
             </div>
           </div>

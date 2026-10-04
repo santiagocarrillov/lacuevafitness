@@ -148,7 +148,7 @@ Los admins ven los mismos campos al registrar un pago.
 
 **Próximo paso concreto:**
 - QA con datos reales (nada de lo anterior se vio con login): fichas, edición en línea, listas, plantilla a un número propio, chat + tarjeta del contacto en el inbox, tablero, filtros, calendario.
-- Sigue pendiente: firma .p12 + primer envío al SRI de pruebas; nómina (datos de Isabel); seguridad menor (`updateMember` sin límite de sede para admins, `deleteMemberNote` borra en vez de anular, mensaje de `portalSignUp`).
+- Sigue pendiente: firma .p12 + primer envío al SRI de pruebas; nómina (datos de Isabel); mensaje de `portalSignUp` (revela si un correo es socio).
 - Para ver UI sin login: ruta temporal sin proteger `src/app/zz-preview/` con datos ficticios, borrarla antes del commit.
 
 **Regla para server actions:** toda función exportada de un archivo `"use server"` verifica sesión y

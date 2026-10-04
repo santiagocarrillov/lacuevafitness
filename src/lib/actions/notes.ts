@@ -39,9 +39,6 @@ export async function getMemberNotes(memberId: string) {
   });
 }
 
-export async function deleteMemberNote(noteId: string, memberId: string) {
-  const user = await requireAuth();
-  if (user.role === "MEMBER") throw new Error("Sin permisos");
-  await prisma.memberNote.delete({ where: { id: noteId } });
-  revalidatePath(`/dashboard/socios/${memberId}`);
-}
+// No delete on purpose: a note is part of the socio's history ("nunca DELETE").
+// The old deleteMemberNote hard-deleted any note for any staff member and had no
+// screen left using it, so it was removed (oct 2026).

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { Sede, MemberStatus, MembershipState, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
 import { headers } from "next/headers";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
-import type { Sex, TaxIdType, User } from "@/generated/prisma/client";
+import type { Prisma, Sex, TaxIdType, User } from "@/generated/prisma/client";
 import { guessTaxIdType, taxIdError } from "@/lib/invoicing/core";
 import { presetStart } from "@/lib/list-filters";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -72,10 +72,10 @@ export async function getMembers({
   const user = await requireMemberViewer();
   const effectiveSede = getSedeScope(user) ?? sede;
 
-  const where: any = {};
-  const and: any[] = [];
+  const where: Prisma.MemberWhereInput = {};
+  const and: Prisma.MemberWhereInput[] = [];
   if (effectiveSede) where.sede = effectiveSede;
-  const statuses = (status ?? "").split(",").filter((s) => (Object.values(MemberStatus) as string[]).includes(s));
+  const statuses = (status ?? "").split(",").filter((s): s is MemberStatus => (Object.values(MemberStatus) as string[]).includes(s));
   if (statuses.length) where.status = { in: statuses };
   const joinedSince = presetStart(joined);
   if (joinedSince) where.joinedAt = { gte: joinedSince };
@@ -310,6 +310,20 @@ export async function updateMember(
   // Front desk edits everything (sede included). Other staff — the nutritionist,
   // who helps socios get into the app, and coaches — only fix contact data.
   if (!can.manageMembers(actor)) data = { email: data.email, phone: data.phone };
+  // Admins with a sede only edit socios who train there (primary or secondary),
+  // and can't move a socio to the other sede: transfers go through someone who
+  // sees both (owner / accounting).
+  const scope = getSedeScope(actor);
+  if (scope) {
+    try {
+      await assertMemberInScope(actor, id);
+    } catch {
+      return { ok: false, error: "Este socio es de otra sede: no puedes editarlo." };
+    }
+    if (data.sede && data.sede !== scope) {
+      return { ok: false, error: "No puedes pasar un socio a otra sede. Pídeselo a Santiago o a Isabel." };
+    }
+  }
 
   // Each field may come alone (edit in place on the ficha). A field that is
   // present but blank means "clear it"; an absent field is left untouched.
