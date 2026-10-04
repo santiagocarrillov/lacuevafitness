@@ -118,9 +118,13 @@ export default async function NutricionHomePage({ searchParams }: { searchParams
         {clinical && (
           <Card title="Armar dieta" icon={Salad}>
             <div className="space-y-2 p-4 text-sm">
+              <Link href="/dashboard/nutricion/planes/socio/nuevo?consulta=1" className="block rounded-lg border border-[#2f855a]/40 bg-[#2f855a]/5 px-3 py-2.5 font-medium hover:border-[#2f855a]">
+                Consulta en vivo
+                <span className="block text-xs font-normal text-muted-foreground">Con el socio presente: su día tipo, kcal y macros a la vista</span>
+              </Link>
               <Link href="/dashboard/nutricion/planes/socio/nuevo" className="block rounded-lg border px-3 py-2.5 font-medium hover:border-stone-400">
-                Para un socio
-                <span className="block text-xs font-normal text-muted-foreground">Desde cero o desde un plan base, con kcal y macros en vivo</span>
+                Plan para un socio
+                <span className="block text-xs font-normal text-muted-foreground">Desde cero o desde un plan base, en el editor completo</span>
               </Link>
               <Link href="/dashboard/nutricion/planes/plantilla/nueva" className="block rounded-lg border px-3 py-2.5 font-medium hover:border-stone-400">
                 Nuevo plan base

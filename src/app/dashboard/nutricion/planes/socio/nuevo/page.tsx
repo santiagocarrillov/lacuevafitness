@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 export default async function NuevoPlanSocioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ socio?: string; volver?: string }>;
+  searchParams: Promise<{ socio?: string; volver?: string; consulta?: string }>;
 }) {
   const user = await requireAuth();
   if (!can.manageNutrition(user)) redirect("/dashboard/nutricion");
-  const { socio, volver } = await searchParams;
+  const { socio, volver, consulta } = await searchParams;
   const [{ templates }, prefill] = await Promise.all([
     listPlansOverview(),
     socio
@@ -31,6 +31,7 @@ export default async function NuevoPlanSocioPage({
         templates={templates.map((t) => ({ id: t.id, name: t.name }))}
         prefillMember={prefill}
         backHref={safeBack(volver, "/dashboard/nutricion/planes")}
+        openConsult={consulta === "1"}
       />
     </NutritionFormPage>
   );

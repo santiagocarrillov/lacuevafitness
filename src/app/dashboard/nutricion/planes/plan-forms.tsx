@@ -73,10 +73,12 @@ export function NewMemberPlanForm({
   templates,
   prefillMember,
   backHref,
+  openConsult,
 }: {
   templates: { id: string; name: string }[];
   prefillMember: PickedMember | null;
   backHref: string;
+  openConsult?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -84,6 +86,7 @@ export function NewMemberPlanForm({
   const [pFrom, setPFrom] = useState<string>("blank");
   const [pKind, setPKind] = useState<PlanKind>("MENU");
   const [pScale, setPScale] = useState(true);
+  const [pConsult, setPConsult] = useState(openConsult ?? false);
 
   function createP() {
     const m = pMember[0];
@@ -99,7 +102,7 @@ export function NewMemberPlanForm({
           templateId: pFrom === "blank" ? null : pFrom,
           scaleToTarget: pScale,
         });
-        router.push(`/dashboard/nutricion/planes/socio/${id}`);
+        router.push(`/dashboard/nutricion/planes/socio/${id}${pConsult && pKind === "MENU" ? "/consulta" : ""}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "No se pudo crear.");
       }
@@ -134,6 +137,10 @@ export function NewMemberPlanForm({
           Reescalar a la meta calórica del socio (si tiene)
         </label>
       )}
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={pConsult} onChange={(e) => setPConsult(e.target.checked)} />
+        Abrir en modo consulta (armar su día tipo con el socio presente)
+      </label>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" disabled={isPending} onClick={() => router.push(backHref)}>
           Cancelar
