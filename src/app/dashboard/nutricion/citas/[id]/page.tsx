@@ -58,7 +58,7 @@ export default async function EditarCitaPage({
     memberPhone: a.member.phone,
   };
   const day = a.startsAt.toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
-  const back = safeBack(volver, `/dashboard/nutricion?fecha=${day}`);
+  const back = safeBack(volver, `/dashboard/nutricion/agenda?fecha=${day}`);
 
   return (
     <NutritionFormPage

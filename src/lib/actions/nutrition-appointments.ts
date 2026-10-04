@@ -24,7 +24,7 @@ async function requireScheduler(): Promise<User> {
 }
 
 function revalidateAgenda(memberId?: string) {
-  revalidatePath("/dashboard/nutricion");
+  revalidatePath("/dashboard/nutricion", "layout");
   revalidatePath("/dashboard/nutricion/cobertura");
   revalidatePath("/portal/hoy");
   revalidatePath("/portal/nutricion");

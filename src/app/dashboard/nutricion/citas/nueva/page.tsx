@@ -35,7 +35,7 @@ export default async function NuevaCitaPage({
       : Promise.resolve(null),
   ]);
 
-  const back = safeBack(params.volver, params.fecha ? `/dashboard/nutricion?fecha=${date}` : "/dashboard/nutricion");
+  const back = safeBack(params.volver, params.fecha ? `/dashboard/nutricion/agenda?fecha=${date}` : "/dashboard/nutricion");
 
   return (
     <NutritionFormPage

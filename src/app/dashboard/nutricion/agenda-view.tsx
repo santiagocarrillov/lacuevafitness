@@ -75,7 +75,7 @@ export function AgendaView(props: {
       else sp.set(k, v);
     }
     const qs = sp.toString();
-    return qs ? `/dashboard/nutricion?${qs}` : "/dashboard/nutricion";
+    return qs ? `/dashboard/nutricion/agenda?${qs}` : "/dashboard/nutricion/agenda";
   }
 
   function go(patch: Record<string, string | null>) {

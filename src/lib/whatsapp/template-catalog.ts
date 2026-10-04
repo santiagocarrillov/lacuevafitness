@@ -19,8 +19,8 @@ export type CatalogTemplate = {
   button?: { text: string; url: string; example: string };
 };
 
-export const BOOKING_URL = "https://lacuevasrxfit.com/cita/{{1}}";
-const BOOKING_EXAMPLE = "https://lacuevasrxfit.com/cita/k3m9q2";
+export const BOOKING_URL = "https://www.lacuevasrxfit.com/cita/{{1}}";
+const BOOKING_EXAMPLE = "https://www.lacuevasrxfit.com/cita/k3m9q2";
 
 export const TEMPLATE_CATALOG: CatalogTemplate[] = [
   {
