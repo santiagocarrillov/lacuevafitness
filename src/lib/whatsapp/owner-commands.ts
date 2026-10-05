@@ -8,6 +8,10 @@
  * su conversación es de socio, así que el agente de ventas no responde.
  *
  * Solo se aceptan botones que vengan de OWNER_WHATSAPP y con el prefijo `ads:`.
+ *
+ * También acepta texto libre de Santiago para la libreta de los agentes (ops.agent_notes):
+ *   "nota: …"     → nota que leen el Brain, el agente de Ads y Claude
+ *   "por qué: …"  → motivo de la última propuesta de Ads que decidió (2 h); si no hay, queda como nota
  */
 import { sendText } from "./client";
 
@@ -54,7 +58,7 @@ export async function handleOwnerButtons(buttons: OwnerButton[]): Promise<void> 
           : json.status === "manual"
             ? `📝 Aprobada: ${json.title}. Es un cambio manual: quedó como tarea en tu Command Center.`
             : json.status === "rechazada"
-              ? `❌ Rechazada: ${json.title}. No se toca nada.`
+              ? `❌ Rechazada: ${json.title}. No se toca nada. Si quieres, responde «por qué: …» y el agente no la vuelve a proponer.`
               : `Esa propuesta ya no estaba pendiente (${json.status ?? "desconocida"}).`;
     } catch (err) {
       console.error("[owner-commands] no se pudo registrar la decisión", err);
@@ -64,6 +68,63 @@ export async function handleOwnerButtons(buttons: OwnerButton[]): Promise<void> 
       await sendText(b.from, reply);
     } catch (err) {
       console.error("[owner-commands] no se pudo confirmar", err);
+    }
+  }
+}
+
+type OwnerNote = { from: string; kind: "nota" | "porque"; text: string };
+
+// "nota: …", "Nota - …", "por qué: …", "porque: …", "por que …" (con o sin tilde, mayúsculas indistintas).
+const NOTE = /^\s*(nota|por\s*qu[eé]|porqu[eé])\s*[:\-–]\s*([\s\S]+)$/i;
+
+export function parseOwnerNote(body: string): { kind: "nota" | "porque"; text: string } | null {
+  const m = NOTE.exec(body);
+  if (!m) return null;
+  const text = m[2].trim();
+  if (!text) return null;
+  return { kind: m[1].toLowerCase().startsWith("nota") ? "nota" : "porque", text };
+}
+
+export function extractOwnerNotes(payload: unknown): OwnerNote[] {
+  const owner = process.env.OWNER_WHATSAPP;
+  if (!owner) return [];
+  const out: OwnerNote[] = [];
+  const entries = (payload as { entry?: { changes?: { value?: { messages?: unknown[] } }[] }[] })?.entry ?? [];
+  for (const e of entries) {
+    for (const c of e.changes ?? []) {
+      for (const m of (c.value?.messages ?? []) as { from?: string; type?: string; text?: { body?: string } }[]) {
+        if (m.from !== owner || m.type !== "text" || !m.text?.body) continue;
+        const note = parseOwnerNote(m.text.body);
+        if (note) out.push({ from: m.from, ...note });
+      }
+    }
+  }
+  return out;
+}
+
+export async function handleOwnerNotes(notes: OwnerNote[]): Promise<void> {
+  const url = process.env.COMMAND_CENTER_URL;
+  const secret = process.env.ADS_DECIDE_SECRET;
+  if (!url || !secret) return;
+  for (const n of notes) {
+    let reply: string;
+    try {
+      const res = await fetch(`${url.replace(/\/$/, "")}/api/notes`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: n.kind, text: n.text }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { reply?: string };
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      reply = `📒 ${json.reply ?? "Nota guardada."}`;
+    } catch (err) {
+      console.error("[owner-commands] no se pudo guardar la nota", err);
+      reply = "⚠️ No pude guardar tu nota. Escríbela en Command Center → Notas.";
+    }
+    try {
+      await sendText(n.from, reply);
+    } catch (err) {
+      console.error("[owner-commands] no se pudo confirmar la nota", err);
     }
   }
 }
