@@ -1,4 +1,5 @@
-// The 7:30 push: "Hoy tienes N tareas". Only reaches staff who turned on
+// The 7:30 push: "Hoy tienes N tareas" (+ socio entries waiting to be
+// validated, for the coaches who validate them). Only reaches staff who turned on
 // "Activar avisos" (push goes through their linked member record). Plain
 // module — only the cron calls it.
 
@@ -7,6 +8,8 @@ import { pushToMember } from "@/lib/push/send";
 import { todayDateUtc } from "@/lib/timezone";
 import { OPEN_STATUSES } from "@/lib/tasks/meta";
 import { TASK_ROLES, mineOrPoolWhere } from "@/lib/tasks/scope";
+import { countPendingValidations, validationKinds } from "@/lib/self-log/queue";
+import { VALIDATION_QUEUE_PATH } from "@/lib/self-log/notify";
 import type { Prisma, User } from "@/generated/prisma/client";
 
 /**
@@ -37,11 +40,26 @@ export async function sendTaskDigest(): Promise<{ users: number; notified: numbe
       prisma.staffTask.count({ where: { AND: [base, { dueDate: { lt: today } }] } }),
       prisma.staffTask.count({ where: { AND: [base, { dueDate: { lte: today } }, { assigneeId: null }] } }),
     ]);
-    if (due === 0 || !user.member) continue;
+    // The people who validate on the floor; owners/accounting get the live nudges only.
+    const kinds = user.role === "OWNER" || user.role === "ACCOUNTING" ? [] : validationKinds(user);
+    const toValidate = kinds.length ? await countPendingValidations({ sede: user.sede, kinds }) : 0;
+    if ((due === 0 && toValidate === 0) || !user.member) continue;
+
+    const validateLine = `${toValidate} registro${toValidate === 1 ? "" : "s"} de socios por validar`;
+    if (due === 0) {
+      await pushToMember(user.member.id, {
+        title: validateLine.replace(/^./, (c) => c.toUpperCase()),
+        body: "Ábrelos y valídalos con un toque: los verdes van todos juntos.",
+        url: VALIDATION_QUEUE_PATH,
+      }).catch(() => undefined);
+      notified++;
+      continue;
+    }
 
     const parts = [
       overdue > 0 ? `${overdue} vencida${overdue === 1 ? "" : "s"}` : null,
       pool > 0 ? `${pool} de la recepción` : null,
+      toValidate > 0 ? validateLine : null,
     ].filter(Boolean);
     await pushToMember(user.member.id, {
       title: `Hoy tienes ${due} tarea${due === 1 ? "" : "s"}`,

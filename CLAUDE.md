@@ -155,6 +155,11 @@ Los admins ven los mismos campos al registrar un pago.
 - **Avisos automáticos** (#146, #147): WhatsApp › Avisos, cron 10:00, interruptor por aviso; **todos apagados (modo prueba)**.
   `docs/whatsapp-templates.md`.
 
+- **SRXFIT › Por validar** (`/dashboard/srxfit/validar`, `src/lib/self-log/`): cola móvil de PRs y medidas que los socios
+  registran desde su app, con su marca oficial al lado; verde = salto creíble (`plausibility.ts`, `npm run test:validar`),
+  ámbar = revisar. **Nada se valida solo** (Santiago): «Validar todos los verdes» lo toca un coach. Push al staff agrupado
+  (uno por ráfaga de 2 h), pendientes en el resumen de las 7:30, y push al socio al validar/descartar.
+
 **Próximo paso concreto:**
 - Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.
 - Que la nutricionista cargue sus horarios (Nutrición › Horarios); sin eso nadie puede agendar.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,14 @@ export function SelfEntriesSection({
       <p className="text-sm text-muted-foreground">
         Datos que el socio ingresó desde su app. No cuentan para reportes ni retos
         hasta que los valides.
+        {canValidate && pending.length > 0 && (
+          <>
+            {" "}
+            <Link href="/dashboard/srxfit/validar?sede=todas" className="font-medium text-primary hover:underline">
+              Ver todos los pendientes ›
+            </Link>
+          </>
+        )}
       </p>
 
       <div className="rounded-lg border border-border divide-y divide-border">

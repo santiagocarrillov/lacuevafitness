@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAuth, can } from "@/lib/auth";
+import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
 import { SIDEBAR_COOKIE } from "./sidebar-cookie";
 import { countMyDueTasks } from "@/lib/actions/staff-tasks";
+import { countPendingValidations, validationKinds } from "@/lib/self-log/queue";
 
 type NavGroup = {
   label?: string;
@@ -36,6 +37,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // gente (Contactos) → cómo le hablamos (Marketing) → el día a día → el método
   // que vive el socio en su app (SRXFIT) → el dinero → los números → ajustes.
   const isOwner = user.role === "OWNER";
+  // Self-logged PRs / measurements waiting for this user (their sede by default).
+  const validateKinds = validationKinds(user);
+  const toValidate = validateKinds.length
+    ? await countPendingValidations({ sede: getSedeScope(user) ?? user.sede ?? null, kinds: validateKinds })
+    : 0;
   const groups: NavGroup[] = [
     { items: [{ href: "/dashboard", label: "Resumen", show: true }] },
     {
@@ -68,6 +74,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         { href: "/dashboard/srxfit", label: "Panel SRXFIT", show: true },
         { href: "/dashboard/srxfit/calendario", label: "Programación", show: true },
         { href: "/dashboard/srxfit/evaluaciones", label: "Evaluaciones", show: can.editTests(user) || can.manageMembers(user) },
+        { href: "/dashboard/srxfit/validar", label: "Por validar", show: validateKinds.length > 0, badge: toValidate },
         { href: "/dashboard/nutricion", label: "Nutrición", show: can.scheduleNutrition(user) },
         {
           href: "/dashboard/retos",

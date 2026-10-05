@@ -139,7 +139,7 @@ export default async function DashboardHome() {
         <SrxfitCard
           data={srxfit}
           links={{
-            prs: can.editTests(user) || can.manageMembers(user) ? "/dashboard/srxfit/evaluaciones" : undefined,
+            prs: can.editTests(user) ? (srxfit.prsToValidate > 0 ? "/dashboard/srxfit/validar?sede=todas" : "/dashboard/srxfit/evaluaciones") : can.manageMembers(user) ? "/dashboard/srxfit/evaluaciones" : undefined,
             seen: can.scheduleNutrition(user) ? "/dashboard/nutricion/cobertura" : undefined,
             plans: can.manageNutrition(user) ? "/dashboard/nutricion/planes" : undefined,
             app: can.managePortalAccess(user) ? "/dashboard/nutricion/app" : undefined,
