@@ -2,10 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { TestKey } from "@/generated/prisma/client";
-import { requireAuth, requireMember, can } from "@/lib/auth";
+import { TestKey, type User } from "@/generated/prisma/client";
+import { requireAuth, requireMember, can, getSedeScope } from "@/lib/auth";
 import { SELF_LOGGABLE_TESTS, SELF_TEST_KEYS } from "@/lib/portal/self-log-tests";
-import { notifyStaffOfSelfEntry } from "@/lib/push/notify-staff";
+import {
+  notifyMembersOfReview,
+  notifyStaffOfSelfEntry,
+  VALIDATION_QUEUE_PATH,
+  type ReviewedEntry,
+} from "@/lib/self-log/notify";
 
 export type SelfLogResult = { ok: true } | { ok: false; error: string };
 
@@ -46,7 +51,7 @@ export async function logSelfMeasurement(formData: FormData): Promise<SelfLogRes
     }
   }
 
-  await prisma.bodyComposition.create({
+  const created = await prisma.bodyComposition.create({
     data: {
       memberId: member.id,
       measuredAt: new Date(),
@@ -62,11 +67,14 @@ export async function logSelfMeasurement(formData: FormData): Promise<SelfLogRes
   if (weightKg != null) parts.push(`peso ${weightKg} kg`);
   if (waistCm != null) parts.push(`cintura ${waistCm} cm`);
   await notifyStaffOfSelfEntry({
+    kind: "measurement",
+    entryId: created.id,
     memberId: member.id,
     memberName: `${member.firstName} ${member.lastName}`.trim(),
     memberSede: member.sede,
     summary: parts.length ? `registró ${parts.join(", ")}` : "registró nuevas medidas",
   }).catch(() => undefined);
+  revalidatePath(VALIDATION_QUEUE_PATH);
 
   revalidatePath("/portal/progreso");
   revalidatePath("/portal/hoy");
@@ -96,7 +104,7 @@ export async function logSelfPr(formData: FormData): Promise<SelfLogResult> {
     return { ok: false, error: `Esa marca parece fuera de rango (máx. ${ceiling} ${meta.unit}).` };
   }
 
-  await prisma.testResult.create({
+  const created = await prisma.testResult.create({
     data: {
       memberId: member.id,
       test: test as TestKey,
@@ -110,11 +118,14 @@ export async function logSelfPr(formData: FormData): Promise<SelfLogResult> {
   });
 
   await notifyStaffOfSelfEntry({
+    kind: "pr",
+    entryId: created.id,
     memberId: member.id,
     memberName: `${member.firstName} ${member.lastName}`.trim(),
     memberSede: member.sede,
     summary: `nueva marca en ${meta.label}: ${value} ${meta.unit}`,
   }).catch(() => undefined);
+  revalidatePath(VALIDATION_QUEUE_PATH);
 
   revalidatePath("/portal/progreso");
   return { ok: true };
@@ -147,51 +158,102 @@ export async function deleteSelfEntry(
   return { ok: true };
 }
 
-/**
- * Staff validates a self-reported entry. Once verified it counts for reports and
- * challenge rankings exactly like a staff-taken measurement.
- */
-export async function verifySelfEntry(
-  kind: "measurement" | "pr",
-  id: string,
-  memberId: string,
-): Promise<SelfLogResult> {
-  const user = await requireAuth();
-  const allowed = kind === "measurement" ? can.editBodyComp(user) : can.editTests(user);
-  if (!allowed) return { ok: false, error: "Sin permisos para validar." };
+type EntryKind = "measurement" | "pr";
 
-  const data = { verifiedAt: new Date(), verifiedByUserId: user.id };
-  if (kind === "measurement") {
-    await prisma.bodyComposition.update({ where: { id }, data });
-  } else {
-    await prisma.testResult.update({ where: { id }, data });
-  }
-
-  revalidatePath(`/dashboard/socios/${memberId}`);
-  return { ok: true };
+function canReview(user: User, kind: EntryKind) {
+  return kind === "measurement" ? can.editBodyComp(user) : can.editTests(user);
 }
 
-/** Staff rejects a self-reported entry (wrong/implausible) — removes it. */
-export async function rejectSelfEntry(
-  kind: "measurement" | "pr",
-  id: string,
-  memberId: string,
-): Promise<SelfLogResult> {
+/**
+ * Load the still-pending self-reported rows among `ids` that this user may
+ * review: right kind of permission, and — for sede-scoped staff — socios of
+ * their sede (primary or secondary).
+ */
+async function reviewableRows(user: User, kind: EntryKind, ids: string[]): Promise<(ReviewedEntry & { id: string })[]> {
+  if (!canReview(user, kind) || ids.length === 0) return [];
+  const scope = getSedeScope(user);
+  const where = {
+    id: { in: ids },
+    source: "MEMBER" as const,
+    verifiedAt: null,
+    ...(scope ? { member: { OR: [{ sede: scope }, { secondarySede: scope }] } } : {}),
+  };
+  if (kind === "measurement") {
+    const rows = await prisma.bodyComposition.findMany({ where, select: { id: true, memberId: true } });
+    return rows.map((r) => ({ id: r.id, memberId: r.memberId, kind: "measurement", label: "Tus medidas" }));
+  }
+  const rows = await prisma.testResult.findMany({ where, select: { id: true, memberId: true, test: true, valueNumeric: true, unit: true } });
+  return rows.map((r) => ({
+    id: r.id,
+    memberId: r.memberId,
+    kind: "pr",
+    label: `${SELF_LOGGABLE_TESTS.find((t) => t.key === r.test)?.label ?? r.test}: ${r.valueNumeric} ${r.unit}`,
+  }));
+}
+
+function revalidateReview(memberIds: string[]) {
+  revalidatePath(VALIDATION_QUEUE_PATH);
+  for (const id of new Set(memberIds)) revalidatePath(`/dashboard/socios/${id}`);
+}
+
+/**
+ * Staff validates a self-reported entry. Once verified it counts for reports and
+ * challenge rankings exactly like a staff-taken measurement. The socio gets a
+ * push saying so.
+ */
+export async function verifySelfEntry(kind: EntryKind, id: string, _memberId?: string): Promise<SelfLogResult> {
+  const res = await verifySelfEntries([{ kind, id }]);
+  return res.ok ? { ok: true } : res;
+}
+
+/**
+ * "Validar" on several entries at once (the queue's "Validar todos los
+ * verdes"). Only rows still pending and within this user's reach are touched;
+ * returns how many were validated.
+ */
+export async function verifySelfEntries(
+  items: { kind: EntryKind; id: string }[],
+): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   const user = await requireAuth();
-  const allowed = kind === "measurement" ? can.editBodyComp(user) : can.editTests(user);
-  if (!allowed) return { ok: false, error: "Sin permisos." };
+  if (!Array.isArray(items) || items.length > 300) return { ok: false, error: "Lista no válida." };
+  const prIds = items.filter((i) => i.kind === "pr").map((i) => i.id);
+  const compIds = items.filter((i) => i.kind === "measurement").map((i) => i.id);
+  if ((prIds.length && !can.editTests(user)) || (compIds.length && !can.editBodyComp(user))) {
+    return { ok: false, error: "Sin permisos para validar." };
+  }
+
+  const [prs, comps] = await Promise.all([reviewableRows(user, "pr", prIds), reviewableRows(user, "measurement", compIds)]);
+  if (prs.length + comps.length === 0) return { ok: false, error: "Ese registro ya fue revisado." };
+
+  const data = { verifiedAt: new Date(), verifiedByUserId: user.id };
+  const pending = { source: "MEMBER" as const, verifiedAt: null };
+  await prisma.$transaction([
+    prisma.testResult.updateMany({ where: { id: { in: prs.map((p) => p.id) }, ...pending }, data }),
+    prisma.bodyComposition.updateMany({ where: { id: { in: comps.map((c) => c.id) }, ...pending }, data }),
+  ]);
+
+  const reviewed = [...prs, ...comps];
+  await notifyMembersOfReview(reviewed, "verified").catch(() => undefined);
+  revalidateReview(reviewed.map((r) => r.memberId));
+  return { ok: true, count: reviewed.length };
+}
+
+/** Staff rejects a self-reported entry (wrong/implausible) — removes it and tells the socio. */
+export async function rejectSelfEntry(kind: EntryKind, id: string, _memberId?: string): Promise<SelfLogResult> {
+  const user = await requireAuth();
+  if (!canReview(user, kind)) return { ok: false, error: "Sin permisos." };
+
+  const [row] = await reviewableRows(user, kind, [id]);
+  if (!row) return { ok: false, error: "Solo se descartan registros del socio que sigan sin validar." };
 
   if (kind === "measurement") {
-    const row = await prisma.bodyComposition.findUnique({ where: { id } });
-    if (!row || row.source !== "MEMBER") return { ok: false, error: "Solo se descartan registros del socio." };
     await prisma.bodyComposition.delete({ where: { id } });
   } else {
-    const row = await prisma.testResult.findUnique({ where: { id } });
-    if (!row || row.source !== "MEMBER") return { ok: false, error: "Solo se descartan registros del socio." };
     await prisma.testResult.delete({ where: { id } });
   }
 
-  revalidatePath(`/dashboard/socios/${memberId}`);
+  await notifyMembersOfReview([row], "rejected").catch(() => undefined);
+  revalidateReview([row.memberId]);
   return { ok: true };
 }
 
