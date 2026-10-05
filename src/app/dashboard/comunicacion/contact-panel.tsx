@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Bot, ExternalLink, Hand, ListChecks, Mail, Phone } from "lucide-react";
+import { Bot, ExternalLink, Hand, Mail, Phone } from "lucide-react";
 import { getContactSummary, type ContactSummary, type ThreadData } from "@/lib/actions/comunicacion";
+import { getPersonTasks } from "@/lib/actions/staff-tasks";
+import { ecuadorDateString } from "@/lib/timezone";
+import type { TaskListItem } from "@/lib/tasks/meta";
+import { PersonTaskList } from "@/components/tasks/person-task-list";
 import { RESUME_PRESETS, formatResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import { LEAD_STAGES, MEMBER_OWNED_STAGES, MEMBER_STATUS_COLOR, MEMBER_STATUS_LABEL, STAGE_COLOR, STAGE_LABEL } from "@/lib/leads/stages";
 import { SEDE_LABEL } from "./format";
@@ -56,6 +60,8 @@ export function ContactPanel({
   onTakeOver,
   onResume,
   onSchedule,
+  onNewTask,
+  onTasksChanged,
 }: {
   thread: ThreadData;
   refreshKey: number;
@@ -67,9 +73,29 @@ export function ContactPanel({
   onTakeOver: () => void;
   onResume: () => void;
   onSchedule: (preset: ResumePreset) => void;
+  /** Opens the "Tarea" tab of the composer, under the chat. */
+  onNewTask: () => void;
+  onTasksChanged: () => void;
 }) {
   const [summary, setSummary] = useState<ContactSummary | null>(null);
+  const [loadedTasks, setLoadedTasks] = useState<{ personId: string; open: TaskListItem[]; closed: TaskListItem[] } | null>(null);
   const id = thread.conversationId;
+  const personKind = thread.contactKind === "member" && thread.memberId ? "member" : thread.leadId ? "lead" : null;
+  const personId = personKind === "member" ? thread.memberId : personKind === "lead" ? thread.leadId : null;
+  // Never show the previous conversation's tasks while the new ones load.
+  const tasks = loadedTasks && loadedTasks.personId === personId ? loadedTasks : null;
+
+  // The person's tasks live here, next to the chat: open ones close in place.
+  useEffect(() => {
+    let alive = true;
+    if (!personKind || !personId) return;
+    getPersonTasks({ kind: personKind, id: personId }, 3)
+      .then((t) => alive && setLoadedTasks({ personId, ...t }))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [personKind, personId, refreshKey]);
 
   useEffect(() => {
     let alive = true;
@@ -83,12 +109,6 @@ export function ContactPanel({
 
   const s = summary && summary.name ? summary : null;
   const fichaHref = s?.memberId ? `/dashboard/socios/${s.memberId}` : s?.leadId ? `/dashboard/leads/${s.leadId}` : null;
-  const back = encodeURIComponent(`/dashboard/comunicacion?c=${id}`);
-  const taskHref = s?.memberId
-    ? `/dashboard/tareas/nueva?socio=${s.memberId}&volver=${back}`
-    : s?.leadId
-      ? `/dashboard/tareas/nueva?lead=${s.leadId}&volver=${back}`
-      : null;
 
   return (
     <aside className="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-card xl:flex">
@@ -245,26 +265,26 @@ export function ContactPanel({
         </Section>
       )}
 
-      {s && (
+      {personId && (
         <Section
-          title="Tareas"
+          title={tasks && tasks.open.length > 0 ? `Tareas (${tasks.open.length})` : "Tareas"}
           action={
-            taskHref && (
-              <Link href={taskHref} className="text-xs font-medium text-primary hover:underline">
-                + Tarea
-              </Link>
-            )
+            <button type="button" onClick={onNewTask} className="text-xs font-medium text-primary hover:underline">
+              + Tarea
+            </button>
           }
         >
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ListChecks className="size-3.5" />
-            {s.openTasks === 0 ? "Nada pendiente." : `${s.openTasks} pendiente${s.openTasks === 1 ? "" : "s"}`}
-            {s.openTasks > 0 && fichaHref && (
-              <Link href={fichaHref} className="ml-auto text-primary hover:underline">
-                Ver
-              </Link>
-            )}
-          </p>
+          {tasks ? (
+            <PersonTaskList
+              open={tasks.open}
+              closed={tasks.closed}
+              meId={currentUserId}
+              today={ecuadorDateString()}
+              onChanged={onTasksChanged}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Cargando…</p>
+          )}
         </Section>
       )}
 

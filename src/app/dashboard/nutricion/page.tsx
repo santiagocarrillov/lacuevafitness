@@ -9,7 +9,8 @@ import { loadSlots } from "@/lib/nutrition/booking-core";
 import { APPOINTMENT_KIND_LABEL, APPOINTMENT_STATUS_LABEL, addDays, ecuadorTimeString } from "@/lib/nutrition/appointments";
 import { COVERAGE_LABEL, type CoverageState } from "@/lib/nutrition/appointments";
 import { ecuadorDateString } from "@/lib/timezone";
-import { ApptStatusButtons, QuickCalculator, ToScheduleActions } from "./home-widgets";
+import { ApptStatusButtons, NewTaskInline, QuickCalculator, ToScheduleActions } from "./home-widgets";
+import { getAssignableUsers } from "@/lib/actions/staff-tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export default async function NutricionHomePage({ searchParams }: { searchParams
   const scope = getSedeScope(user);
   const clinical = can.manageNutrition(user);
 
-  const [appts, toSchedule, coverage, tasks, slots, hasHours] = await Promise.all([
+  const [appts, toSchedule, coverage, tasks, slots, hasHours, taskUsers] = await Promise.all([
     getAgenda(today, addDays(today, 6), scope),
     getToSchedule(),
     getNutritionCoverage(scope),
@@ -72,7 +73,9 @@ export default async function NutricionHomePage({ searchParams }: { searchParams
     }),
     loadSlots(prisma, { days: 7, sede: scope }),
     prisma.nutritionAvailability.count({ where: { active: true } }),
+    getAssignableUsers(),
   ]);
+  const taskBase = { users: taskUsers, currentUserId: user.id, canPool: can.manageLeads(user), defaultSede: user.sede };
   const scheduled = appts.filter((a) => a.status !== "CANCELLED");
   const byDay = new Map<string, typeof scheduled>();
   for (const a of scheduled) {
@@ -218,7 +221,7 @@ export default async function NutricionHomePage({ searchParams }: { searchParams
                       {t.daysLeft < 0 ? `Venció hace ${-t.daysLeft} d` : t.daysLeft === 0 ? "Hoy" : t.daysLeft === 1 ? "Mañana" : `Hasta ${t.deadline.slice(8)}/${t.deadline.slice(5, 7)}`}
                     </span>
                   </div>
-                  <ToScheduleActions memberId={t.memberId} reason={t.reason} deadline={t.reason === "TRIAL" ? t.deadline : null} sent={!!t.invite} />
+                  <ToScheduleActions memberId={t.memberId} name={t.name} taskBase={taskBase} reason={t.reason} deadline={t.reason === "TRIAL" ? t.deadline : null} sent={!!t.invite} />
                 </li>
               ))}
             </ul>
@@ -226,6 +229,7 @@ export default async function NutricionHomePage({ searchParams }: { searchParams
         </Card>
 
         <Card title="Mis tareas" icon={CheckSquare} count={tasks.length} aside={<Link href="/dashboard/tareas" className="text-primary hover:underline">Todas</Link>}>
+          <NewTaskInline base={taskBase} />
           {tasks.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">Sin tareas pendientes.</p>
           ) : (

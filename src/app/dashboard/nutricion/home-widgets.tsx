@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Check, Copy, MessageCircle, X } from "lucide-react";
+import { Check, Copy, ListPlus, MessageCircle, X } from "lucide-react";
 import { setAppointmentStatus } from "@/lib/actions/nutrition-appointments";
 import { createBookingLink } from "@/lib/actions/nutrition-booking";
+import { QuickTaskForm, type QuickTaskBase } from "@/components/tasks/quick-task-form";
+import type { PersonRef } from "@/lib/tasks/meta";
 import { ACTIVITY_LEVELS, GOALS, calculateTarget, type ActivityLevel, type CalcSex, type Goal } from "@/lib/nutrition/calc";
 
 const err = (e: unknown) => (e instanceof Error ? e.message : "No se pudo completar.");
@@ -35,10 +38,26 @@ export function ApptStatusButtons({ id }: { id: string }) {
 }
 
 /** Booking link by WhatsApp (from her own phone, no template needed) or staff books it. */
-export function ToScheduleActions({ memberId, reason, deadline, sent }: { memberId: string; reason: "TRIAL" | "MEASUREMENT"; deadline: string | null; sent: boolean }) {
+export function ToScheduleActions({
+  memberId,
+  name,
+  reason,
+  deadline,
+  sent,
+  taskBase,
+}: {
+  memberId: string;
+  name: string;
+  reason: "TRIAL" | "MEASUREMENT";
+  deadline: string | null;
+  sent: boolean;
+  taskBase: QuickTaskBase;
+}) {
   const [pending, start] = useTransition();
   const [link, setLink] = useState<{ url: string; text: string; whatsappUrl: string | null } | null>(null);
+  const [tasking, setTasking] = useState(false);
   return (
+    <>
     <div className="flex flex-wrap items-center gap-2 pl-12 text-xs">
       {link ? (
         <>
@@ -78,7 +97,65 @@ export function ToScheduleActions({ memberId, reason, deadline, sent }: { member
       <Link href={`/dashboard/nutricion/citas/nueva?socio=${memberId}&volver=/dashboard/nutricion`} className="text-primary hover:underline">
         Agendar yo
       </Link>
+      <button type="button" onClick={() => setTasking((t) => !t)} className="text-primary hover:underline">
+        Tarea
+      </button>
       {sent && !link && <span className="text-muted-foreground">· enlace ya enviado</span>}
+    </div>
+    {tasking && (
+      <InlineTaskBox
+        base={taskBase}
+        person={{ kind: "member", id: memberId, name }}
+        initialTitle={`${reason === "TRIAL" ? "Agendar consulta inicial" : "Agendar medición"} con ${name.split(" ")[0]}`}
+        onDone={() => setTasking(false)}
+      />
+    )}
+    </>
+  );
+}
+
+/** The quick task form in a soft box, refreshing the page when a task is created. */
+function InlineTaskBox({
+  base,
+  person,
+  initialTitle,
+  onDone,
+}: {
+  base: QuickTaskBase;
+  person?: PersonRef;
+  initialTitle?: string;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  return (
+    <div className="mt-2 rounded-lg border border-primary/30 bg-muted/30 p-2.5">
+      <QuickTaskForm
+        {...base}
+        person={person ?? null}
+        allowPersonPick={!person}
+        initialTitle={initialTitle}
+        onCreated={() => {
+          onDone();
+          router.refresh();
+        }}
+        onCancel={onDone}
+      />
+    </div>
+  );
+}
+
+/** "+ Nueva tarea" at the top of "Mis tareas": the form opens right there. */
+export function NewTaskInline({ base }: { base: QuickTaskBase }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-stone-100 px-4 py-2.5">
+      {open ? (
+        <InlineTaskBox base={base} onDone={() => setOpen(false)} />
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+          <ListPlus className="size-4" /> Nueva tarea
+        </button>
+      )}
     </div>
   );
 }

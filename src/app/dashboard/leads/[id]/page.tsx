@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ListChecks, MessageCircle, Phone, StickyNote, UserPlus } from "lucide-react";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { getLead, getStaffUsers } from "@/lib/actions/leads";
-import { getPersonTasks } from "@/lib/actions/staff-tasks";
+import { getAssignableUsers, getPersonTasks } from "@/lib/actions/staff-tasks";
 import { Badge } from "@/components/ui/badge";
 import { ecuadorDateString, ecuadorDateTimeInput, ECUADOR_TZ } from "@/lib/timezone";
 import { STAGE_COLOR, STAGE_LABEL } from "@/lib/leads/stages";
@@ -27,7 +27,7 @@ import { getConversationThread } from "@/lib/actions/comunicacion";
 import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 import { Timeline } from "@/components/ficha/timeline";
 import { Composer } from "@/components/ficha/composer";
-import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
+import { NEW_TASK_HASH, PersonTasksSection } from "@/components/ficha/person-tasks-section";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
 import { StageControl } from "./stage-control";
 
@@ -74,11 +74,12 @@ export default async function LeadDetailPage({
   if (lead.member) redirect(`/dashboard/socios/${lead.member.id}`);
 
   const seesSegments = can.viewSegments(user);
-  const [tasks, staff, personSegments, segmentOptions] = await Promise.all([
+  const [tasks, staff, personSegments, segmentOptions, taskUsers] = await Promise.all([
     getPersonTasks({ kind: "lead", id }, 50),
     getStaffUsers(),
     seesSegments ? getPersonSegments({ kind: "lead", id }) : Promise.resolve([]),
     seesSegments ? listSegments() : Promise.resolve([]),
+    getAssignableUsers(),
   ]);
   // La actividad se carga siempre: la última entrada alimenta el resumen de arriba.
   const [timeline, waThread] = await Promise.all([
@@ -136,7 +137,7 @@ export default async function LeadDetailPage({
               disabled={!lead.phone}
               title={lead.phone ? undefined : "Sin teléfono"}
             />
-            <QuickAction href={newTaskHref(person, base)} label="Tarea" icon={<ListChecks className="size-4" />} />
+            <QuickAction href={NEW_TASK_HASH} external label="Tarea" icon={<ListChecks className="size-4" />} />
             <QuickAction href={`${base}/convertir`} label="Socio" icon={<UserPlus className="size-4" />} title="Convertir a socio" />
           </QuickActions>
         </div>
@@ -283,17 +284,13 @@ export default async function LeadDetailPage({
       <FichaSection title="Etapa del embudo">
         <StageControl leadId={lead.id} stage={lead.stage} />
       </FichaSection>
-      <FichaSection
-        title="Tareas"
-        count={tasks.open.length}
-        action={
-          <Link href={newTaskHref(person, base)} className="text-xs font-medium text-primary hover:underline">
-            + Tarea
-          </Link>
-        }
-      >
-        <PersonTasks open={tasks.open} today={ecuadorDateString()} />
-      </FichaSection>
+      <PersonTasksSection
+        person={person}
+        open={tasks.open}
+        closed={tasks.closed}
+        today={ecuadorDateString()}
+        base={{ users: taskUsers, currentUserId: user.id, canPool: can.manageLeads(user), defaultSede: user.sede }}
+      />
       {seesSegments && (
         <FichaSection title="Segmentos" count={personSegments.length}>
           <SegmentsCard person={{ kind: "lead", id: lead.id }} auto={[]} lists={personSegments} options={segmentOptions} />

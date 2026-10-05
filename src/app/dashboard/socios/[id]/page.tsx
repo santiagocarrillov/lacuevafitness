@@ -24,7 +24,7 @@ import { MembershipEditor } from "./membership-editor";
 import { MembershipPaymentPanel } from "./membership-payment-panel";
 import { ChurnRiskBadge } from "./churn-risk-badge";
 import { FrequencyBadge } from "@/components/frequency-badge";
-import { getPersonTasks } from "@/lib/actions/staff-tasks";
+import { getAssignableUsers, getPersonTasks } from "@/lib/actions/staff-tasks";
 import { ecuadorDateString, ECUADOR_TZ } from "@/lib/timezone";
 import { MEMBER_STATUS_COLOR, MEMBER_STATUS_LABEL } from "@/lib/leads/stages";
 import { loadPersonTimeline, money, TIMELINE_KIND_LABEL } from "@/lib/ficha/timeline";
@@ -41,7 +41,7 @@ import {
 } from "@/components/ficha/layout";
 import { Timeline } from "@/components/ficha/timeline";
 import { Composer } from "@/components/ficha/composer";
-import { PersonTasks, newTaskHref } from "@/components/ficha/person-tasks";
+import { NEW_TASK_HASH, PersonTasksSection } from "@/components/ficha/person-tasks-section";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
 import { WhatsappPanel } from "@/components/ficha/whatsapp-panel";
 import { prisma } from "@/lib/prisma";
@@ -144,13 +144,14 @@ export default async function MemberDetailPage({
       ? (tabParam as Tab)
       : "actividad";
 
-  const [member, analytics, tasks, challenges, selfEntries, appointments] = await Promise.all([
+  const [member, analytics, tasks, challenges, selfEntries, appointments, taskUsers] = await Promise.all([
     getMember(id),
     getMemberAnalytics(id),
     getPersonTasks({ kind: "member", id }, 50),
     getMemberChallenges(id),
     getMemberSelfEntries(id),
     canSchedule ? getMemberAppointments(id) : Promise.resolve([]),
+    getAssignableUsers(),
   ]);
   if (!member) return notFound();
 
@@ -270,7 +271,7 @@ export default async function MemberDetailPage({
               disabled={!member.phone}
               title={member.phone ? undefined : "Sin teléfono en la ficha"}
             />
-            <QuickAction href={newTaskHref(person, base)} label="Tarea" icon={<ListChecks className="size-4" />} />
+            <QuickAction href={NEW_TASK_HASH} external label="Tarea" icon={<ListChecks className="size-4" />} />
             {canManage && <QuickAction href={`${base}/notificar`} label="Notificar" icon={<Bell className="size-4" />} />}
             {renewHref && (
               <QuickAction href={renewHref} label={lastMembership ? "Renovar" : "Plan"} icon={<RefreshCw className="size-4" />} />
@@ -818,17 +819,13 @@ export default async function MemberDetailPage({
         </FichaSection>
       )}
 
-      <FichaSection
-        title="Tareas"
-        count={tasks.open.length}
-        action={
-          <Link href={newTaskHref(person, base)} className="text-xs font-medium text-primary hover:underline">
-            + Tarea
-          </Link>
-        }
-      >
-        <PersonTasks open={tasks.open} today={today} />
-      </FichaSection>
+      <PersonTasksSection
+        person={person}
+        open={tasks.open}
+        closed={tasks.closed}
+        today={today}
+        base={{ users: taskUsers, currentUserId: user.id, canPool: can.manageLeads(user), defaultSede: user.sede }}
+      />
 
       {seesInbox && (
         <FichaSection title="WhatsApp">
