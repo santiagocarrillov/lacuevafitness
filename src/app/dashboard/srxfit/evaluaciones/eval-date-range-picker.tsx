@@ -19,7 +19,7 @@ export function EvalDateRangePicker({ from, to, sede }: Props) {
   const [customTo, setCustomTo] = useState(to);
 
   function navigate(f: string, t: string) {
-    const p = new URLSearchParams({ sede, from: f, to: t });
+    const p = new URLSearchParams({ ...(sede ? { sede } : {}), from: f, to: t });
     router.push(`/dashboard/srxfit/evaluaciones?${p.toString()}`);
   }
 

@@ -169,6 +169,15 @@ export async function requireMember(
  * all sedes but have no access to financial data. Others are scoped to their sede.
  * Returns the sede to filter by, or null if the user can see all sedes.
  */
+/**
+ * A `?sede=` value from the URL, or undefined when it's missing or not a real
+ * sede. Links built with an unset sede carried the text "undefined", which
+ * Prisma rejects — never cast the raw param to `Sede`.
+ */
+export function parseSedeParam(value: string | null | undefined): Sede | undefined {
+  return value === "FITNESS_CENTER" || value === "XTREME" ? value : undefined;
+}
+
 export function getSedeScope(user: User): Sede | null {
   if (
     user.role === "OWNER" ||

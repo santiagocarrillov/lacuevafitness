@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
-import { requireAuth, getSedeScope, can } from "@/lib/auth";
+import { requireAuth, getSedeScope, parseSedeParam, can } from "@/lib/auth";
 import { getBodyFatMetrics, getMembersEvalStatus } from "@/lib/actions/srxfit";
 import { ComplianceGauge } from "./compliance-gauge";
 import { EvaluacionesTable, sortEvalRows } from "./evaluaciones-table";
@@ -38,14 +38,14 @@ export default async function EvaluacionesPage({
   const now = new Date();
   const from = params.from ?? isoDate(new Date(now.getFullYear(), now.getMonth(), 1));
   const to = params.to ?? isoDate(now);
-  const sede = (scopedSede ?? (params.sede as Sede | undefined | "")) as "" | Sede;
+  const sede: "" | Sede = scopedSede ?? parseSedeParam(params.sede) ?? "";
 
   function buildUrl(updates: Record<string, string>) {
-    const p = new URLSearchParams({ sede: sede as string, from, to, ...updates });
+    const p = new URLSearchParams({ ...(sede ? { sede } : {}), from, to, ...updates });
     return `/dashboard/srxfit/evaluaciones?${p.toString()}`;
   }
 
-  const sedeForQuery = sede ? (sede as Sede) : undefined;
+  const sedeForQuery = sede || undefined;
 
   const [group, fatMetrics, members, panel] = await Promise.all([
     groupEvaluationStats({ sede: sedeForQuery ?? null }),
@@ -116,7 +116,7 @@ export default async function EvaluacionesPage({
             ))}
           </div>
         )}
-        <EvalDateRangePicker from={from} to={to} sede={sede as string} />
+        <EvalDateRangePicker from={from} to={to} sede={sede} />
       </div>
 
       <GroupDashboard s={group} />
