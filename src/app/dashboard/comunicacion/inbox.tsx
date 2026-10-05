@@ -18,6 +18,7 @@ import {
   sendFichaTemplate,
   type ConversationRow,
   type ThreadData,
+  type ThreadMessage,
   type InboxFilter,
   type InboxSearchResult,
   countWaitingForHuman,
@@ -30,10 +31,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Columns3, List, ListPlus, Search, Send, StickyNote, X } from "lucide-react";
 import { Board } from "./board";
 import { ContactPanel } from "./contact-panel";
+import { QuickTaskForm, type QuickTaskBase } from "@/components/tasks/quick-task-form";
 import { Avatar, BotChip, ConversationCard, StageChip } from "./ui";
 import { Highlight } from "./highlight";
 import { dayLabel, timeShort } from "./format";
 import { LEAD_STAGES } from "@/lib/leads/stages";
+import type { PersonRef } from "@/lib/tasks/meta";
 
 const FILTERS: Array<{ key: InboxFilter; label: string }> = [
   { key: "all", label: "Todas" },
@@ -118,6 +121,8 @@ type Props = {
   initialConversations: ConversationRow[];
   staff: Array<{ id: string; name: string }>;
   currentUserId: string;
+  /** Equipo y permisos para crear tareas aquí mismo. */
+  taskBase: QuickTaskBase;
   /** Conversación a abrir al entrar (`?c=`), p. ej. desde una tarea del Resumen. */
   initialOpenId?: string | null;
   /** "lista" (chat) o "tablero" (columnas por etapa), desde `?vista=`. */
@@ -128,6 +133,7 @@ export function Inbox({
   initialConversations,
   staff,
   currentUserId,
+  taskBase,
   initialOpenId = null,
   initialView = "lista",
 }: Props) {
@@ -136,7 +142,9 @@ export function Inbox({
   const sp = useSearchParams();
   const [view, setView] = useState<"lista" | "tablero">(initialView);
   /** Composer: reply on WhatsApp, or an internal note that lands on the ficha. */
-  const [mode, setMode] = useState<"reply" | "note">("reply");
+  const [mode, setMode] = useState<"reply" | "note" | "task">("reply");
+  /** Lo que arranca el formulario de tarea (bumping `key` lo reinicia). */
+  const [taskDraft, setTaskDraft] = useState<{ key: number; title: string; detail: string }>({ key: 0, title: "", detail: "" });
   const [note, setNote] = useState("");
   /** Bumped after actions so the contact card reloads. */
   const [panelKey, setPanelKey] = useState(0);
@@ -324,6 +332,7 @@ export function Inbox({
       setThread(null);
       setError(null);
       setReply("");
+      setMode((m) => (m === "task" ? "reply" : m));
       setStageNotice(null);
       setThreadSearchOpen(false);
       setThreadQuery("");
@@ -430,6 +439,18 @@ export function Inbox({
     if (next === "tablero") params.set("vista", "tablero");
     else params.delete("vista");
     router.replace(params.toString() ? `${pathname}?${params}` : pathname, { scroll: false });
+  }
+
+  /** Open the "Tarea" tab of the composer; from a message, quote it in the notes. */
+  function openTask(m?: ThreadMessage) {
+    const first = thread?.contactName.split(" ")[0] ?? "";
+    setTaskDraft((d) => ({
+      key: d.key + 1,
+      title: m ? `Seguimiento a ${first}` : "",
+      detail: m ? `${m.senderLabel} escribió el ${dayLabel(m.createdAt)} a las ${timeShort(m.createdAt)}:\n«${m.body}»` : "",
+    }));
+    setMode("task");
+    setError(null);
   }
 
   async function onSaveNote() {
@@ -663,13 +684,17 @@ export function Inbox({
                       Tomar control
                     </button>
                   )}
-                  <Link
-                    href={newTaskHref(thread)}
+                  <button
+                    type="button"
+                    onClick={() => openTask()}
                     title="Crear una tarea sobre esta persona"
-                    className="inline-flex size-8 items-center justify-center rounded-md border border-border hover:bg-muted"
+                    aria-label="Crear una tarea sobre esta persona"
+                    className={`inline-flex size-8 items-center justify-center rounded-md border transition ${
+                      mode === "task" ? "border-primary bg-muted" : "border-border hover:bg-muted"
+                    }`}
                   >
                     <ListPlus className="size-4" />
-                  </Link>
+                  </button>
                   <button
                     onClick={() => {
                       if (threadSearchOpen) {
@@ -796,9 +821,9 @@ export function Inbox({
                             </details>
                           )}
                           <span className={`mt-1 flex items-center justify-end gap-2 text-[10px] ${staffOut ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                            <Link href={newTaskHref(thread, m.id)} title="Crear una tarea a partir de este mensaje" className="opacity-60 hover:opacity-100">
+                            <button type="button" onClick={() => openTask(m)} title="Crear una tarea a partir de este mensaje" className="opacity-60 hover:opacity-100">
                               + tarea
-                            </Link>
+                            </button>
                             {timeShort(m.createdAt)}
                           </span>
                         </div>
@@ -816,6 +841,7 @@ export function Inbox({
                     [
                       { key: "reply", label: "Responder" },
                       { key: "note", label: "Nota interna" },
+                      { key: "task", label: "Tarea" },
                     ] as const
                   ).map((t) => (
                     <button
@@ -833,7 +859,20 @@ export function Inbox({
                 </div>
                 <div className="p-3">
                   {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
-                  {mode === "note" ? (
+                  {mode === "task" ? (
+                    <QuickTaskForm
+                      key={`${thread.conversationId}-${taskDraft.key}`}
+                      {...taskBase}
+                      person={threadPerson(thread)}
+                      initialTitle={taskDraft.title}
+                      initialDetail={taskDraft.detail}
+                      onCreated={() => {
+                        setMode("reply");
+                        setPanelKey((k) => k + 1);
+                      }}
+                      onCancel={() => setMode("reply")}
+                    />
+                  ) : mode === "note" ? (
                     <div className="flex items-end gap-2">
                       <textarea
                         value={note}
@@ -923,6 +962,8 @@ export function Inbox({
             onTakeOver={() => withRefresh(() => takeOverConversation(thread.conversationId))}
             onResume={() => withRefresh(() => resumeBot(thread.conversationId))}
             onSchedule={(preset) => withRefresh(() => scheduleBotResume(thread.conversationId, preset))}
+            onNewTask={() => openTask()}
+            onTasksChanged={() => setPanelKey((k) => k + 1)}
           />
         )}
       </div>
@@ -937,15 +978,8 @@ function fichaHref(thread: ThreadData): string | null {
   return null;
 }
 
-/**
- * "+ Tarea" goes to the full-page form with the conversation's person (or, with
- * `messageId`, that message quoted) and comes back to this conversation.
- */
-function newTaskHref(thread: ThreadData, messageId?: string): string {
-  const q = new URLSearchParams();
-  if (messageId) q.set("mensaje", messageId);
+/** The conversation's person, for tasks created from the chat. */
+function threadPerson(thread: ThreadData): PersonRef | null {
   const id = thread.contactKind === "member" ? thread.memberId : thread.leadId;
-  if (id) q.set(thread.contactKind === "member" ? "socio" : "lead", id);
-  q.set("volver", `/dashboard/comunicacion?c=${thread.conversationId}`);
-  return `/dashboard/tareas/nueva?${q}`;
+  return id ? { kind: thread.contactKind, id, name: thread.contactName } : null;
 }

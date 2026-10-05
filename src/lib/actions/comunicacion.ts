@@ -528,7 +528,6 @@ export type ContactSummary = {
   trialScheduledAt: string | null;
   membership: { plan: string; endsAt: string; active: boolean } | null;
   lastAttendanceAt: string | null;
-  openTasks: number;
   notes: { id: string; text: string; by: string | null; at: string }[];
 };
 
@@ -557,7 +556,7 @@ export async function getContactSummary(conversationId: string): Promise<Contact
   const memberId = c.memberId ?? c.lead?.member?.id ?? null;
   const leadId = c.lead?.id ?? (memberId ? (await prisma.member.findUnique({ where: { id: memberId }, select: { leadId: true } }))?.leadId ?? null : null);
 
-  const [member, lead, interactions, notes, openTasks] = await Promise.all([
+  const [member, lead, interactions, notes] = await Promise.all([
     memberId
       ? prisma.member.findUnique({
           where: { id: memberId },
@@ -587,12 +586,6 @@ export async function getContactSummary(conversationId: string): Promise<Contact
           select: { id: true, content: true, createdAt: true, author: { select: { fullName: true } } },
         })
       : [],
-    prisma.staffTask.count({
-      where: {
-        status: { in: ["TODO", "IN_PROGRESS", "WAITING"] },
-        OR: [...(memberId ? [{ memberId }] : []), ...(leadId ? [{ leadId }] : [])],
-      },
-    }),
   ]);
 
   const m = member?.memberships[0];
@@ -619,7 +612,6 @@ export async function getContactSummary(conversationId: string): Promise<Contact
     trialScheduledAt: l?.trialScheduledAt?.toISOString() ?? null,
     membership: m ? { plan: m.plan.name, endsAt: m.endsAt.toISOString(), active: m.state === "ACTIVE" && m.endsAt >= new Date() } : null,
     lastAttendanceAt: member?.attendance[0]?.recordedAt.toISOString() ?? null,
-    openTasks,
     notes: allNotes,
   };
 }
