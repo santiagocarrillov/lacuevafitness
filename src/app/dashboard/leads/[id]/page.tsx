@@ -27,7 +27,8 @@ import { getConversationThread } from "@/lib/actions/comunicacion";
 import { fichaTemplatePreviews } from "@/lib/whatsapp/templates";
 import { Timeline } from "@/components/ficha/timeline";
 import { Composer } from "@/components/ficha/composer";
-import { NEW_TASK_HASH, PersonTasksSection } from "@/components/ficha/person-tasks-section";
+import { PersonTasksSection } from "@/components/ficha/person-tasks-section";
+import { NEW_TASK_HASH } from "@/lib/tasks/meta";
 import { WhatsappSummary } from "@/components/ficha/whatsapp-card";
 import { StageControl } from "./stage-control";
 
