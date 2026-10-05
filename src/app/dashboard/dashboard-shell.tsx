@@ -51,6 +51,17 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
   const pathname = usePathname();
   useTrackNavigation();
   const nav = groups.flatMap((g) => g.items);
+  // Everything waiting in the menu (tareas + por validar…), shown on the button
+  // that opens it so a closed menu still says there's something to do.
+  const pendingTotal = nav.reduce((n, i) => n + (i.badge ?? 0), 0);
+  const pendingDot = pendingTotal > 0 && (
+    <span
+      aria-hidden
+      className="absolute -right-1 -top-1 min-w-4 rounded-full bg-destructive px-1 text-center text-[10px] font-semibold leading-4 text-white ring-2 ring-background"
+    >
+      {pendingTotal > 99 ? "99+" : pendingTotal}
+    </span>
+  );
   const groupOf = (href?: string) => groups.find((g) => g.items.some((i) => i.href === href))?.label;
 
   function toggleCollapsed() {
@@ -103,9 +114,10 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
       <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-12 border-b border-border bg-background/95 backdrop-blur flex items-center justify-between px-3">
         <button
           onClick={() => setOpen(true)}
-          aria-label="Abrir menú"
-          className="p-2 -ml-2 rounded-md hover:bg-accent transition"
+          aria-label={pendingTotal > 0 ? `Abrir menú (${pendingTotal} pendientes)` : "Abrir menú"}
+          className="relative p-2 -ml-2 rounded-md hover:bg-accent transition"
         >
+          {pendingDot}
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="12" x2="21" y2="12" />
@@ -259,10 +271,11 @@ export function DashboardShell({ children, nav: groups, userName, userMeta, show
             <button
               type="button"
               onClick={toggleCollapsed}
-              aria-label="Mostrar menú"
+              aria-label={pendingTotal > 0 ? `Mostrar menú (${pendingTotal} pendientes)` : "Mostrar menú"}
               title="Mostrar menú ( [ )"
-              className="-ml-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              className="relative -ml-2 rounded-md p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
             >
+              {pendingDot}
               <PanelLeftOpen className="size-4" />
             </button>
           )}
