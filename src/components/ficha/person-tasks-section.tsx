@@ -2,13 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PersonRef, TaskListItem } from "@/lib/tasks/meta";
+import { NEW_TASK_HASH, type PersonRef, type TaskListItem } from "@/lib/tasks/meta";
 import { QuickTaskForm, type QuickTaskBase } from "@/components/tasks/quick-task-form";
 import { PersonTaskList } from "@/components/tasks/person-task-list";
 import { FichaSection } from "./layout";
-
-/** Hash the ficha's "Tarea" quick action points to: opens the form below. */
-export const NEW_TASK_HASH = "#nueva-tarea";
 
 /**
  * "Tareas" on a ficha: "+ Tarea" opens the form right here (no other page),

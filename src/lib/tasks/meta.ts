@@ -7,6 +7,14 @@ export type SedeValue = "FITNESS_CENTER" | "XTREME";
 export type TaskView = "mine" | "assigned" | "pool" | "all";
 export type TaskRepeat = "DAILY" | "WEEKDAYS" | "WEEKLY" | "MONTHLY";
 
+/**
+ * Hash the ficha's "Tarea" quick action points to: opens the form in the
+ * Tareas section. Lives here (not in the "use client" section) because a
+ * server page importing a constant from a client module gets a client
+ * reference, not the string — that broke every ficha with `startsWith`.
+ */
+export const NEW_TASK_HASH = "#nueva-tarea";
+
 export const REPEAT_LABEL: Record<TaskRepeat, string> = {
   DAILY: "Cada día",
   WEEKDAYS: "Días hábiles (L–V)",
