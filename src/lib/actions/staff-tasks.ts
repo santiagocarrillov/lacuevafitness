@@ -1045,13 +1045,26 @@ export async function countMyDueTasks(): Promise<number> {
   });
 }
 
-/** Tasks tied to one person that this user may see: open first, then the last closed. */
+/**
+ * Tasks tied to one person that this user may see: open first, then the last
+ * closed. A socio who came in as a lead keeps the tasks from back then (and a
+ * converted lead shows the socio's), so the history doesn't split in two.
+ */
 export async function getPersonTasks(
   person: { kind: "lead" | "member"; id: string },
   closedTake = 3,
 ): Promise<{ open: TaskListItem[]; closed: TaskListItem[] }> {
   const user = await requireTaskUser();
-  const who = person.kind === "member" ? { memberId: person.id } : { leadId: person.id };
+  let memberId: string | null = null;
+  let leadId: string | null = null;
+  if (person.kind === "member") {
+    memberId = person.id;
+    leadId = (await prisma.member.findUnique({ where: { id: person.id }, select: { leadId: true } }))?.leadId ?? null;
+  } else {
+    leadId = person.id;
+    memberId = (await prisma.member.findUnique({ where: { leadId: person.id }, select: { id: true } }))?.id ?? null;
+  }
+  const who = { OR: [...(memberId ? [{ memberId }] : []), ...(leadId ? [{ leadId }] : [])] };
   const [open, closed] = await Promise.all([
     prisma.staffTask.findMany({
       where: { AND: [visibleWhere(user), who, { status: { in: OPEN_STATUSES } }] },
