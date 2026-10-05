@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
 import { getLeads, getLeadStats, getStaffUsers } from "@/lib/actions/leads";
-import { requireAuth, getSedeScope, can } from "@/lib/auth";
+import { requireAuth, getSedeScope, parseSedeParam, can } from "@/lib/auth";
 import { LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import { ACTIVITY_PRESETS, CREATED_PRESETS } from "@/lib/list-filters";
 import { FilterBar, Pager, type FilterDef } from "@/components/list/filter-bar";
@@ -43,7 +43,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   if (!can.manageLeads(user)) redirect("/dashboard?forbidden=1");
   const scopedSede = getSedeScope(user);
   const params = await searchParams;
-  const sede = (scopedSede ?? (params.sede as Sede | undefined)) || undefined;
+  const sede = scopedSede ?? parseSedeParam(params.sede);
 
   const [result, stats, staff] = await Promise.all([
     getLeads({

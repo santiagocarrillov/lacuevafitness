@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
-import { requireAuth, getSedeScope, can } from "@/lib/auth";
+import { requireAuth, getSedeScope, parseSedeParam, can } from "@/lib/auth";
 import {
   getRevenueDetail, getLeadsDetail, getSalesDetail,
   getActiveMembersDetail, getExpiredMembershipsDetail, getUpcomingRenewalsDetail,
@@ -67,7 +67,7 @@ export default async function DetalleReportePage({
 
   const p = await searchParams;
   const type = p.type ?? "";
-  const sede = (scopedSede ?? (p.sede as Sede | undefined)) || undefined;
+  const sede = scopedSede ?? parseSedeParam(p.sede);
 
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);

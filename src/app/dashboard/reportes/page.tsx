@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sede } from "@/generated/prisma/client";
-import { requireAuth, getSedeScope, can } from "@/lib/auth";
+import { requireAuth, getSedeScope, parseSedeParam, can } from "@/lib/auth";
 import { GestionTab } from "./gestion-tab";
 import { AsistenciaTab } from "./asistencia-tab";
 import { ComercialTab } from "./comercial-tab";
@@ -51,7 +51,7 @@ export default async function ReportesPage({
   let tab = params.tab ?? "gestion";
   if (tab === "contable" && !canContable) tab = "gestion";
 
-  const sede = (scopedSede ?? params.sede ?? "") as "" | Sede;
+  const sede: "" | Sede = scopedSede ?? parseSedeParam(params.sede) ?? "";
 
   const now = new Date();
 

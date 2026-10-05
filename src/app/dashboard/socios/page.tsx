@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Sede } from "@/generated/prisma/client";
 import { getMembers, getMemberStats } from "@/lib/actions/members";
-import { requireAuth, getSedeScope } from "@/lib/auth";
+import { requireAuth, getSedeScope, parseSedeParam } from "@/lib/auth";
 import { MEMBER_STATUS_LABEL } from "@/lib/leads/stages";
 import { CREATED_PRESETS } from "@/lib/list-filters";
 import { FilterBar, Pager, type FilterDef } from "@/components/list/filter-bar";
@@ -17,7 +17,7 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
   const scopedSede = getSedeScope(user);
   const params = await searchParams;
   // Scoped users can only see their own sede — force the filter
-  const sede = (scopedSede ?? (params.sede as Sede | undefined)) || undefined;
+  const sede = scopedSede ?? parseSedeParam(params.sede);
 
   const [result, statsFC, statsXT] = await Promise.all([
     getMembers({
