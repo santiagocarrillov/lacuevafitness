@@ -38,7 +38,11 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   icons: {
-    icon: "/icons/portal-192.png",
+    // The X from SRXFIT, so the portal tab is told apart from the website's.
+    icon: [
+      { url: "/icons/portal-favicon.ico", sizes: "48x48" },
+      { url: "/icons/portal-x-192.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: "/icons/apple-touch-icon.png",
   },
 };
