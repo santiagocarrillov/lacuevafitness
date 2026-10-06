@@ -36,10 +36,13 @@ export const metadata: Metadata = {
   title: "La Cueva SRXFIT — No solo entrenas. Te transformas.",
   description:
     "Fitness Prescrito Científicamente en Sangolquí. Te evaluamos, te prescribimos y medimos cada avance. Más saludable. Más fit. Más longeva.",
-  // favicon.ico at the app root covers browser tabs; these add the larger
-  // sizes Google results and iOS home-screen bookmarks ask for.
+  // favicon.ico for browser tabs, plus the larger sizes Google results and
+  // iOS home-screen bookmarks ask for.
   icons: {
-    icon: [{ url: "/icons/web-icon-512.png", sizes: "512x512", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icons/web-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/icons/web-apple-touch-icon.png",
   },
 };

@@ -30,6 +30,9 @@ const barlowSemiCondensed = Barlow_Semi_Condensed({
 export const metadata: Metadata = {
   title: "La Cueva — Dashboard SRXFit",
   description: "Dashboard operativo de La Cueva Fitness Center y La Cueva Xtreme.",
+  // Declared here instead of as src/app/favicon.ico: the file convention is
+  // injected on every route, which would leak into the portal's own icon.
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({
