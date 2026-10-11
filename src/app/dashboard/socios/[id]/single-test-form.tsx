@@ -21,6 +21,7 @@ const TEST_CATALOG: Array<{ key: string; label: string; unit: string; isTime?: b
   { key: "RING_ROW_ANGLE", label: "Ring Row (ángulo)", unit: "grados" },
   { key: "DEAD_HANG_SECONDS", label: "Dead Hang", unit: "seg" },
   { key: "PLANK_SECONDS", label: "Plank", unit: "seg" },
+  { key: "BROAD_JUMP_CM", label: "Salto largo (mejor de 3)", unit: "cm" },
   { key: "COOPER_METERS", label: "Cooper 12 min", unit: "metros" },
   { key: "CHRISTINE_TIME_SECONDS", label: "Christine (3 RFT)", unit: "seg", isTime: true },
   { key: "ROW_500M_SPRINT_SECONDS", label: "500m Remo Sprint", unit: "seg", isTime: true },

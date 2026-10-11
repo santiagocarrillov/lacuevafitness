@@ -19,7 +19,7 @@ const TEST_LABEL: Record<string, string> = {
   RING_ROW_ANGLE: "Ring Row (ángulo)", PLANK_SECONDS: "Plank",
   CHRISTINE_TIME_SECONDS: "Christine (3 RFT)", COOPER_METERS: "Cooper 12 min",
   CLEAN_JERK_1RM: "Clean & Jerk 1RM", SNATCH_1RM: "Snatch 1RM",
-  ROW_500M_SPRINT_SECONDS: "500m Remo Sprint",
+  ROW_500M_SPRINT_SECONDS: "500m Remo Sprint", BROAD_JUMP_CM: "Salto largo",
 };
 
 export default async function EvaluacionesPage() {

@@ -29,29 +29,35 @@ type TestMeta = {
 
 const oneRm = (v: number) => `1RM ≈ ${(v * 1.08).toFixed(1)} kg`;
 
+// Days follow the week-9 battery of the SRXFIT manual v3 (10.3).
 const STRENGTH: TestMeta[] = [
   { key: "BACK_SQUAT_3RM", label: "Back squat 3RM", hint: "Lunes · peso del 3RM técnico", derived: oneRm },
   { key: "DEADLIFT_3RM", label: "Deadlift 3RM", hint: "Lunes · peso del 3RM técnico", derived: oneRm },
   { key: "BENCH_PRESS_3RM", label: "Bench press 3RM", hint: "Martes · peso del 3RM técnico", derived: oneRm },
   { key: "PUSH_PRESS_3RM", label: "Push press 3RM", hint: "Martes · peso del 3RM técnico", derived: oneRm },
-  { key: "PULL_UPS_MAX", label: "Pull-ups strict", hint: "Martes · reps en rango completo" },
-  { key: "RING_ROW_ANGLE", label: "Ring row (si no hace pull-ups)", hint: "Martes · ángulo del cuerpo" },
-  { key: "PLANK_SECONDS", label: "Plank", hint: "Martes · segundos hasta perder la forma" },
-  { key: "DEAD_HANG_SECONDS", label: "Dead hang", hint: "Martes · segundos hasta soltar" },
+  { key: "PULL_UPS_MAX", label: "Pull-ups strict", hint: "Viernes · reps en rango completo" },
+  { key: "RING_ROW_ANGLE", label: "Ring row (si no hace pull-ups)", hint: "Viernes · ángulo del cuerpo" },
+  { key: "PLANK_SECONDS", label: "Plank", hint: "Viernes · antes del benchmark · segundos hasta perder la forma" },
+  { key: "DEAD_HANG_SECONDS", label: "Dead hang", hint: "Viernes · antes del benchmark · segundos hasta soltar" },
+];
+
+// Low-impact members skip the jump: the field stays empty ("no aplica"), never a zero.
+const POWER: TestMeta[] = [
+  { key: "BROAD_JUMP_CM", label: "Salto largo", hint: "Lunes, antes del squat · mejor de 3 · aterrizaje sostenido" },
 ];
 
 const CONDITIONING: TestMeta[] = [
-  { key: "CHRISTINE_TIME_SECONDS", label: "Christine 3 RFT", hint: "Miércoles · 500 m remo + 12 DL + 21 box jumps", isTime: true },
+  { key: "CHRISTINE_TIME_SECONDS", label: "Christine 3 RFT", hint: "Viernes · 500 m remo + 12 DL + 21 box jumps", isTime: true },
   {
-    key: "COOPER_METERS", label: "Cooper 12 min", hint: "Jueves · metros recorridos",
+    key: "COOPER_METERS", label: "Cooper 12 min", hint: "Sábado · metros recorridos",
     derived: (v) => `VO₂max ≈ ${((v - 504.9) / 44.73).toFixed(1)} ml/kg/min`,
   },
 ];
 
 const OLYMPIC: TestMeta[] = [
-  { key: "CLEAN_JERK_1RM", label: "Clean & jerk 1RM", hint: "Viernes · con base técnica" },
-  { key: "SNATCH_1RM", label: "Snatch 1RM", hint: "Viernes · con base técnica" },
-  { key: "ROW_500M_SPRINT_SECONDS", label: "Remo 500 m sprint", hint: "Viernes · desde parado", isTime: true },
+  { key: "CLEAN_JERK_1RM", label: "Clean & jerk 1RM", hint: "Miércoles · con base técnica" },
+  { key: "SNATCH_1RM", label: "Snatch 1RM", hint: "Jueves · con base técnica" },
+  { key: "ROW_500M_SPRINT_SECONDS", label: "Remo 500 m sprint", hint: "Sábado · desde parado", isTime: true },
 ];
 
 type BodyMeta = { key: Exclude<keyof PanelBody, "notes">; label: string; unit: string; step: string; betterDir?: "up" | "down" };
@@ -426,7 +432,7 @@ export function EvalPanel({
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-[11px] text-muted-foreground">Con {EVAL_COMPLETE_PCT}% queda evaluado. Los levantamientos olímpicos son opcionales y no suman.</p>
+              <p className="mt-2 text-[11px] text-muted-foreground">Con {EVAL_COMPLETE_PCT}% queda evaluado. El salto largo y los levantamientos olímpicos no suman.</p>
             </section>
           </div>
 
@@ -439,6 +445,10 @@ export function EvalPanel({
           <div className="min-w-0 space-y-4">
             <Column title="Acondicionamiento" icon={HeartPulse} color="#e5533f" aside="30% del avance">
               {CONDITIONING.map(testField)}
+            </Column>
+
+            <Column title="Potencia" icon={Activity} color="#d19a3a" aside="No suma · bajo impacto: vacío">
+              {POWER.map(testField)}
             </Column>
 
             <Column title="Levantamientos olímpicos" icon={Activity} color="#7c6bd6" aside="Opcional, no suma">
