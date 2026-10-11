@@ -19,6 +19,7 @@ export const TEST_LABELS: Record<TestKey, TestSpec> = {
   CLEAN_JERK_1RM: { label: "Clean & jerk 1RM", unit: "kg", betterDir: "up" },
   SNATCH_1RM: { label: "Snatch 1RM", unit: "kg", betterDir: "up" },
   ROW_500M_SPRINT_SECONDS: { label: "Remo 500m", unit: "s", betterDir: "down" },
+  BROAD_JUMP_CM: { label: "Salto largo", unit: "cm", betterDir: "up" },
 };
 
 // Subset shown in the "Mis PRs" section of /portal/progreso. Order matters.

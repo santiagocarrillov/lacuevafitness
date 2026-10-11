@@ -16,8 +16,9 @@ export type EvalSlot = {
   body?: "weightKg" | "bodyFatPct";
 };
 
-// Weights add up to 100. The optional Friday module (C&J, snatch, 500 m row)
-// weighs 0: it never holds an evaluation back.
+// Weights add up to 100. The optional module (C&J, snatch, 500 m row) and the
+// broad jump weigh 0: they never hold an evaluation back. The jump stays out
+// because low-impact members skip it ("no aplica", never a zero).
 export const EVAL_SLOTS: EvalSlot[] = [
   { key: "peso", label: "Peso", weight: 10, body: "weightKg" },
   { key: "grasa", label: "% grasa", weight: 10, body: "bodyFatPct" },

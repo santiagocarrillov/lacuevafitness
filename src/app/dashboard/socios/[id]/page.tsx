@@ -105,6 +105,7 @@ const testLabels: Record<string, string> = {
   CLEAN_JERK_1RM: "Clean & Jerk 1RM",
   SNATCH_1RM: "Snatch 1RM",
   ROW_500M_SPRINT_SECONDS: "500m Remo Sprint",
+  BROAD_JUMP_CM: "Salto largo",
 };
 
 const dateFmt = (d: Date | null | undefined) =>

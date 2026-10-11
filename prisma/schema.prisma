@@ -665,6 +665,7 @@ enum TestKey {
   CLEAN_JERK_1RM
   SNATCH_1RM
   ROW_500M_SPRINT_SECONDS
+  BROAD_JUMP_CM
 }
 
 model TestResult {
