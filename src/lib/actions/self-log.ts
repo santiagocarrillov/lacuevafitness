@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { TestKey, type User } from "@/generated/prisma/client";
 import { requireAuth, requireMember, can, getSedeScope } from "@/lib/auth";
 import { SELF_LOGGABLE_TESTS, SELF_TEST_KEYS } from "@/lib/portal/self-log-tests";
+import { estimate1Rm, formatMainSet, validateMainSet } from "@/lib/self-log/main-set";
+import { getSessionForDate } from "@/lib/srxfit-calendar";
+import { ecuadorParts } from "@/lib/portal/tz";
 import {
   notifyMembersOfReview,
   notifyStaffOfSelfEntry,
@@ -131,9 +134,64 @@ export async function logSelfPr(formData: FormData): Promise<SelfLogResult> {
   return { ok: true };
 }
 
+/**
+ * A socio logs the best set of today's main lift (Manual SRXFIT v3, 9.5):
+ * load, reps and reps in reserve. One per training day; saving again replaces
+ * it while a coach has not validated it. The day comes from the server clock
+ * (Ecuador), never from the form.
+ */
+export async function logMainSet(formData: FormData): Promise<SelfLogResult> {
+  const { member, user } = await requireMember({ enforceAccess: false });
+
+  const exercise = String(formData.get("exercise") ?? "").trim().replace(/\s+/g, " ");
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 200) || null;
+  const parsed = validateMainSet({
+    exercise,
+    loadKg: num(formData.get("loadKg")),
+    reps: num(formData.get("reps")),
+    rir: num(formData.get("rir")),
+  });
+  if (!parsed.ok) return parsed;
+
+  const { year, month, day } = ecuadorParts(new Date());
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const session = getSessionForDate(new Date(year, month - 1, day));
+
+  const existing = await prisma.mainSetLog.findUnique({ where: { memberId_date: { memberId: member.id, date } } });
+  if (existing && (existing.source !== "MEMBER" || existing.verifiedAt)) {
+    return { ok: false, error: "Tu serie de hoy ya fue validada por tu coach." };
+  }
+
+  const data = {
+    exercise,
+    ...parsed.set,
+    notes,
+    weekNumber: session?.weekNumber ?? null,
+    pattern: session?.pattern ?? null,
+    recordedByUserId: user.id,
+  };
+  const saved = existing
+    ? await prisma.mainSetLog.update({ where: { id: existing.id }, data })
+    : await prisma.mainSetLog.create({ data: { ...data, memberId: member.id, date, source: "MEMBER" } });
+
+  if (!existing) {
+    await notifyStaffOfSelfEntry({
+      kind: "set",
+      entryId: saved.id,
+      memberId: member.id,
+      memberName: `${member.firstName} ${member.lastName}`.trim(),
+      memberSede: member.sede,
+      summary: `serie principal de ${exercise}: ${formatMainSet(parsed.set)}`,
+    }).catch(() => undefined);
+  }
+  revalidatePath(VALIDATION_QUEUE_PATH);
+  revalidatePath("/portal/hoy");
+  return { ok: true };
+}
+
 /** A socio may remove their own self-reported entry while it's still unverified. */
 export async function deleteSelfEntry(
-  kind: "measurement" | "pr",
+  kind: EntryKind,
   id: string,
 ): Promise<SelfLogResult> {
   const { member } = await requireMember({ enforceAccess: false });
@@ -145,6 +203,15 @@ export async function deleteSelfEntry(
       return { ok: false, error: "Ese registro ya fue validado por tu coach." };
     }
     await prisma.bodyComposition.delete({ where: { id } });
+  } else if (kind === "set") {
+    const row = await prisma.mainSetLog.findUnique({ where: { id } });
+    if (!row || row.memberId !== member.id) return { ok: false, error: "No encontrado." };
+    if (row.source !== "MEMBER" || row.verifiedAt) {
+      return { ok: false, error: "Ese registro ya fue validado por tu coach." };
+    }
+    await prisma.mainSetLog.delete({ where: { id } });
+    revalidatePath("/portal/hoy");
+    revalidatePath(VALIDATION_QUEUE_PATH);
   } else {
     const row = await prisma.testResult.findUnique({ where: { id } });
     if (!row || row.memberId !== member.id) return { ok: false, error: "No encontrado." };
@@ -158,7 +225,7 @@ export async function deleteSelfEntry(
   return { ok: true };
 }
 
-type EntryKind = "measurement" | "pr";
+type EntryKind = "measurement" | "pr" | "set";
 
 function canReview(user: User, kind: EntryKind) {
   return kind === "measurement" ? can.editBodyComp(user) : can.editTests(user);
@@ -181,6 +248,10 @@ async function reviewableRows(user: User, kind: EntryKind, ids: string[]): Promi
   if (kind === "measurement") {
     const rows = await prisma.bodyComposition.findMany({ where, select: { id: true, memberId: true } });
     return rows.map((r) => ({ id: r.id, memberId: r.memberId, kind: "measurement", label: "Tus medidas" }));
+  }
+  if (kind === "set") {
+    const rows = await prisma.mainSetLog.findMany({ where, select: { id: true, memberId: true, exercise: true, loadKg: true, reps: true, rir: true } });
+    return rows.map((r) => ({ id: r.id, memberId: r.memberId, kind: "set", label: `${r.exercise}: ${formatMainSet(r)}` }));
   }
   const rows = await prisma.testResult.findMany({ where, select: { id: true, memberId: true, test: true, valueNumeric: true, unit: true } });
   return rows.map((r) => ({
@@ -217,22 +288,28 @@ export async function verifySelfEntries(
   const user = await requireAuth();
   if (!Array.isArray(items) || items.length > 300) return { ok: false, error: "Lista no válida." };
   const prIds = items.filter((i) => i.kind === "pr").map((i) => i.id);
+  const setIds = items.filter((i) => i.kind === "set").map((i) => i.id);
   const compIds = items.filter((i) => i.kind === "measurement").map((i) => i.id);
-  if ((prIds.length && !can.editTests(user)) || (compIds.length && !can.editBodyComp(user))) {
+  if (((prIds.length || setIds.length) && !can.editTests(user)) || (compIds.length && !can.editBodyComp(user))) {
     return { ok: false, error: "Sin permisos para validar." };
   }
 
-  const [prs, comps] = await Promise.all([reviewableRows(user, "pr", prIds), reviewableRows(user, "measurement", compIds)]);
-  if (prs.length + comps.length === 0) return { ok: false, error: "Ese registro ya fue revisado." };
+  const [prs, comps, sets] = await Promise.all([
+    reviewableRows(user, "pr", prIds),
+    reviewableRows(user, "measurement", compIds),
+    reviewableRows(user, "set", setIds),
+  ]);
+  if (prs.length + comps.length + sets.length === 0) return { ok: false, error: "Ese registro ya fue revisado." };
 
   const data = { verifiedAt: new Date(), verifiedByUserId: user.id };
   const pending = { source: "MEMBER" as const, verifiedAt: null };
   await prisma.$transaction([
     prisma.testResult.updateMany({ where: { id: { in: prs.map((p) => p.id) }, ...pending }, data }),
     prisma.bodyComposition.updateMany({ where: { id: { in: comps.map((c) => c.id) }, ...pending }, data }),
+    prisma.mainSetLog.updateMany({ where: { id: { in: sets.map((s) => s.id) }, ...pending }, data }),
   ]);
 
-  const reviewed = [...prs, ...comps];
+  const reviewed = [...prs, ...comps, ...sets];
   await notifyMembersOfReview(reviewed, "verified").catch(() => undefined);
   revalidateReview(reviewed.map((r) => r.memberId));
   return { ok: true, count: reviewed.length };
@@ -248,6 +325,8 @@ export async function rejectSelfEntry(kind: EntryKind, id: string, _memberId?: s
 
   if (kind === "measurement") {
     await prisma.bodyComposition.delete({ where: { id } });
+  } else if (kind === "set") {
+    await prisma.mainSetLog.delete({ where: { id } });
   } else {
     await prisma.testResult.delete({ where: { id } });
   }
@@ -268,7 +347,12 @@ export async function getMemberSelfEntries(memberId: string) {
   const user = await requireAuth();
   if (user.role === "MEMBER") throw new Error("Sin permisos");
 
-  const [comps, prs] = await Promise.all([
+  const [sets, comps, prs] = await Promise.all([
+    prisma.mainSetLog.findMany({
+      where: { memberId, source: "MEMBER" },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+    }),
     prisma.bodyComposition.findMany({
       where: { memberId, source: "MEMBER" },
       orderBy: { measuredAt: "desc" },
@@ -316,7 +400,17 @@ export async function getMemberSelfEntries(memberId: string) {
     };
   });
 
-  return [...measurement, ...marks]
+  const mainSets = sets.map((s) => ({
+    id: s.id,
+    kind: "set" as const,
+    at: fmt(s.createdAt),
+    sortAt: s.createdAt.getTime(),
+    summary: `Serie principal · ${s.exercise} — ${formatMainSet(s)} (1RM estimado ${estimate1Rm(s)} kg)`,
+    notes: s.notes,
+    verified: s.verifiedAt != null,
+  }));
+
+  return [...measurement, ...marks, ...mainSets]
     .sort((a, b) => b.sortAt - a.sortAt)
     .map(({ sortAt: _sortAt, ...rest }) => rest);
 }

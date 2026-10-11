@@ -9,7 +9,7 @@ import { verifySelfEntry, rejectSelfEntry } from "@/lib/actions/self-log";
 
 export type SelfEntry = {
   id: string;
-  kind: "measurement" | "pr";
+  kind: "measurement" | "pr" | "set";
   at: string;
   /** Human summary, e.g. "Peso 74.5 kg · Cintura 82 cm" or "Bench press (3RM) 100 kg" */
   summary: string;
