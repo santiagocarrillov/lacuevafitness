@@ -359,6 +359,22 @@ export async function generateAutoTasks(opts: { dryRun?: boolean } = {}): Promis
           await tx.staffTaskEntry.create({
             data: { taskId: t.id, kind: "EVENT", body: `La creó automáticamente (${p.reason}).` },
           });
+          // A trial that already got the old "Cobrar renovación" task: the close replaces it.
+          if (p.reason === "cierre de trial") {
+            const old = await tx.staffTask.findFirst({
+              where: {
+                autoKey: p.autoKey.replace("trialclose:", "renewal:"),
+                status: { in: ["TODO", "IN_PROGRESS", "WAITING"] },
+              },
+              select: { id: true },
+            });
+            if (old) {
+              await tx.staffTask.update({ where: { id: old.id }, data: { status: "CANCELED" } });
+              await tx.staffTaskEntry.create({
+                data: { taskId: old.id, kind: "EVENT", body: "Cancelada automáticamente: es un trial, la reemplaza el cierre de trial." },
+              });
+            }
+          }
         });
         created++;
       } catch (err) {
