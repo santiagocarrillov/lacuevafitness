@@ -18,6 +18,8 @@ import { getMemberAppointments } from "@/lib/actions/nutrition-appointments";
 import { getMemberMealPlans, getMemberMealLogs, getNutritionFocus } from "@/lib/actions/nutrition";
 import { TestResultsSection } from "./test-results-section";
 import { SelfEntriesSection } from "./self-entries-section";
+import { StrengthSection } from "./strength-section";
+import { getMemberStrength } from "@/lib/srxfit/member-strength";
 import { getMemberSelfEntries } from "@/lib/actions/self-log";
 import { ChallengesSection } from "./challenges-section";
 import { MembershipEditor } from "./membership-editor";
@@ -205,13 +207,14 @@ export default async function MemberDetailPage({
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
 
   // Only what the open tab needs.
-  const [timeline, plans, tabData, waThread] = await Promise.all([
+  const [timeline, plans, tabData, waThread, strength] = await Promise.all([
     tab === "actividad" ? loadPersonTimeline(user, { leadId: member.leadId, memberId: member.id }, tasks.closed) : Promise.resolve([]),
     tab === "membresia" ? getMembershipPlans() : Promise.resolve([]),
     (tab === "nutricion" || tab === "salud") && canEditHealth
       ? Promise.all([getClinicalRecords(id), getMemberMealPlans(id), getMemberMealLogs(id), getNutritionFocus(id)])
       : Promise.resolve(null),
     tab === "whatsapp" && conversation ? getConversationThread(conversation.id) : Promise.resolve(null),
+    tab === "salud" ? getMemberStrength(member) : Promise.resolve(null),
   ]);
   const [clinicalRecords, mealPlans, mealLogs, nutritionFocus] = tabData ?? [[], [], [], null];
 
@@ -685,6 +688,15 @@ export default async function MemberDetailPage({
             entries={selfEntries}
             canValidate={user.role === "OWNER" || user.role === "ADMIN" || user.role === "COACH" || user.role === "NUTRITIONIST"}
           />
+          {strength && (
+            <StrengthSection
+              memberId={member.id}
+              strength={strength}
+              canRegister={can.editTests(user) && inScope}
+              showProfile={canEditHealth}
+              memberIsActive={member.status === "ACTIVE" || member.status === "TRIAL"}
+            />
+          )}
           <TestResultsSection
             testResults={member.testResults}
             memberId={member.id}

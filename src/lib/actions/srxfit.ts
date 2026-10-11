@@ -7,6 +7,10 @@ import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { Sede, TestKey } from "@/generated/prisma/client";
 import { TEST_LABELS } from "@/lib/portal/test-labels";
 import { evalScore, evalStatus } from "@/lib/srxfit/eval-score";
+import { validateMainSet } from "@/lib/self-log/main-set";
+import { VALIDATION_QUEUE_PATH } from "@/lib/self-log/notify";
+import { getSessionForDate } from "@/lib/srxfit-calendar";
+import { ecuadorDateString } from "@/lib/timezone";
 import { findTargetEvaluation, newEvaluationType, syncEvaluationCompletion } from "@/lib/srxfit/eval-panel";
 
 // ─── Guards ──────────────────────────────────────────────────────────
@@ -198,6 +202,62 @@ export async function createSingleTestResult(data: {
   revalidatePath(`/dashboard/socios/${data.memberId}`);
   revalidatePath(`/dashboard/srxfit/evaluaciones/${data.memberId}`);
   return { success: true };
+}
+
+/**
+ * A coach logs the socio's best set of the main lift for them (Manual SRXFIT
+ * v3, 9.5). Staff-entered, so it is official at once. One log per socio and
+ * day: it replaces whatever was there for that day, including the socio's own
+ * unvalidated entry.
+ */
+export async function recordMainSetForMember(data: {
+  memberId: string;
+  exercise: string;
+  loadKg: number | null;
+  reps: number | null;
+  rir: number | null;
+  date: string; // yyyy-mm-dd
+  notes?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireAuth();
+  if (!can.editTests(user)) throw new Error("Sin permisos");
+  const scope = getSedeScope(user);
+  const member = await prisma.member.findFirst({
+    where: scope ? { id: data.memberId, OR: [{ sede: scope }, { secondarySede: scope }] } : { id: data.memberId },
+    select: { id: true },
+  });
+  if (!member) throw new Error("Sin permisos");
+
+  const exercise = data.exercise.trim().replace(/\s+/g, " ");
+  const parsed = validateMainSet({ exercise, loadKg: data.loadKg, reps: data.reps, rir: data.rir });
+  if (!parsed.ok) return parsed;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.date) || data.date > ecuadorDateString()) {
+    return { ok: false, error: "La fecha no puede ser futura." };
+  }
+  const [y, m, d] = data.date.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const session = getSessionForDate(new Date(y, m - 1, d));
+
+  const row = {
+    exercise,
+    ...parsed.set,
+    notes: data.notes?.trim().slice(0, 200) || null,
+    weekNumber: session?.weekNumber ?? null,
+    pattern: session?.pattern ?? null,
+    source: "STAFF" as const,
+    recordedByUserId: user.id,
+    verifiedAt: new Date(),
+    verifiedByUserId: user.id,
+  };
+  await prisma.mainSetLog.upsert({
+    where: { memberId_date: { memberId: member.id, date } },
+    update: row,
+    create: { ...row, memberId: member.id, date },
+  });
+
+  revalidatePath(`/dashboard/socios/${member.id}`);
+  revalidatePath(VALIDATION_QUEUE_PATH);
+  return { ok: true };
 }
 
 // Delete a single test result by id (used for ad-hoc tests that have no eval).

@@ -166,7 +166,10 @@ Los admins ven los mismos campos al registrar un pago.
   `src/lib/self-log/main-set.ts`, `npm run test:serie-principal`) y entra a «Por validar» como tipo `set`. Las consultas que
   usen esas series para reportes llevan `OFFICIAL_ENTRY_WHERE`. **Tu prescripción de hoy** en Portal › Hoy: ajuste de las estaciones según las reglas 8.3–8.4
   (`src/lib/srxfit/prescription.ts` puro, datos en `src/lib/portal/prescription.ts`, `npm run test:prescripcion`); no evalúa dolor
-  ni déficit calórico (no hay dato). Falta la tendencia de fuerza en la ficha y que el coach vea o cambie la sugerencia.
+  ni déficit calórico (no hay dato). **Fuerza en la ficha** (Salud y entrenamiento › «Fuerza · serie principal»): el coach ve la
+  sugerencia del día y la tendencia del 1RM estimado por ejercicio (mínimo 3 sesiones oficiales, `src/lib/srxfit/strength-trend.ts`,
+  `npm run test:tendencia-fuerza`) y registra la serie por el socio en `/dashboard/socios/[id]/serie` (queda oficial). El perfil
+  hormonal solo lo ven OWNER y NUTRITIONIST. Falta que el coach pueda cambiar la sugerencia (pide tabla nueva: decidir).
 
 **Próximo paso concreto:**
 - Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.
