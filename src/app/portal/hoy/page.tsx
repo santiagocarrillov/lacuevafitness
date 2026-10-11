@@ -12,6 +12,8 @@ import { getNextNutritionAppointment } from "@/lib/portal/nutrition-appointment"
 import { RoutineWeek, type RoutineWeekData } from "@/components/portal/routine-week";
 import { MainSetCard, type MainSetPrevious } from "@/components/portal/main-set-card";
 import { mainExerciseFromMd } from "@/lib/self-log/main-set";
+import { PrescriptionCard } from "@/components/portal/prescription-card";
+import { getTodayPrescription } from "@/lib/portal/prescription";
 import { getWeekNumberForDate, getWeekSessions } from "@/lib/srxfit-calendar";
 import { getWeekOverrides } from "@/lib/actions/srxfit-overrides";
 import {
@@ -170,6 +172,12 @@ export default async function HoyPage() {
       }
     : null;
 
+  // ── Tu prescripción de hoy (8.4). Not in the re-evaluation week: there are no stations. ──
+  const prescription =
+    todayRoutine && todayRoutine.phase !== "Re-evaluación"
+      ? await getTodayPrescription({ member, phase: todayRoutine.phase, attendanceDates, now: today })
+      : null;
+
   return (
     <PortalShell avatarInitial={initial}>
       <div style={{ marginBottom: 18 }}>
@@ -252,6 +260,8 @@ export default async function HoyPage() {
       )}
 
       {routineWeek && <RoutineWeek data={routineWeek} />}
+
+      {prescription && <PrescriptionCard prescription={prescription} />}
 
       {todayRoutine && (
         <MainSetCard

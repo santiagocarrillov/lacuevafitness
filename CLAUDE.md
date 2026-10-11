@@ -164,7 +164,9 @@ Los admins ven los mismos campos al registrar un pago.
   (`src/lib/srxfit-generator/`, `npm run test:srxfit-generador`); test de **salto largo** (`BROAD_JUMP_CM`, no suma al avance);
   **serie principal** del día: el socio anota carga, reps y reps en reserva en Portal › Hoy (`MainSetLog`, una por día,
   `src/lib/self-log/main-set.ts`, `npm run test:serie-principal`) y entra a «Por validar» como tipo `set`. Las consultas que
-  usen esas series para reportes llevan `OFFICIAL_ENTRY_WHERE`. Falta «Tu prescripción de hoy» y la tendencia de fuerza en la ficha.
+  usen esas series para reportes llevan `OFFICIAL_ENTRY_WHERE`. **Tu prescripción de hoy** en Portal › Hoy: ajuste de las estaciones según las reglas 8.3–8.4
+  (`src/lib/srxfit/prescription.ts` puro, datos en `src/lib/portal/prescription.ts`, `npm run test:prescripcion`); no evalúa dolor
+  ni déficit calórico (no hay dato). Falta la tendencia de fuerza en la ficha y que el coach vea o cambie la sugerencia.
 
 **Próximo paso concreto:**
 - Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.
