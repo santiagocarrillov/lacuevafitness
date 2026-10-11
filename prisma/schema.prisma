@@ -130,6 +130,7 @@ model Member {
   bodyCompositions      BodyComposition[]
   clinicalMarkers       ClinicalMarker[]
   testResults           TestResult[]
+  mainSetLogs           MainSetLog[]
   trainingLevels        TrainingLevelAssignment[]
   goals                 MemberGoal[]
   memberNotes           MemberNote[]
@@ -687,6 +688,31 @@ model TestResult {
   verifiedByUserId String?
 
   @@index([memberId, test, recordedAt])
+}
+
+// Best set of the day's main lift (Manual SRXFIT v3, 9.5): load, reps and reps
+// in reserve. The socio logs it after the strength block; it is official once
+// a coach verifies it (same rule as self-reported PRs, see EntrySource).
+model MainSetLog {
+  id               String      @id @default(cuid())
+  memberId         String
+  member           Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date             DateTime    @db.Date // Ecuador local day; one log per training day
+  weekNumber       Int?
+  pattern          String?
+  exercise         String
+  loadKg           Float
+  reps             Int
+  rir              Int
+  notes            String?
+  source           EntrySource @default(MEMBER)
+  recordedByUserId String?
+  verifiedAt       DateTime?
+  verifiedByUserId String?
+  createdAt        DateTime    @default(now())
+
+  @@unique([memberId, date])
+  @@index([memberId, exercise, date])
 }
 
 model BodyComposition {
