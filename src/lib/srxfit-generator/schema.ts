@@ -7,8 +7,12 @@ import { z } from "zod";
 export const PATTERNS = ["Empuje", "Unilateral", "Jalón", "Rotación", "Bisagra", "Full-body"] as const;
 export const PHASES = ["Aprender", "Desarrollar", "Desafiar", "Recuperar", "Reevaluación"] as const;
 export const COND_FORMATS = ["AMRAP", "EMOM", "RFT", "Tabata", "Intervalos", "Parejas", "Estaciones", "Z2"] as const;
+export const ROTATION_KEYS = ["1-2", "3-4", "5-6", "7-8", "9"] as const;
 export const ZONES = ["Z2", "Z3", "Z4"] as const;
 export const DAY_TYPES = ["Fuerza pesada", "Equilibrado", "Metabólico"] as const;
+export const STATION_KINDS = ["sinergista", "neutro", "isométrico", "rotación"] as const;
+export const STATION_REGIONS = ["inferior", "superior", "core"] as const;
+export const STATION_PLACEMENTS = ["entre series", "después del principal"] as const;
 
 const scaling = z.object({ n1: z.string(), n2: z.string(), n3: z.string() });
 
@@ -22,10 +26,25 @@ export const activacionSchema = z.object({
 
 export const fuerzaSchema = z.object({
   durationMin: z.number().int().min(20).max(30),
+  // Manual v3, 7.2: dosis fija de potencia, antes del principal.
+  powerPrimer: z.object({
+    exercise: z.string().min(1),
+    dose: z.string().min(1), // ej. "4 × 3, descanso completo"
+    lowImpact: z.string().min(1),
+  }),
   mainExercise: z.string(),
   scheme: z.string(), // ej. "4 × 10 · RPE 7 · descanso 75s"
   scaling,
-  stations: z.array(z.object({ name: z.string(), reps: z.string(), target: z.string() })),
+  stations: z.array(
+    z.object({
+      name: z.string(),
+      reps: z.string(),
+      target: z.string(),
+      kind: z.enum(STATION_KINDS),
+      region: z.enum(STATION_REGIONS),
+      placement: z.enum(STATION_PLACEMENTS),
+    }),
+  ),
   coachNote: z.string().min(1), // R6: porqué + cue
 });
 
@@ -57,12 +76,12 @@ export const sessionSchema = z.object({
 });
 
 export const weekSchema = z.object({
-  weekNumber: z.number().int().min(1).max(18),
+  weekNumber: z.number().int().min(1), // corre de bloque en bloque (el Bloque 3 es 19–27)
   block: z.number().int().min(1).max(2),
   blockEmphasis: z.string(),
   phase: z.enum(PHASES),
   breathingTechnique: z.string(),
-  rotationKey: z.string(),
+  rotationKey: z.enum(ROTATION_KEYS),
   isTestWeek: z.boolean(), // true en Desafiar y Reevaluación (excepción de variedad, R1)
   sessions: z.array(sessionSchema).min(5).max(6),
 });

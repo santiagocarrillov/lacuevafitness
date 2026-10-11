@@ -1,19 +1,20 @@
 /**
  * SRXFIT — Orquestación del generador de rutinas.
  * Flujo: construir prompt → llamar a Claude → validar con Zod → linter de variedad (R1)
- *        → si falla, reintentar con feedback (auto-corrección). "Coach-proof" aplicado a la IA.
+ *        + linter del método v3 (R7–R12) → si falla, reintentar con feedback (auto-corrección). "Coach-proof" aplicado a la IA.
  *
  * Sin dependencias nuevas: usa fetch contra la Messages API. Requiere ANTHROPIC_API_KEY.
  */
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { weekSchema, type Week } from "./schema";
 import { lintWeekVariety } from "./variety-linter";
+import { lintWeekMethod } from "./method-linter";
 
 export interface GenerateWeekInput {
-  weekNumber: number;          // 1–18
+  weekNumber: number;          // corre de bloque en bloque
   phase: Week["phase"];
   blockEmphasis: string;       // ej. "Hipertrofia"
-  rotationKey: string;         // ej. "1-2"
+  rotationKey: Week["rotationKey"]; // "1-2" | "3-4" | "5-6" | "7-8" | "9"
   isTestWeek: boolean;
   memberLevelMix?: string;     // ej. "mayoría N2, algunos N1"
   sede?: "Fitness Center" | "Xtreme";
@@ -31,9 +32,9 @@ Devuelve el objeto Week en JSON (5 días + sábado), respetando TODAS las reglas
   if (!feedback) return base;
   return `${base}
 
-⚠️ El intento anterior violó la regla de variedad de acondicionamiento (R1):
+⚠️ El intento anterior no pasó la validación:
 ${feedback}
-Corrige: usa un FORMATO distinto de acondicionamiento por día y rota los movimientos (ningún movimiento en más de 2 días). Vuelve a generar la semana completa.`;
+Corrige cada punto sin romper las demás reglas duras y vuelve a generar la semana completa.`;
 }
 
 async function callClaude(userPrompt: string): Promise<string> {
@@ -46,7 +47,7 @@ async function callClaude(userPrompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 8000,
+      max_tokens: 16000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
     }),
@@ -69,7 +70,7 @@ export interface GenerateResult {
   attempts: number;
 }
 
-/** Genera una semana válida (schema + variedad) o lanza tras MAX_ATTEMPTS. */
+/** Genera una semana válida (schema + variedad + método v3) o lanza tras MAX_ATTEMPTS. */
 export async function generateWeek(input: GenerateWeekInput): Promise<GenerateResult> {
   let feedback: string | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -81,7 +82,7 @@ export async function generateWeek(input: GenerateWeekInput): Promise<GenerateRe
       feedback = `El JSON no cumplió el schema: ${(e as Error).message}`;
       continue;
     }
-    const violations = lintWeekVariety(parsed);
+    const violations = [...lintWeekVariety(parsed), ...lintWeekMethod(parsed)];
     if (violations.length === 0) return { week: parsed, attempts: attempt };
     feedback = violations.map((v) => `- ${v.detail}`).join("\n");
   }
