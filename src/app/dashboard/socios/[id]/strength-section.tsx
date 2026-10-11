@@ -86,14 +86,11 @@ export function StrengthSection({
   strength,
   canRegister,
   memberIsActive,
-  showProfile,
 }: {
   memberId: string;
   strength: MemberStrength;
   canRegister: boolean;
   memberIsActive: boolean;
-  /** The profile derives from the hormonal stage (clinical data): only whoever may read health data sees it. */
-  showProfile: boolean;
 }) {
   const { prescription: p, trends, pending } = strength;
   return (
@@ -120,11 +117,11 @@ export function StrengthSection({
               <Badge variant="outline" className={`text-xs ${STEP_CLASS[p.step]}`}>
                 {p.headline}
               </Badge>
-              {showProfile && p.profile && <span className="text-xs text-muted-foreground">Perfil {p.profile}</span>}
+              {p.profile && <span className="text-xs text-muted-foreground">Perfil {p.profile}</span>}
               {p.rule && <span className="text-xs text-muted-foreground">Regla {p.rule}</span>}
             </div>
             {p.reasons.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{p.reasons.join(" ")}</p>}
-            {showProfile && p.priorities.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Prioridades: {p.priorities.join(" ")}</p>}
+            {p.priorities.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Prioridades: {p.priorities.join(" ")}</p>}
             <p className="mt-1 text-xs text-muted-foreground">
               Es lo que el socio ve en su app. Tú decides en clase: si le duele algo o está en déficit calórico, baja un paso.
             </p>
