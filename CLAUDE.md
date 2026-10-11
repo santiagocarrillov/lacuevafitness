@@ -169,7 +169,7 @@ Los admins ven los mismos campos al registrar un pago.
   ni déficit calórico (no hay dato). **Fuerza en la ficha** (Salud y entrenamiento › «Fuerza · serie principal»): el coach ve la
   sugerencia del día y la tendencia del 1RM estimado por ejercicio (mínimo 3 sesiones oficiales, `src/lib/srxfit/strength-trend.ts`,
   `npm run test:tendencia-fuerza`) y registra la serie por el socio en `/dashboard/socios/[id]/serie` (queda oficial). El perfil
-  hormonal solo lo ven OWNER y NUTRITIONIST. Falta que el coach pueda cambiar la sugerencia (pide tabla nueva: decidir).
+  A–F y sus prioridades los ve todo el staff (Santiago, 10 oct). El coach no cambia la sugerencia en la app: lo ajusta en persona.
 
 **Próximo paso concreto:**
 - Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.

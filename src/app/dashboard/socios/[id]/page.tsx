@@ -693,7 +693,6 @@ export default async function MemberDetailPage({
               memberId={member.id}
               strength={strength}
               canRegister={can.editTests(user) && inScope}
-              showProfile={canEditHealth}
               memberIsActive={member.status === "ACTIVE" || member.status === "TRIAL"}
             />
           )}
