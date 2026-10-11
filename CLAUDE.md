@@ -160,6 +160,12 @@ Los admins ven los mismos campos al registrar un pago.
   ámbar = revisar. **Nada se valida solo** (Santiago): «Validar todos los verdes» lo toca un coach. Push al staff agrupado
   (uno por ráfaga de 2 h), pendientes en el resumen de las 7:30, y push al socio al validar/descartar.
 
+- **SRXFIT v3 en la app (10–11 oct 2026)**: el generador de rutinas y su linter siguen el Manual v3
+  (`src/lib/srxfit-generator/`, `npm run test:srxfit-generador`); test de **salto largo** (`BROAD_JUMP_CM`, no suma al avance);
+  **serie principal** del día: el socio anota carga, reps y reps en reserva en Portal › Hoy (`MainSetLog`, una por día,
+  `src/lib/self-log/main-set.ts`, `npm run test:serie-principal`) y entra a «Por validar» como tipo `set`. Las consultas que
+  usen esas series para reportes llevan `OFFICIAL_ENTRY_WHERE`. Falta «Tu prescripción de hoy» y la tendencia de fuerza en la ficha.
+
 **Próximo paso concreto:**
 - Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.
 - Que la nutricionista cargue sus horarios (Nutrición › Horarios); sin eso nadie puede agendar.

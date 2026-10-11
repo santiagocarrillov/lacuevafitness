@@ -14,6 +14,7 @@ export const VALIDATION_QUEUE_PATH = "/dashboard/srxfit/validar";
 const VALIDATOR_ROLES: Record<ValidationKind, UserRole[]> = {
   pr: ["COACH", "NUTRITIONIST", "ADMIN", "OWNER"],
   measurement: ["NUTRITIONIST", "ADMIN", "OWNER"],
+  set: ["COACH", "NUTRITIONIST", "ADMIN", "OWNER"],
 };
 
 /**
@@ -42,10 +43,15 @@ export async function notifyStaffOfSelfEntry(opts: {
           prisma.testResult.count({ where: { ...pending, id: { not: opts.entryId }, recordedAt: { gte: since } } }),
           prisma.testResult.count({ where: pending }),
         ])
-      : await Promise.all([
-          prisma.bodyComposition.count({ where: { ...pending, id: { not: opts.entryId }, measuredAt: { gte: since } } }),
-          prisma.bodyComposition.count({ where: pending }),
-        ]);
+      : opts.kind === "set"
+        ? await Promise.all([
+            prisma.mainSetLog.count({ where: { ...pending, id: { not: opts.entryId }, createdAt: { gte: since } } }),
+            prisma.mainSetLog.count({ where: pending }),
+          ])
+        : await Promise.all([
+            prisma.bodyComposition.count({ where: { ...pending, id: { not: opts.entryId }, measuredAt: { gte: since } } }),
+            prisma.bodyComposition.count({ where: pending }),
+          ]);
   if (recentOthers > 0) return { notified: 0 };
 
   const staff = await prisma.user.findMany({
@@ -71,6 +77,12 @@ export async function notifyStaffOfSelfEntry(opts: {
   return { notified: targets.length };
 }
 
+const VERIFIED_TITLE: Record<ValidationKind, string> = {
+  pr: "Tu marca fue validada ✅",
+  measurement: "Tus medidas fueron validadas ✅",
+  set: "Tu serie fue validada ✅",
+};
+
 export type ReviewedEntry = { memberId: string; kind: ValidationKind; label: string };
 
 /**
@@ -87,14 +99,16 @@ export async function notifyMembersOfReview(entries: ReviewedEntry[], verdict: "
       const payload =
         verdict === "verified"
           ? {
-              title: one ? (one.kind === "pr" ? "Tu marca fue validada ✅" : "Tus medidas fueron validadas ✅") : `${list.length} registros validados ✅`,
-              body: `${one ? `${one.label}. ` : ""}Ya cuenta${one ? "" : "n"} para tus retos y rankings.`,
+              title: one ? VERIFIED_TITLE[one.kind] : `${list.length} registros validados ✅`,
+              body: list.every((e) => e.kind === "set")
+                ? `${one ? `${one.label}. ` : ""}Ya cuenta${one ? "" : "n"} en tu historial de fuerza.`
+                : `${one ? `${one.label}. ` : ""}Ya cuenta${one ? "" : "n"} para tus retos y rankings.`,
             }
           : {
               title: one ? "Tu registro no fue validado" : `${list.length} registros no fueron validados`,
               body: `${one ? `${one.label}. ` : ""}Si crees que es un error, habla con tu coach.`,
             };
-      return pushToMember(memberId, { ...payload, url: "/portal/progreso" }).catch(() => undefined);
+      return pushToMember(memberId, { ...payload, url: list.every((e) => e.kind === "set") ? "/portal/hoy" : "/portal/progreso" }).catch(() => undefined);
     }),
   );
 }

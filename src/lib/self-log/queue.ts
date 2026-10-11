@@ -7,15 +7,16 @@ import { prisma } from "@/lib/prisma";
 import { OFFICIAL_ENTRY_WHERE } from "@/lib/entry-source";
 import { SELF_LOGGABLE_TESTS } from "@/lib/portal/self-log-tests";
 import { checkMeasurement, checkPr, MEASUREMENT_FIELDS, type MeasurementValues } from "./plausibility";
+import { checkMainSet, estimate1Rm, exerciseKey, formatMainSet } from "./main-set";
 import type { Prisma, Sede, User } from "@/generated/prisma/client";
 
-export type ValidationKind = "pr" | "measurement";
+export type ValidationKind = "pr" | "measurement" | "set";
 
 /** What this user may validate — same rules as verifySelfEntry. */
 export function validationKinds(user: Pick<User, "role">): ValidationKind[] {
   const r = user.role;
   const kinds: ValidationKind[] = [];
-  if (r === "OWNER" || r === "COACH" || r === "NUTRITIONIST" || r === "ADMIN") kinds.push("pr");
+  if (r === "OWNER" || r === "COACH" || r === "NUTRITIONIST" || r === "ADMIN") kinds.push("pr", "set");
   if (r === "OWNER" || r === "NUTRITIONIST" || r === "ADMIN") kinds.push("measurement");
   return kinds;
 }
@@ -47,18 +48,27 @@ const PENDING = { source: "MEMBER" as const, verifiedAt: null };
 
 export async function countPendingValidations(opts: { sede: Sede | null; kinds: ValidationKind[] }): Promise<number> {
   const member = memberWhere(opts.sede);
-  const [prs, comps] = await Promise.all([
+  const [prs, comps, sets] = await Promise.all([
     opts.kinds.includes("pr") ? prisma.testResult.count({ where: { ...PENDING, member } }) : 0,
     opts.kinds.includes("measurement") ? prisma.bodyComposition.count({ where: { ...PENDING, member } }) : 0,
+    opts.kinds.includes("set") ? prisma.mainSetLog.count({ where: { ...PENDING, member } }) : 0,
   ]);
-  return prs + comps;
+  return prs + comps + sets;
 }
 
 export async function getValidationQueue(opts: { sede: Sede | null; kinds: ValidationKind[] }): Promise<QueueItem[]> {
   const member = memberWhere(opts.sede);
   const memberSelect = { select: { firstName: true, lastName: true, sede: true } } as const;
 
-  const [prs, comps] = await Promise.all([
+  const [sets, prs, comps] = await Promise.all([
+    opts.kinds.includes("set")
+      ? prisma.mainSetLog.findMany({
+          where: { ...PENDING, member },
+          include: { member: memberSelect },
+          orderBy: { createdAt: "asc" },
+          take: 200,
+        })
+      : [],
     opts.kinds.includes("pr")
       ? prisma.testResult.findMany({
           where: { ...PENDING, member },
@@ -77,11 +87,17 @@ export async function getValidationQueue(opts: { sede: Sede | null; kinds: Valid
       : [],
   ]);
 
-  const memberIds = [...new Set([...prs.map((p) => p.memberId), ...comps.map((c) => c.memberId)])];
+  const memberIds = [...new Set([...prs.map((p) => p.memberId), ...comps.map((c) => c.memberId), ...sets.map((s) => s.memberId)])];
   if (memberIds.length === 0) return [];
 
   // The socio's official history: best mark per test, latest value per body field.
-  const [officialTests, officialComps] = await Promise.all([
+  const [officialSets, officialTests, officialComps] = await Promise.all([
+    sets.length
+      ? prisma.mainSetLog.findMany({
+          where: { memberId: { in: [...new Set(sets.map((s) => s.memberId))] }, ...OFFICIAL_ENTRY_WHERE },
+          select: { memberId: true, exercise: true, loadKg: true, reps: true, rir: true },
+        })
+      : [],
     prs.length
       ? prisma.testResult.findMany({
           where: {
@@ -113,7 +129,33 @@ export async function getValidationQueue(opts: { sede: Sede | null; kinds: Valid
     lastBody.set(c.memberId, prev);
   }
 
+  const bestE1Rm = new Map<string, number>();
+  for (const s of officialSets) {
+    const k = `${s.memberId}:${exerciseKey(s.exercise)}`;
+    const e = estimate1Rm(s);
+    if (e > (bestE1Rm.get(k) ?? -Infinity)) bestE1Rm.set(k, e);
+  }
+
   const name = (m: { firstName: string; lastName: string }) => `${m.firstName} ${m.lastName}`.trim();
+
+  const setItems: QueueItem[] = sets.map((s) => {
+    const previousBestE1Rm = bestE1Rm.get(`${s.memberId}:${exerciseKey(s.exercise)}`) ?? null;
+    const check = checkMainSet({ ...s, previousBestE1Rm, bodyWeightKg: lastBody.get(s.memberId)?.weightKg ?? null });
+    return {
+      id: s.id,
+      kind: "set",
+      memberId: s.memberId,
+      memberName: name(s.member),
+      sede: s.member.sede,
+      at: s.createdAt.toISOString(),
+      title: `Serie principal · ${s.exercise}`,
+      lines: [formatMainSet(s), `1RM estimado ${estimate1Rm(s)} kg`],
+      reference: previousBestE1Rm != null ? `Mejor 1RM estimado oficial: ${previousBestE1Rm} kg` : null,
+      green: check.green,
+      note: check.note,
+      notes: s.notes,
+    };
+  });
 
   const prItems: QueueItem[] = prs.map((p) => {
     const meta = SELF_LOGGABLE_TESTS.find((t) => t.key === p.test);
@@ -161,5 +203,5 @@ export async function getValidationQueue(opts: { sede: Sede | null; kinds: Valid
   });
 
   // Oldest first: nothing sits at the bottom forever.
-  return [...prItems, ...compItems].sort((a, b) => a.at.localeCompare(b.at));
+  return [...setItems, ...prItems, ...compItems].sort((a, b) => a.at.localeCompare(b.at));
 }

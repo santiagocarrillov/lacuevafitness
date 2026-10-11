@@ -43,7 +43,7 @@ export default async function ValidarPage({ searchParams }: { searchParams: Prom
         </div>
         <h1 className="text-2xl font-semibold">Por validar</h1>
         <p className="text-sm text-muted-foreground">
-          {kinds.includes("measurement") ? "Marcas y medidas" : "Marcas"} que los socios registraron desde su app. No
+          {kinds.includes("measurement") ? "Marcas, series y medidas" : "Marcas y series"} que los socios registraron desde su app. No
           cuentan para retos ni reportes hasta que las valides.
         </p>
       </div>

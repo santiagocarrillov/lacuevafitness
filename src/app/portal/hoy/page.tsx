@@ -10,6 +10,8 @@ import { ADHERENCE_META, adherenceFromChecks } from "@/lib/nutrition/adherence";
 import { MEAL_LABEL } from "@/lib/nutrition/meals";
 import { getNextNutritionAppointment } from "@/lib/portal/nutrition-appointment";
 import { RoutineWeek, type RoutineWeekData } from "@/components/portal/routine-week";
+import { MainSetCard, type MainSetPrevious } from "@/components/portal/main-set-card";
+import { mainExerciseFromMd } from "@/lib/self-log/main-set";
 import { getWeekNumberForDate, getWeekSessions } from "@/lib/srxfit-calendar";
 import { getWeekOverrides } from "@/lib/actions/srxfit-overrides";
 import {
@@ -143,6 +145,31 @@ export default async function HoyPage() {
     };
   }
 
+  // ── Serie principal de hoy (Manual SRXFIT v3, 9.5) ──
+  const todayRoutine = routineWeek?.days.find((d) => d.dayIndex === todayDayIndex) ?? null;
+  const suggestedExercise = todayRoutine ? mainExerciseFromMd(todayRoutine.fuerza) : null;
+  const todaySet = todayRoutine
+    ? await prisma.mainSetLog.findUnique({ where: { memberId_date: { memberId: member.id, date: ecuadorDateUtc } } })
+    : null;
+  const previousExercise = todaySet?.exercise ?? suggestedExercise;
+  const previousSetRow =
+    todayRoutine && previousExercise
+      ? await prisma.mainSetLog.findFirst({
+          where: { memberId: member.id, date: { lt: ecuadorDateUtc }, exercise: { equals: previousExercise, mode: "insensitive" } },
+          orderBy: { date: "desc" },
+        })
+      : null;
+  const previousSet: MainSetPrevious | null = previousSetRow
+    ? {
+        exercise: previousSetRow.exercise,
+        loadKg: previousSetRow.loadKg,
+        reps: previousSetRow.reps,
+        rir: previousSetRow.rir,
+        // Stored as a UTC date-only value: read it back in UTC.
+        when: previousSetRow.date.toLocaleDateString("es-EC", { day: "numeric", month: "short", timeZone: "UTC" }),
+      }
+    : null;
+
   return (
     <PortalShell avatarInitial={initial}>
       <div style={{ marginBottom: 18 }}>
@@ -225,6 +252,25 @@ export default async function HoyPage() {
       )}
 
       {routineWeek && <RoutineWeek data={routineWeek} />}
+
+      {todayRoutine && (
+        <MainSetCard
+          suggestedExercise={suggestedExercise}
+          today={
+            todaySet
+              ? {
+                  id: todaySet.id,
+                  exercise: todaySet.exercise,
+                  loadKg: todaySet.loadKg,
+                  reps: todaySet.reps,
+                  rir: todaySet.rir,
+                  verified: todaySet.verifiedAt != null,
+                }
+              : null
+          }
+          previous={previousSet}
+        />
+      )}
 
       {nextNutritionAppt && <NextAppointmentCard appointment={nextNutritionAppt} />}
 

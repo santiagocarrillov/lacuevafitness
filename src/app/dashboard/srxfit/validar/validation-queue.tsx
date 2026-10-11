@@ -144,6 +144,11 @@ export function ValidationQueue({ items, showSede }: { items: QueueItem[]; showS
             <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.title}</p>
             {item.kind === "pr" ? (
               <p className="text-2xl font-semibold tabular-nums">{item.lines[0]}</p>
+            ) : item.kind === "set" ? (
+              <>
+                <p className="text-2xl font-semibold tabular-nums">{item.lines[0]}</p>
+                <p className="text-sm tabular-nums text-muted-foreground">{item.lines[1]}</p>
+              </>
             ) : (
               <ul className="mt-0.5 space-y-0.5 text-sm tabular-nums">
                 {item.lines.map((l) => (

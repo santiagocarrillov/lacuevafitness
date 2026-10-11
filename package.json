@@ -33,6 +33,7 @@
     "test:evaluaciones-grupo": "tsx --env-file=.env scripts/test-evaluaciones-grupo.ts",
     "test:eval-score": "tsx scripts/test-eval-score.ts",
     "test:validar": "tsx scripts/test-validar.ts",
+    "test:serie-principal": "tsx scripts/test-serie-principal.ts",
     "test:srxfit-generador": "tsx scripts/test-srxfit-generador.ts",
     "test:avisos": "tsx --env-file=.env scripts/test-avisos.ts",
     "test:finanzas": "tsx scripts/test-finanzas.ts",
