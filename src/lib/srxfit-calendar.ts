@@ -4,7 +4,7 @@ import planData from "@/data/srxfit-plan.json";
 export const SRXFIT_START = new Date("2026-05-04T00:00:00");
 
 // Total weeks the plan covers. Derived from the data so adding a block
-// (e.g. Bloque 3 = weeks 19-27) does not require touching the guards below.
+// (Bloque 3 = weeks 19-27, Bloque 4 = weeks 28-36) does not require touching the guards below.
 export const TOTAL_WEEKS = (planData as { weeks: unknown[] }).weeks.length;
 export const SRXFIT_END = (() => {
   const d = new Date(SRXFIT_START);

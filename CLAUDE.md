@@ -171,6 +171,11 @@ Los admins ven los mismos campos al registrar un pago.
   `npm run test:tendencia-fuerza`) y registra la serie por el socio en `/dashboard/socios/[id]/serie` (queda oficial). El perfil
   A–F y sus prioridades los ve todo el staff (Santiago, 10 oct). El coach no cambia la sugerencia en la app: lo ajusta en persona.
 
+- **Bloque 4 sembrado (12 oct 2026)**: semanas 28–36 del plan (9 nov 2026 – 9 ene 2027), Resistencia muscular → Potencia,
+  aprobado por Santiago sin cambios. Fuente: `exports/SRXFit_Bloque4_Sem1-9_propuesta.md`; resembrar con
+  `npx tsx scripts/seed-bloque-overrides.ts --bloque=4 --write` (sirve también para el 3). El plan base de esas semanas
+  (`src/data/srxfit-plan.json`) se derivó del mismo documento; lo que se ve es el override. El siguiente bloque empieza el 11 ene 2027.
+
 **Próximo paso concreto:**
 - Confirmar que Meta aprobó las 8 plantillas (WhatsApp › Plantillas) y prender los avisos que Santiago elija.
 - Que la nutricionista cargue sus horarios (Nutrición › Horarios); sin eso nadie puede agendar.

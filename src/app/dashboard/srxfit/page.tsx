@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAuth, getSedeScope, can } from "@/lib/auth";
 import { getSrxfitHubStats } from "@/lib/actions/srxfit";
+import { TOTAL_WEEKS } from "@/lib/srxfit-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +52,12 @@ export default async function SrxfitPage() {
         <ModuleCard
           href="/dashboard/srxfit/calendario"
           title="Calendario de Programación"
-          description="Visualiza las 162 sesiones del plan de 27 semanas (bloques 1-3). Click en cualquier día para ver la sesión completa con instrucciones para coaches."
+          description={`Visualiza las ${TOTAL_WEEKS * 6} sesiones del plan de ${TOTAL_WEEKS} semanas (bloques 1-${TOTAL_WEEKS / 9}). Click en cualquier día para ver la sesión completa con instrucciones para coaches.`}
           badge="Parte 2"
           badgeColor="bg-purple-100 text-purple-800"
           stats={[
-            { label: "Semanas", value: 27 },
-            { label: "Sesiones", value: 162 },
+            { label: "Semanas", value: TOTAL_WEEKS },
+            { label: "Sesiones", value: TOTAL_WEEKS * 6 },
           ]}
           note="Inicia lunes 4 mayo 2026"
         />
@@ -121,7 +122,7 @@ export default async function SrxfitPage() {
           ))}
         </div>
         <p className="text-xs text-muted-foreground pt-1">
-          Re-evaluación grupal: semanas 9, 18 y 27. Desde el Bloque 3 la batería de fuerza se reparte en cuatro días (squat+deadlift · bench+push press · clean &amp; jerk · snatch) y la entrega de comparativas cierra el sábado.
+          Re-evaluación grupal: semanas 9, 18, 27 y 36. Desde el Bloque 3 la batería de fuerza se reparte en cuatro días (squat+deadlift · bench+push press · clean &amp; jerk · snatch) y la entrega de comparativas cierra el sábado. Desde el Bloque 4 se suma el salto largo el lunes.
         </p>
       </section>
     </div>
