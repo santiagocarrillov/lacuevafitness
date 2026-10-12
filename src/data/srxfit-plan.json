@@ -1,18 +1,19 @@
 {
  "metadata": {
-  "title": "SRXFit · Plan 2026 — Bloques 1-3 (27 semanas)",
+  "title": "SRXFit · Plan 2026 — Bloques 1-4 (36 semanas)",
   "facility": "La Cueva Fitness Center · La Cueva Xtreme",
   "version": "3.0",
   "year": 2026,
-  "duration_weeks": 27,
-  "total_blocks": 3,
-  "total_sessions": 162,
+  "duration_weeks": 36,
+  "total_blocks": 4,
+  "total_sessions": 216,
   "class_real_duration_min": 50,
   "intended_use": "Calendario digital para coaches. Cada día contiene la programación completa.",
   "methodology_source": [
    "SRXFit_Manual_Metodologico_v2.docx",
    "SRXFit_Sistema_Programacion.md",
-   "SRXFit_Onboarding_Evaluacion_v1.docx"
+   "SRXFit_Onboarding_Evaluacion_v1.docx",
+   "SRXFit_Manual_Metodologico_v3.md"
   ]
  },
  "global_principles": {
@@ -168,6 +169,36 @@
     }
    ],
    "reeval_week": 27
+  },
+  {
+   "id": "bloque-4",
+   "number": 4,
+   "weeks_range": [
+    28,
+    36
+   ],
+   "general_emphasis": "Resistencia muscular (Mesociclo A) → Potencia (Mesociclo B)",
+   "rationale": "Continúa el macrociclo tras la hipertrofia y fuerza del Bloque 3. Las sesiones se recombinan desde rutinas ya vividas que el Bloque 3 no usó, adaptadas al Manual v3 (matriz de días, primer de potencia, isométricos, intervalo largo semanal). Los días de Rotación se crearon desde las reglas. La re-evaluación suma el salto largo.",
+   "breathing": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "mesocycles": [
+    {
+     "id": "4A",
+     "weeks": [
+      28,
+      31
+     ],
+     "emphasis": "Resistencia muscular"
+    },
+    {
+     "id": "4B",
+     "weeks": [
+      32,
+      35
+     ],
+     "emphasis": "Potencia"
+    }
+   ],
+   "reeval_week": 36
   }
  ],
  "weeks": [
@@ -16762,6 +16793,4421 @@
       }
      },
      "coach_notes": null
+    }
+   ]
+  },
+  {
+   "week_number": 28,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo A",
+   "phase": "Aprender",
+   "phase_params": {
+    "rpe": "6-7",
+    "rir": "4-5",
+    "rest": "Largos (90-120s fuerza)"
+   },
+   "rotation_key": "4A-1",
+   "block_emphasis": "Resistencia muscular",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 1 · Resistencia muscular · Mesociclo A. Fase APRENDER. RPE 6–7 · 4–5 en reserva. Primera semana del Bloque 4: se aprende el patrón de cada día y se mide el salto de partida. Técnica antes que carga, series largas con descansos cortos y cada estación terminada con buena forma.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + thoracic extension cuadrupedia — 8 reps"
+       ],
+       "rounds_format": "3 rondas (subiendo a Z2)",
+       "rounds_content": [
+        "100m run · alternativas: 30 skaters / 10 burpees",
+        "8 caterpillars (sin push-up)",
+        "10 mountain climbers con lateral kicks cruzados",
+        "8 scapular push-ups (sin doblar codo)"
+       ],
+       "rules": [
+        "PROHIBIDO fatigar el empuje antes del bloque de fuerza: nada de push-ups con flexión de codo ni DB en la activación.",
+        "La activación no sustituye al primer de potencia."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "main_exercise": {
+        "name": "DB bench press (banco plano)",
+        "scheme": "4 × 12 · RPE 6-7 (4–5 en reserva) · descanso 60s"
+       },
+       "scaling": {
+        "N1": "DB ligeras, pies firmes en el piso, 5 en reserva. Si se pierde el control de las mancuernas, bajar carga.",
+        "N2": "DB moderadas, 4 × 12 con 4 en reserva.",
+        "N3": "DB con 4 segundos de bajada + 1 segundo de pausa en el pecho (misma carga o un poco menor)."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso (4 huecos).",
+       "coach_note": "Aprender el patrón de empuje horizontal. El RPE bajo es intencional: esta semana la coordinación pesa más que la carga. Cue: omóplatos juntos y apoyados en el banco, antebrazos verticales y codos a unos 45° del tronco; baja controlado y empuja el piso con los pies.",
+       "stations": [
+        {
+         "name": "Primer de potencia (4 min): Push-up explosivo 3 × 5 + pogos 2 × 10 · descanso completo",
+         "note": "Medición de salto (semana 1, registro continuo 9.5): después del primer, 3 intentos de salto largo; anota el mejor en cm. Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Extensión de tríceps con banda (pushdown)",
+         "reps": "15",
+         "focus": "sinergista · tríceps"
+        },
+        {
+         "name": "Sostén abajo del push-up",
+         "reps": "20–30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Elevaciones laterales con DB",
+         "reps": "2 × 15 cerca del fallo",
+         "focus": "sinergista · deltoides lateral",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "EMOM 12 min",
+       "zone": "Z3",
+       "objective": "Z3 sostenida. Si no sobran al menos 10 segundos en el minuto, baja carga o repeticiones.",
+       "scaling": "N1: DB ligero, KB ligero, swing ruso, 12 lateral jumps. N2: estándar. N3: DB pesado, KB pesado, swing americano completo.",
+       "description": "Cada minuto empieza un movimiento; lo que sobre del minuto es descanso. Rota 4 vueltas (3 min por vuelta):\n- Min 1: 6 DB thrusters\n- Min 2: 12 KB swing americano\n- Min 3: 18 lateral jumps a DB"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Hoy aprendiste el patrón. El cuerpo está grabando lo que hicimos. Mañana toca sentadilla. Hidrátate y descansa."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5 reps"
+       ],
+       "rounds_format": "3 rondas (subiendo a Z2)",
+       "rounds_content": [
+        "25 jumping jacks · alternativas: 10 jumping lunges no profundas / 20 jumping jacks cruzados",
+        "12 glute bridge bilateral (BW)",
+        "10 banded glute kickback/lado",
+        "8 cat-cow + 5 hollow rocks"
+       ],
+       "rules": [
+        "PROHIBIDO: saltos máximos, isquios al fallo, sentadillas profundas con peso antes del bloque de fuerza.",
+        "Activación de glúteo y core ANTES de cualquier carga axial.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Box squat",
+        "scheme": "4 × 12 con pausa de 1 s sentado en el cajón · carga de entrada · RPE 6-7 (4–5 en reserva) · descanso 75s"
+       },
+       "scaling": {
+        "N1": "Box squat a caja alta con peso corporal o goblet ligero.",
+        "N2": "Box squat con barra ligera o goblet moderado, caja a la altura del paralelo.",
+        "N3": "Box squat con barra, caja a paralelo, bajada de 3 s y pausa de 1 s."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso (4 huecos); el wall sit solo en los 3 primeros.",
+       "coach_note": "La sentadilla es la base del día y la bisagra la acompaña en las estaciones. Cue: siéntate hacia atrás con la cadera, pausa de 1 s sentado sin relajar la espalda y sube empujando el piso con los talones pesados; si pierdes la tensión en la caja, baja la carga.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto al cajón (caja baja, 30–40 cm) 4 × 4 · descanso completo",
+         "note": "Aprender: aterriza suave y baja de la caja caminando. Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Wall sit",
+         "reps": "30–40 s",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Ab wheel rollout (o plank con desplazamiento)",
+         "reps": "5–8",
+         "focus": "neutro · core"
+        },
+        {
+         "name": "Hip thrust con pausa de 1 s arriba",
+         "reps": "2 × 15 cerca del fallo",
+         "focus": "sinergista · glúteo",
+         "note": "después del principal"
+        },
+        {
+         "name": "Calf raise unilateral",
+         "reps": "2 × 12/lado cerca del fallo",
+         "focus": "neutro · pantorrilla",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "RFT 4 rondas",
+       "zone": "Z3",
+       "objective": "Z3. Densidad de piernas sostenida. Tiempo objetivo: 8–10 min.",
+       "scaling": "N1: KB ligero, swing ruso, caja baja. N2: estándar. N3: KB pesado, caja alta.",
+       "description": "4 rondas por tiempo (tope 10 min):\n- 12 KB goblet squat\n- 10 KB swing americano\n- 8 box step-ups/lado"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 60s/lado",
+        "Butterfly stretch — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Sentadilla y bisagra son las bases. Hoy las trabajaste con calidad. Mañana toca unilateral."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado",
+        "Ankle CARs — 8/lado"
+       ],
+       "rounds_format": "3 rondas (subiendo a Z2)",
+       "rounds_content": [
+        "10 banded clams 5/lado",
+        "10 monster walks (5/lado)",
+        "10 skater jumps con pausa de aterrizaje (5/lado)",
+        "20 pogo jumps"
+       ],
+       "rules": [
+        "Sin fatiga unilateral cargada. Glúteo medio + core, sin agotar pierna."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 20,
+       "main_exercise": {
+        "name": "Bulgarian split squat (DB)",
+        "scheme": "4 × 10/lado · carga de entrada · RPE 6-7 (4–5 en reserva) · descanso 60s"
+       },
+       "scaling": {
+        "N1": "Bulgarian split squat con peso corporal, pie trasero en banco bajo y mano en TRX o poste si hace falta.",
+        "N2": "DB moderadas a los costados.",
+        "N3": "DB pesadas con 3 s de bajada."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso (4 huecos); el isométrico solo en los 3 primeros.",
+       "coach_note": "Prioriza el lado limitante: empieza siempre por el lado débil y repite con el otro las mismas repeticiones. Cue: el pie trasero descansa en el banco sin empujar con él, el torso queda erguido y la rodilla delantera sigue la línea del pie; baja recto, no hacia adelante. El trabajo a una pierna es la base del sprint y del cambio de dirección.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto y aterrizaje a una pierna (hop and stick) 3 × 4 por lado · descanso completo",
+         "note": "Aprender: salto bajo, aterriza y sostén 2 segundos sin mover el pie. Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Split squat isométrico",
+         "reps": "20–30 s/lado",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Single-leg balance con reach a DB",
+         "reps": "8/lado",
+         "focus": "sinergista · glúteo medio"
+        },
+        {
+         "name": "Hip thrust a una pierna",
+         "reps": "2 × 12/lado cerca del fallo",
+         "focus": "sinergista · isquio",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 15,
+       "format": "Intervalos",
+       "zone": "Z4",
+       "objective": "Es el único Z4 de la semana. Modula el pulso: fuerte pero constante, que el último intervalo sea igual al primero.",
+       "scaling": "N1: 3 min a ritmo moderado-fuerte, KB o DB ligero en el carry. N2: estándar. N3: ritmo de competición fuerte, carga pesada en el carry.",
+       "description": "4 intervalos de 3 min fuertes (Z4) con 1 min de descanso caminando entre cada uno. Alterna:\n1. Intervalos 1 y 3: 400m run (3 min a ritmo fuerte)\n2. Intervalos 2 y 4: farmers walk unilateral (suitcase), 90 s por brazo, cambia a la mitad"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 60s/lado",
+        "Couch stretch — 45s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Piernas fuertes, una a la vez. Modulaste el pulso en los intervalos. Mañana toca rotación."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation cuadrupedia — 5/lado"
+       ],
+       "rounds_format": "3 rondas (subiendo a Z2)",
+       "rounds_content": [
+        "20 skaters · alternativas: 8 burpees / 15 high knees/lado",
+        "10 ankle CARs/lado",
+        "5 skips A + 5 skips B (mecánica)",
+        "8 good mornings con barra vacía o PVC"
+       ],
+       "rules": [
+        "Activación neural alta SIN agotar: técnica > volumen.",
+        "Tobillo y T-spine son prerequisitos del trabajo principal: no saltarlos.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Hang power clean",
+        "scheme": "4 series de 3 + 3 reps (cluster: 3 reps, 10 s de pausa, 3 reps) con barra ligera · RPE 6-7 (4–5 en reserva) · descanso 75s"
+       },
+       "scaling": {
+        "N1": "Tirón desde colgado con barra vacía o PVC; sin recepción bajo la barra, solo tirón alto.",
+        "N2": "Hang power clean con barra ligera y recepción en cuarto de sentadilla.",
+        "N3": "Hang clean completo (recepción en sentadilla) con carga ligera-moderada."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso (4 huecos).",
+       "coach_note": "Este día existe para cubrir la rotación, el patrón que los otros cuatro días de la semana no tocan. En Aprender el levantamiento es técnica desde colgado: barra pegada al cuerpo, extensión de cadera, codos arriba y recibe suave. La rotación sale de las caderas y los pies hacia el tronco; en las estaciones, no gires solo con los brazos.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva 3 × 4 por lado (landmine, banda o disco) · descanso completo",
+         "note": "Sin balón. Aprender: rotación rápida desde los pies y las caderas, no desde los brazos. Bajo impacto: tirón alto desde colgado."
+        },
+        {
+         "name": "Woodchop con polea o banda, de alto a bajo",
+         "reps": "12/lado",
+         "focus": "rotación · oblicuos"
+        },
+        {
+         "name": "Pallof press sostenido",
+         "reps": "20–30 s/lado",
+         "focus": "isométrico · core · anti-rotación"
+        },
+        {
+         "name": "Rotación con landmine",
+         "reps": "2 × 12/lado cerca del fallo",
+         "focus": "rotación · oblicuos",
+         "note": "después del principal"
+        },
+        {
+         "name": "Calf raise de pie",
+         "reps": "2 × 15",
+         "focus": "neutro · pantorrilla",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 9,
+       "format": "Tabata",
+       "zone": "Z3",
+       "objective": "Z3: ritmo sostenible durante las 8 rondas, no sprint. Si la técnica del burpee se cae, pasa a caminar-planchar-saltar.",
+       "scaling": "N1: DB ligero, burpee sin salto largo (step-back). N2: estándar. N3: DB moderado, broad jump máximo.",
+       "description": "Dos bloques de 4 min (8 rondas de 20 s de trabajo / 10 s de descanso), con 1 min de descanso entre bloques:\n- Bloque 1: DB rotational press (alternando lado cada ronda, 4 por lado)\n- Bloque 2: burpee to broad jump"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Thread the needle — 60s/lado",
+        "Pancake stretch — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Trabajamos rotación y potencia hoy. Esto se ve en cualquier deporte que practiques. Mañana toca jalón. Buen trabajo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Cat-cow + thoracic extension — 8",
+        "Hip CARs — 5/lado"
+       ],
+       "rounds_format": "3 rondas (subiendo a Z2)",
+       "rounds_content": [
+        "12 KB gorila rows (ligeros)",
+        "10 scapular pull-ups",
+        "8 TRX pull-ups",
+        "3 paradas con ayuda del cabo (estilo subir el cabo desde el suelo)"
+       ],
+       "rules": [
+        "PROHIBIDO dead hang al máximo o pull-ups al fallo."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "main_exercise": {
+        "name": "Romanian deadlift (barra)",
+        "scheme": "4 × 12 · carga de entrada · RPE 6-7 (4–5 en reserva) · descanso 75s"
+       },
+       "scaling": {
+        "N1": "RDL con DB o KB, carga ligera, recorrido hasta debajo de la rodilla.",
+        "N2": "RDL con barra y carga moderada.",
+        "N3": "RDL con barra, 3 s de bajada y pausa de 1 s abajo."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso (4 huecos).",
+       "coach_note": "Patrón de bisagra con jalón: la barra viaja pegada al cuerpo y la espalda queda neutra de principio a fin. Cue: lleva la cadera hacia atrás con rodillas casi rectas y la barra rozando los muslos, baja hasta sentir tensión en los isquios y sube cerrando con glúteos sin hiperextender la zona lumbar. Esta semana el trabajo es de volumen, no de velocidad máxima.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 4 × 3 · descanso completo",
+         "note": "Aprender: aterriza en media sentadilla y sostén 2 segundos. Bajo impacto: swing (KB swing explosivo 3 × 6)."
+        },
+        {
+         "name": "Chin-up asistido con banda",
+         "reps": "8–10",
+         "focus": "sinergista · bíceps"
+        },
+        {
+         "name": "GHD lumbar hold",
+         "reps": "30–40 s",
+         "focus": "isométrico · core"
+        },
+        {
+         "name": "Curl de bíceps con DB (agarre martillo)",
+         "reps": "2 × 15 cerca del fallo",
+         "focus": "sinergista · bíceps",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "Estaciones",
+       "zone": "Z3",
+       "objective": "Z3 sostenida. Encadena jalón horizontal, salto y agarre sin romper la técnica.",
+       "scaling": "N1: remo suave, ring row con cuerpo más vertical, step-over, carga ligera. N2: estándar. N3: remo fuerte, pies elevados en el ring row o C2B, carga pesada.",
+       "description": "3 rondas de 4 estaciones: 40 s de trabajo / 20 s de transición (12 min):\n1. Remo (ergómetro): calorías a ritmo constante\n2. Ring row (o pull-ups con banda)\n3. Box jump-over (drop-and-jump)\n4. Farmer carry (agarre firme, pasos cortos)"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 60s/lado",
+        "Thread the needle — 30s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Jalón. Tu cadera aprendió a trabajar bajo la barra. Mañana, cobertura de la semana."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas (subiendo a Z2)",
+       "rounds_content": [
+        "20 skaters · alternativas: 8 burpees / 15 high knees/lado",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 16,
+       "format": "Fuerza (16 min)",
+       "notes": "Primer de potencia (3 min): Rotación explosiva 2 × 4 por lado (landmine, banda o disco) · 16 contactos · descanso completo\nSin balón. Bajo impacto: tirón alto desde colgado.\nCircuito (2 rondas): 45 s de trabajo / 15 s de transición · 1 min de descanso entre rondas. Empieza por Rotación, que es la prioridad del día.\n- Rotación (PRIORIDAD): Rotación con landmine o DB rotational press ligero (rotación · oblicuos)\n- Empuje: Press de hombro con DB ligero, alternado (sinergista · deltoides)\n- Sentadilla: Wall sit (isométrico · inferior)\n- Unilateral: Reverse lunge BW o con DB ligeros (sinergista · cuádriceps y glúteo)\n- Jalón: KB swing ruso (sinergista · cadena posterior)\nScaling:\n- N1: Cargas ligeras o BW. Modulación a la baja.\n- N2: Cargas estándar moderadas. RPE 6-7.\n- N3: Cargas moderadas con técnica perfecta. RPE 7.\nCoach note: El sábado prioriza Rotación porque es el patrón que los miembros de 3 días por semana (lun-mié-vie) no reciben. Cinco estaciones, una por patrón, sin repetir ejercicio. RPE objetivo: 6-7. Cue: en la rotación, gira desde las caderas y los pies; el miembro modula la carga libremente según cómo llegó del fin de semana."
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z3",
+       "objective": "Cuenten los turnos de la pareja. Cierre metabólico modulado, RPE 6-7.",
+       "scaling": "N1: 150m run, push-up de rodillas. N2: estándar. N3: 250m run, push-up estricto.",
+       "description": "12 min en parejas: un compañero hace un turno completo mientras el otro descansa, y luego se cambian. Cada turno:\n- 200m run o 30 saltar soga\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Lying twist — 60s/lado",
+        "Child's pose extendido — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino. Cierre de semana, más pausada."
+       },
+       "closing": {
+        "message": "Cerramos la semana. Reconoce al grupo. La semana que viene seguimos en Aprender, con una carga un poco mayor en lo que ya dominas."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 29,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo A",
+   "phase": "Desarrollar",
+   "phase_params": {
+    "rpe": "7-8",
+    "rir": "2-3",
+    "rest": "Medios (60-90s)"
+   },
+   "rotation_key": "4A-1",
+   "block_emphasis": "Resistencia muscular",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 2 · Resistencia muscular · Mesociclo A. Fase DESARROLLAR. RPE 7–8 · 2–3 en reserva. Misma estructura de la semana 1, pero con sobrecarga: más carga o más repeticiones en cada principal y descansos que no bajan la densidad. Los primers de potencia suben de altura o de distancia; la técnica aprendida la semana pasada ya se puede cargar.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + extensión torácica cuadrupedia — 8 reps"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100m run · alternativas: 20 skaters / 8 burpees",
+        "8 scapular push-ups (sin doblar codo)",
+        "10 caterpillars",
+        "12 banded pull-aparts"
+       ],
+       "rules": [
+        "PROHIBIDO: agotar manguito rotador, push-ups al fallo, dips antes del bloque de fuerza.",
+        "La activación termina con sensación de «listo para empujar fuerte», no «ya estoy cansado».",
+        "Cardio modulable según espacio disponible."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "DB bench press (banco plano)",
+        "scheme": "4 × 12 · RPE 7–8 · descanso 60s · +carga o +reps respecto a la semana 1"
+       },
+       "scaling": {
+        "N1": "Misma carga de la semana 1 y 12 reps limpias; 3–4 en reserva.",
+        "N2": "Sube la carga o suma 1–2 reps respecto a la semana 1.",
+        "N3": "Bench press con tempo (3 s bajando, sin pausa arriba) y carga mayor que la semana 1."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso.",
+       "coach_note": "Sumamos reps y reducimos descanso respecto a la semana 1. Si el bench se rompe (paran a media estación), baja 1 kg por mancuerna y recupera la densidad antes de volver a subir. Cue: codos a unos 45° del torso, escápulas abajo y atrás, y empuja el piso con los pies.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 3 × 5 (las manos despegan del piso si el nivel lo permite) + pogos 2 × 10 · descanso completo",
+         "note": "Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Tríceps DB martillo",
+         "reps": "12",
+         "focus": "sinergista · tríceps"
+        },
+        {
+         "name": "Sostén abajo del push-up",
+         "reps": "20–30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Dips / fondos",
+         "reps": "2 × 10 cerca del fallo",
+         "focus": "sinergista · pectoral y tríceps",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "RFT",
+       "zone": "Z3",
+       "objective": "Z3. Densidad constante: que la ronda 3 sea igual de limpia que la 1, sin caída de reps.",
+       "scaling": "N1: DB ligeros, push-ups con rodillas, 30 saltos de soga. N2: estándar. N3: DB pesados, push-ups con pausa abajo, 60 saltos de soga.",
+       "description": "3 rondas por tiempo (tope 10 min):\n- 10 DB thrusters\n- 12 push-ups\n- 15 KB swing americano\n- 40 saltos de soga"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Cargamos un poco más esta semana. El cuerpo ya conocía el patrón, ahora lo refuerzas. Buen trabajo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 saltos de soga",
+        "8 tuck jumps",
+        "10 glute bridge con pausa",
+        "8 jumping squats"
+       ],
+       "rules": [
+        "Sin fatigar cuádriceps. Aterrizajes controlados.",
+        "Los saltos de la activación son de calentamiento, no sustituyen el primer de potencia."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Box squat",
+        "scheme": "4 × 12 · RPE 7–8 · descanso 60–75s · pausa de 1 s sentado en el cajón · un escalón más de esfuerzo que la semana 1"
+       },
+       "scaling": {
+        "N1": "Box squat con goblet ligero, cajón alto; 4–5 en reserva.",
+        "N2": "Barra, carga mayor que la semana 1.",
+        "N3": "Barra, bajada de 3 s, pausa de 1 s y carga mayor que la semana 1."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso.",
+       "coach_note": "El día existe para sumar volumen de sentadilla con control. Cambiamos el contraste de potencia por pausa real en el cajón: sin rebote, sin relajar la espalda. Cue: caderas atrás hasta tocar el cajón, espinillas casi verticales, empuja el piso y sube con el pecho primero.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto al cajón 4 × 4 (cajón medio-alto; baja caminando y reinicia cada salto) · descanso completo",
+         "note": "Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Wall sit",
+         "reps": "3 × 30–60 s",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Standing calf raise con KB",
+         "reps": "12/pierna",
+         "focus": "neutro · pantorrilla"
+        },
+        {
+         "name": "Hip thrust",
+         "reps": "2 × 15 cerca del fallo",
+         "focus": "sinergista · glúteo",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "Tabata",
+       "zone": "Z3",
+       "objective": "Z3 sostenido, no sprint: la última ronda debe tener las mismas reps que la primera. Densidad de piernas con margen.",
+       "scaling": "N1: goblet ligero, burpee sin salto (paso sobre el cajón). N2: estándar. N3: goblet pesado, cajón alto.",
+       "description": "2 bloques Tabata (8 rondas de 20 s trabajo / 10 s descanso), 1 min de descanso entre bloques:\n- Bloque 1: goblet squat\n- Bloque 2: burpee con salto de lado a lado sobre el cajón"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado",
+        "Butterfly stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Piernas más fuertes cada semana. El cajón te dice cuánto bajaste con control."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 8,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "20 skaters · alternativas: 8 burpees / 15 high knees/lado",
+        "12 banded clams/lado",
+        "10 monster walks (lateral con banda) — 5/lado",
+        "5 single-leg balance + reach/lado (10s c/u)"
+       ],
+       "rules": [
+        "PROHIBIDO: fatiga unilateral antes del bloque de fuerza (sin lunges ni split squats a RPE alto en la activación).",
+        "Activación de glúteo medio y core profundo SIN agotar la pierna.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 21,
+       "main_exercise": {
+        "name": "Bulgarian split squat (DB)",
+        "scheme": "4 × 10/lado · RPE 7–8 · descanso 60s · un escalón más de esfuerzo que la semana 1"
+       },
+       "scaling": {
+        "N1": "Misma carga de la semana 1 y 1 serie más; 3–4 en reserva.",
+        "N2": "un escalón más de esfuerzo que la semana 1.",
+        "N3": "DB pesados, pausa de 1 s en la posición baja."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso.",
+       "coach_note": "Sumamos carga sobre la semana 1. Si el balance se cae después de la serie 3, la carga es alta: baja 2 kg y mantén la calidad. Cue: torso erguido, rodilla delantera alineada con el segundo dedo, y empuja con el talón del pie de adelante.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto y aterrizaje a una pierna (hop and stick) 3 × 4 por lado · descanso completo",
+         "note": "Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Pallof press con banda",
+         "reps": "10/lado",
+         "focus": "neutro · core"
+        },
+        {
+         "name": "Split squat isométrico",
+         "reps": "3 × 20–30 s por lado",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "RDL a una pierna con DB ligero",
+         "reps": "2 × 10/lado cerca del fallo",
+         "focus": "sinergista · isquiotibiales",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 15,
+       "format": "Intervalos",
+       "zone": "Z4",
+       "objective": "Z4: respiración exigente, frases de 2–3 palabras. Es el único trabajo de Z4 de la semana: el intervalo 4 debe sentirse igual de fuerte que el 1.",
+       "scaling": "N1: lunges sin peso, push-ups con rodillas, KB ligero. N2: estándar. N3: DB pesados, push-ups con palmada o pausa abajo.",
+       "description": "4 × 3 min de trabajo continuo, 1 min de descanso activo (caminando) entre intervalos. En cada intervalo, repite el circuito sin parar:\n- 8 walking lunges con DB\n- 8 push-ups\n- 6 KB suitcase deadlift/lado"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 90s/lado",
+        "Couch stretch — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Sumamos carga unilateral. La pierna débil se está poniendo al día."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + rotación torácica cuadrupedia — 5/lado",
+        "10 ankle CARs/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100m run · alternativas: 20 skaters / 8 burpees",
+        "10 caterpillars",
+        "10 skips de rodilla alta",
+        "8 rotaciones de tronco con banda, ligeras (sin fatigar)"
+       ],
+       "rules": [
+        "Activación neural alta SIN agotar: técnica > volumen.",
+        "Tobillo y columna torácica son prerrequisito del trabajo principal: no se saltan.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Hang power snatch",
+        "scheme": "5 × 4 · 55–60% · RPE 7–8 · descanso 60–75s · sube la carga solo si la velocidad de la barra se mantiene"
+       },
+       "scaling": {
+        "N1": "DB hang snatch a un brazo, carga ligera.",
+        "N2": "Hang power snatch con barra, 55%.",
+        "N3": "Hang power snatch al 60% con pausa de 1 s en colgado (rodillas) y recepción en parcial."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso.",
+       "coach_note": "Este día existe para cubrir la rotación, el patrón que los otros cuatro días no tocan: la fuerza del tronco que transmite potencia de piernas a brazos. El snatch desde colgado enseña esa transmisión. Cue: extensión completa de cadera y rodillas antes de jalar con los brazos; la barra va cerca del cuerpo. Si se mueve lenta, baja la carga.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva con landmine (o disco / banda, sin balón) 3 × 4 por lado, a máxima velocidad · descanso completo",
+         "note": "Bajo impacto: tirón alto desde colgado."
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "3 × 20–30 s por lado",
+         "focus": "isométrico · core · anti-rotación"
+        },
+        {
+         "name": "Woodchop con polea o banda",
+         "reps": "12/lado",
+         "focus": "rotación · oblicuos"
+        },
+        {
+         "name": "Rotación con landmine",
+         "reps": "2 × 12/lado cerca del fallo",
+         "focus": "rotación · oblicuos",
+         "note": "después del principal"
+        },
+        {
+         "name": "Calf raise de pie",
+         "reps": "2 × 15",
+         "focus": "neutro · pantorrilla",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "Estaciones",
+       "zone": "Z3",
+       "objective": "Z3 con técnica olímpica bajo fatiga y rotación con carga. Si la técnica se rompe, baja el peso.",
+       "scaling": "N1: DB ligero, step-up a cajón bajo, twist sin disco. N2: estándar. N3: DB moderado, cajón alto, disco pesado.",
+       "description": "5 estaciones, 45 s trabajo / 15 s cambio, 2 rondas:\n1. DB hang clean\n2. Box step-ups alternando\n3. Woodchop con DB\n4. Carrera de ida y vuelta 15 m\n5. Russian twist con disco"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Thread the needle — 60s/lado",
+        "Pancake stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "El tronco es el puente entre piernas y brazos. Hoy lo entrenaste con carga."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Scapular CARs — 5/dirección",
+        "Open book — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 mountain climbers/lado · alternativas: 8 burpees supinos / 100m run",
+        "12 banded face pulls",
+        "8 Y-T-W con DB ligeros (3 de cada letra)",
+        "5 scapular pull-ups en barra (sin llegar a fallo)"
+       ],
+       "rules": [
+        "PROHIBIDO: dead hang al máximo, pull-ups al fallo, swings pesados antes de fuerza.",
+        "Activación escapular completa: no recortar.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Romanian deadlift (barra)",
+        "scheme": "4 × 12 · RPE 7–8 · descanso 60–75s · un escalón más de esfuerzo que la semana 1"
+       },
+       "scaling": {
+        "N1": "RDL con DB ligeras, misma carga de la semana 1; 3–4 en reserva.",
+        "N2": "Barra, carga mayor que la semana 1.",
+        "N3": "Barra, bajada de 3 s y carga mayor que la semana 1."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso.",
+       "coach_note": "Sumamos carga al jalón: la espalda baja y los isquiotibiales llegan frescos porque los remos van después. Cue: barra pegada a las piernas, cadera atrás con espalda neutra, y siente el estiramiento de isquios antes de subir; las escápulas bloquean la barra, no la jalan.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 4 × 3 (cada salto un poco más lejos que el de la semana 1, aterrizando estable) · descanso completo",
+         "note": "Bajo impacto: swing explosivo 3 × 6."
+        },
+        {
+         "name": "DB curl alterno",
+         "reps": "10/lado",
+         "focus": "sinergista · bíceps"
+        },
+        {
+         "name": "Farmer hold",
+         "reps": "3 × 30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Single-arm DB row",
+         "reps": "3 × 12/lado cerca del fallo",
+         "focus": "sinergista · dorsal",
+         "note": "después del principal"
+        },
+        {
+         "name": "Ring row",
+         "reps": "2 × 15",
+         "focus": "sinergista · dorsal",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "AMRAP",
+       "zone": "Z3",
+       "objective": "Z3 sostenido. Cada ronda en aprox 2 min.",
+       "scaling": "N1: 100m row, KB ligero, ring row con pies más cerca. N2: estándar. N3: 200m row, KB pesado, ring row con lastre.",
+       "description": "AMRAP 10 min:\n- 150m row (o 12 cal)\n- 12 KB swing americano\n- 8 ring row"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 90s/lado",
+        "Thread the needle — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Sumamos carga al jalón. La espalda está respondiendo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "8 burpees supinos · alternativas: 100m run / 20 skaters",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "format": "Fuerza (22 min)",
+       "notes": "Primer de potencia (4 min): Broad jump 5 × 3 (15 contactos) · descanso completo\nBajo impacto: swing explosivo 3 × 6.\nCircuito (2 rondas): 50 s trabajo / 10 s transición · 1 min 30 s de descanso entre rondas\n- Jalón: Ring row con pausa de 2 s arriba — PRIORIDAD del día (sinergista · dorsal)\n- Empuje: Floor press con DB (sinergista · pectoral)\n- Sentadilla: Wall sit con DB en el regazo (isométrico · inferior)\n- Unilateral: Reverse lunge con DB ligeros (sinergista · glúteo)\n- Rotación: Woodchop con banda o DB (rotación · oblicuos)\nScaling:\n- N1: Cargas ligeras o peso corporal. Modulación a la baja.\n- N2: Cargas estándar moderadas. RPE 6–7.\n- N3: Cargas moderadas con técnica perfecta. RPE 7.\nCoach note: El sábado prioriza Jalón porque es el patrón que quien entrena lun-mié no recibió esta semana (el Jalón cae el viernes). Estaciones nunca repiten ejercicio. El miembro modula la carga según cómo llegó del fin de semana. Cue del ring row: pecho a las anillas, codos pegados y pausa real arriba."
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z3",
+       "objective": "Cierre metabólico modulado. RPE 6–7. Pueden hablar entre turnos: el ritmo lo marca quien descansa.",
+       "scaling": "N1: 150m run, push-ups con rodillas. N2: estándar. N3: 250m run, push-ups estrictos.",
+       "description": "12 min por parejas: A hace una ronda completa mientras B descansa; luego cambian. Cuenten rondas totales de la pareja:\n- 200m run o 30 saltos de soga\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 6,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Child's pose extendido — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino. Sesión de cierre de semana: más pausada."
+       },
+       "closing": {
+        "message": "Cerramos la semana jalando. Reconoce al grupo y anuncia la prioridad del próximo sábado."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 30,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo A",
+   "phase": "Desafiar",
+   "phase_params": {
+    "rpe": "8-9",
+    "rir": "1-2",
+    "rest": "Largos para fuerza, cortos para acond."
+   },
+   "rotation_key": "4A-2",
+   "block_emphasis": "Resistencia muscular",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 3 · Resistencia muscular · Mesociclo A. Fase DESAFIAR. RPE 8–9 · ensayo general. De lunes a jueves se ensaya, un levantamiento técnico por día, el orden exacto de la semana 9: nadie busca fallo, todos buscan una barra rápida y una técnica que aguante. El viernes se trabaja el unilateral con normalidad y el sábado cubre la rotación, el patrón que esta semana no tuvo día propio.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Bisagra + Jalón",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5",
+        "Ankle dorsiflexión con banda — 1 min/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "8 burpees supinos",
+        "10 glute bridge single-leg (5/pie)",
+        "12 banded glute kickback (6/lado)",
+        "14 lunges (7/lado)"
+       ],
+       "rules": [
+        "Activación EXTENDIDA, sin fatigar cuádriceps.",
+        "Nadie carga sin haber mostrado movilidad y técnica."
+       ],
+       "exercises": [
+        "Calentamiento progresivo: barra vacía × 5 → 5 @55% → 3 @70% del pico de bloque."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 26,
+       "main_exercise": {
+        "name": "Back squat",
+        "scheme": "A · Back squat 5 × 5 · RPE 8–9 · descanso 2 min (prueba ensayada) / B · Deadlift convencional 5 × 5 · RPE 8 · descanso 2 min (prueba ensayada, volumen recortado porque comparte día)"
+       },
+       "scaling": {
+        "N1": "back squat 5×5 técnico estable + trap bar 3×5.",
+        "N2": "ambos al pico del bloque.",
+        "N3": "pico técnico, barra rápida, sin fallo."
+       },
+       "coach_note": "Hoy el tiempo es para calentar bien, ejecutar y corregir; solo hay un wall sit al final, cuando los levantamientos ya terminaron. El squat va primero porque es el que más se degrada con fatiga lumbar. En el deadlift, bloque lumbar antes de despegar y barra pegada a la pierna; si la espalda se redondea, se para. Esto es ensayo, no test: nadie busca fallo.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto al cajón 3 × 4 · descanso completo",
+         "note": "Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Wall sit",
+         "reps": "3 × 30 s",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Día de fuerza. Acondicionamiento ligero, con implemento ligero, conversación posible.",
+       "scaling": "N1 KB y balón más ligeros, 6 reps. N2 estándar. N3 estándar con ritmo constante, sin acelerar.",
+       "description": "- 1 min c/u × 4 rondas cada uno; mientras la pareja trabaja, esperar en plancha\n- 8 KB swings\n- 8 wall balls"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado",
+        "Butterfly stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Hoy viste lo que tus piernas y tu espalda van a mostrar la semana del 4 de enero. Faltan seis semanas para subirlo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Empuje",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + thoracic extension — 8",
+        "Band dislocates — 8"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 banded pull-aparts",
+        "10 push-ups",
+        "8 scapular push-ups",
+        "8 band pull-apart en Y"
+       ],
+       "rules": [
+        "PROHIBIDO agotar manguito rotador o push-ups al fallo.",
+        "Termina \"listo para empujar fuerte\", no cansado."
+       ],
+       "exercises": [
+        "Calentamiento progresivo del press: barra vacía × 8 → 5 @55% → 3 @70%."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 27,
+       "main_exercise": {
+        "name": "Bench press",
+        "scheme": "A · Bench press 5 × 5 · RPE 8–9 · descanso 2 min (prueba ensayada) / B · Push press 5 × 5 · RPE 8 · descanso 2 min (prueba ensayada, volumen recortado)"
+       },
+       "scaling": {
+        "N1": "peso técnico estable en ambos.",
+        "N2": "ambos al pico del bloque.",
+        "N3": "pico máximo técnico del ciclo, sin fallo."
+       },
+       "coach_note": "**Las dos sedes miden bench Y push press.** En Xtreme hay que tener los bancos listos desde hoy, no el 4 de enero. Un spotter por barra en bench. La barra baja controlada y sube con intención; en el push press, si se cae adelante faltó dip-drive. El sostén de pantorrilla va al final para no restarle piernas al push press.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 3 × 5 + pogos 2 × 10 · descanso completo",
+         "note": "Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Sostén de pantorrilla a una pierna",
+         "reps": "3 × 30 s por lado",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero, Z2, sin comprometer el press.",
+       "scaling": "N1 DB muy ligeras y burpee sin salto. N2 estándar. N3 estándar, nunca al límite.",
+       "description": "- 1 min c/u × 4 rondas cada uno, a ritmo de conversación\n- 6 gorilla rows con DB (3/brazo)\n- 6 thrusters ligeros\n- 4 burpees"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Dos levantamientos de empuje en un día y la técnica aguantó. Eso es lo que se mide."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Olímpico (clean & jerk)",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 12,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado",
+        "Band dislocates — 8"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "8 burpees · alternativas: 15 high knees/lado · 25 jumping jacks",
+        "12 Bulgarian split squats sin peso (6/pierna)",
+        "10 monster walks con banda — 5/lado"
+       ],
+       "rules": [
+        "La técnica con barra vacía es parte del bloque, no calentamiento opcional.",
+        "Nadie carga hasta que el footwork del jerk esté limpio."
+       ],
+       "exercises": [
+        "Técnica (8 min, con barra vacía — no se recorta): 5 muscle clean · 5 front squat · 5 clean pull",
+        "Técnica (8 min, con barra vacía — no se recorta): 5 push press · 5 push jerk · 5 split jerk (footwork sin peso)"
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Clean & Jerk",
+        "scheme": "calentamiento progresivo + 5 × 3 · RPE 8–9 · descanso 2 min (prueba ensayada)"
+       },
+       "scaling": {
+        "N1": "5×5 técnico, puede quedarse en power clean + push press.",
+        "N2": "5×3 al pico técnico.",
+        "N3": "pico técnico del ciclo, sin fallo."
+       },
+       "coach_note": "Este es el día que antes compartía con el snatch y el row de 500 m. Ahora tiene su propio bloque y por eso se puede corregir de verdad: extensión completa, codos rápidos, jerk con pies. Cada serie se corrige antes de la siguiente; el Pallof va al final, cuando ya no queda barra. En la semana 9 esto es 1RM.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 3 × 3 · descanso completo",
+         "note": "Bajo impacto: swing explosivo 3 × 6."
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "3 × 20 s por lado",
+         "focus": "isométrico · core · anti-rotación",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero. Nada que castigue hombro ni muñeca después del jerk.",
+       "scaling": "N1 6 reps, DB muy ligeras, burpee sin salto. N2 estándar. N3 estándar con DB ligeras, a ritmo de conversación.",
+       "description": "- 1 min c/u × 4 rondas cada uno\n- 8 DB thrusters ligeros\n- 8 burpees"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 90s/lado",
+        "Couch stretch — 60s/lado",
+        "Muñeca: extensión en cuadrupedia — 45s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Un solo levantamiento, todo el día para él. Así es como la técnica sube y no solo el peso."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Olímpico (snatch)",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 12,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation — 5/lado",
+        "Ankle CARs — 10/lado",
+        "Band dislocates — 10"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "20 skaters con disco",
+        "80 saltar soga",
+        "8 caterpillars"
+       ],
+       "rules": [
+        "Activación neural SIN agotar. Cada salto es técnica, no cansancio.",
+        "Overhead squat con barra vacía antes de cualquier carga: si no hay posición, se ensaya en power."
+       ],
+       "exercises": [
+        "Técnica (8 min, barra vacía): 5 snatch grip deadlift · 5 high pull · 5 overhead squat",
+        "Técnica (8 min, barra vacía): 5 hang power snatch · 3 snatch balance"
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Snatch (power o completo)",
+        "scheme": "calentamiento progresivo + 5 × 2 · RPE 8 · descanso 2 min (prueba ensayada)"
+       },
+       "scaling": {
+        "N1": "DB snatch a una mano — 3/brazo, o hang power snatch con barra vacía.",
+        "N2": "hang power snatch con barra, recepción en power.",
+        "N3": "snatch completo desde el piso, recepción baja."
+       },
+       "coach_note": "El snatch es el levantamiento que más castiga la fatiga acumulada, y por eso tiene su propio día: antes iba tercero, después del C&J y con el row de 500 m encima. La barra debe VOLAR; si se hala lenta, se baja el peso. Series de 2 para que ninguna rep salga fatigada. Registrar la carga de hoy: es el punto de partida del 1RM de enero.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto vertical 3 × 4 · descanso completo",
+         "note": "Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Plancha lateral",
+         "reps": "3 × 20 s por lado",
+         "focus": "isométrico · core",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero y sin sobrecabeza: el hombro ya trabajó.",
+       "scaling": "N1 step-ups en lugar de box jumps, swing ligero. N2 estándar. N3 estándar, sin acelerar.",
+       "description": "- 1 min c/u × 4 rondas cada uno\n- 6 box jumps (sube, salta y baja caminando)\n- 6 KB swings\n- 8 v-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pancake stretch — 90s",
+        "Thread the needle — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cuatro días, cuatro levantamientos, uno por día. Ninguno le robó tiempo al otro. Así vas a llegar a la re-evaluación."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado",
+        "Ankle CARs — 8/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 banded clams/lado",
+        "10 monster walks (5/lado)",
+        "12 glute bridge single leg (6/pie)",
+        "20 skaters"
+       ],
+       "rules": [
+        "Sin fatiga unilateral cargada."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Reverse lunge con barra",
+        "scheme": "5 × 6/lado · RPE 7–8 · descanso 90s"
+       },
+       "scaling": {
+        "N1": "DB.",
+        "N2": "back rack.",
+        "N3": "overhead lunge."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso.",
+       "coach_note": "Reverse lunge por defecto (protege rodilla). Semana pesada; este día trabaja el patrón sin lift de batería. Prioriza el lado limitante: empieza siempre por la pierna más débil y la otra iguala sus reps. Cue: torso alto y el talón delantero clavado al subir.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto y aterrizaje a una pierna (hop and stick) 3 × 4 por lado · descanso completo",
+         "note": "Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Pallof press",
+         "reps": "8/lado",
+         "focus": "anti-rotación · core"
+        },
+        {
+         "name": "Farmer carry",
+         "reps": "20 m",
+         "focus": "neutro · agarre"
+        },
+        {
+         "name": "Split squat isométrico",
+         "reps": "3 × 20–30 s por lado",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "Tabata",
+       "zone": "Z3",
+       "objective": "Umbral. Este día sí exige metabólico (no lleva test).",
+       "scaling": "N1 ligeros. N2 estándar. N3 pesados.",
+       "description": "- Bloque 1 (4 min): 8 rondas de 20 s trabajo / 10 s descanso, alternando DB alternating snatch y box step-overs\n- 1 min de descanso\n- Bloque 2 (4 min): 8 rondas de 20 s trabajo / 10 s descanso de V-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 90s/lado",
+        "Couch stretch — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cerraste la última semana pesada del ciclo. La próxima bajamos las series y mantenemos la carga, y después entramos a potencia."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 high knees/lado (o 25 jumping jacks · 10 jumping lunges no profundas)",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "format": "Fuerza (22 min)",
+       "notes": "Primer de potencia (4 min): Rotación explosiva con landmine, banda o disco 3 × 3 por lado (18 contactos) · descanso completo\nBajo impacto: tirón alto desde colgado.\nCircuito (2 rondas): 45s trabajo / 15s transición · 1 min descanso entre rondas\n- Rotación: Landmine rotation, cargas moderadas — PRIORIDAD del día (rotación · oblicuos)\n- Empuje: Push-up con toque de hombro (anti-rotación · core)\n- Sentadilla: Goblet squat con KB (sinergista · cuádriceps)\n- Unilateral: Reverse lunge BW o con DB ligeros (sinergista · glúteo)\n- Jalón: Sostén arriba del remo con DB (isométrico · superior)\nScaling:\n- N1: Cargas ligeras o BW. Modulación a la baja.\n- N2: Cargas estándar moderadas. RPE 6-7.\n- N3: Cargas moderadas con técnica perfecta. RPE 7.\nCoach note: El sábado prioriza Rotación porque esta semana ningún día la trabajó. Dos estaciones, landmine rotation y el push-up con toque de hombro, piden que el torso gire (o no gire) con control: las caderas conducen y no se mueve la cadera cuando se pide anti-rotación. Estaciones nunca repiten ejercicio. RPE objetivo: 6-7. El miembro modula carga libremente según cómo llegó del fin de semana."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "RFT",
+       "zone": "Z3",
+       "objective": "Cierre metabólico modulado. RPE 6-7. Cada ronda en aprox 2 min 30 s.",
+       "scaling": "N1: 150m run, push-up rodillas. N2: estándar. N3: 250m run, push-up estricto.",
+       "description": "3 rondas por tiempo:\n- 200m run o 30 saltar soga\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 7,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Child's pose extendido — 90s",
+        "Lying twist — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino. Sesión de cierre de semana: más larga y pausada."
+       },
+       "closing": {
+        "message": "Cerramos la semana girando con control. Reconoce al grupo y avisa que la próxima semana se baja el volumen con la misma carga."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 31,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo A",
+   "phase": "Recuperar",
+   "phase_params": {
+    "rpe": "5-6",
+    "rir": "4-5",
+    "rest": "Relajados"
+   },
+   "rotation_key": "4A-2",
+   "block_emphasis": "Resistencia muscular",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 4 · Resistencia muscular · Mesociclo A. Fase RECUPERAR. RPE 5–6 · sin acercarte al fallo. Mitad de series con la misma carga, primer a mitad de contactos y acondicionamiento suave en Z2: no es descanso, es la semana en que el cuerpo absorbe las tres anteriores antes de entrar a potencia.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5 reps"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 saltos de soga",
+        "12 glute bridge bilateral (BW)",
+        "10 air squats con pausa de 2 s abajo",
+        "8 reverse lunges BW (4/lado)"
+       ],
+       "rules": [
+        "PROHIBIDO fatigar las piernas antes del bloque de fuerza: sin saltos máximos, el primer de potencia es el que prepara el salto.",
+        "Termina la última ronda en Z2, respirando por la nariz."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 23,
+       "main_exercise": {
+        "name": "Box squat",
+        "scheme": "2 × 12 con pausa de 1 s sentado en el cajón · RPE 5–6 · descanso 60 s · mitad de las series (4 → 2), misma carga de la semana 2"
+       },
+       "scaling": {
+        "N1": "Box squat con cajón alto y carga ligera, 4–5 en reserva.",
+        "N2": "Box squat con la misma carga de la semana 2, 4–5 en reserva.",
+        "N3": "Box squat con la misma carga y barra en front rack, sin acercarte al fallo."
+       },
+       "stations_protocol": "2 vueltas seguidas, 45 s de descanso entre vueltas, lejos del fallo.",
+       "coach_note": "Es una descarga activa, no un descanso: mitad de las series con la misma carga mantiene el patrón y deja que las piernas absorban el trabajo. Cue: siéntate atrás hasta tocar el cajón sin relajar el torso, pausa de 1 s con todo el cuerpo tenso y sube empujando el piso con todo el pie; para cada serie con margen.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto al cajón 2 × 4 (N3: caída y salto) · descanso completo",
+         "note": "Bajo impacto: levantarse rápido de la caja 2 × 4."
+        },
+        {
+         "name": "Hip thrust",
+         "reps": "15",
+         "focus": "sinergista · glúteo",
+         "note": "después del principal"
+        },
+        {
+         "name": "Elevación de talones a una pierna",
+         "reps": "12/lado",
+         "focus": "neutro · pantorrilla",
+         "note": "después del principal"
+        },
+        {
+         "name": "Wall sit",
+         "reps": "30–45 s",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "ESTACIONES 10 min",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Ritmo de conversación; técnica idéntica en la ronda 2.",
+       "scaling": "N1: tuck-ups, goblet squat con KB ligera, devil press sin salto de cadera · N2: estándar · N3: V-ups completos y devil press con DB moderadas, siempre en Z2.",
+       "description": "4 estaciones × 2 rondas, 50 s de trabajo / 25 s de transición:\n- Trote suave en sitio o 150 m run\n- V-ups\n- Goblet squat con KB\n- Devil press con DB ligeras"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 60s/lado",
+        "Butterfly stretch — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Las piernas absorben lo trabajado: hoy sembramos la fuerza de mañana."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 banded clams/lado",
+        "10 monster walks (5/lado)",
+        "12 banded glute kick back single leg (6/pie)",
+        "10 banded hip abduction (5/lado)"
+       ],
+       "rules": [
+        "Despierta el glúteo medio sin agotarlo: bandas ligeras, técnica antes que repeticiones."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 23,
+       "main_exercise": {
+        "name": "Bulgarian split squat (DB)",
+        "scheme": "2 × 10/lado · RPE 5–6 · descanso 60 s · mitad de las series (4 → 2), misma carga de la semana 2"
+       },
+       "scaling": {
+        "N1": "Peso corporal o DB ligeras, pie trasero en banco bajo y apoyo de una mano si lo necesitas.",
+        "N2": "DB con la misma carga de la semana 2, 4–5 en reserva.",
+        "N3": "Misma carga con bajada de 3 s, rango completo y sin acercarte al fallo."
+       },
+       "stations_protocol": "2 vueltas seguidas, 45 s de descanso entre vueltas, lejos del fallo.",
+       "coach_note": "Descarga: mitad de las series y sin barra pesada para que cadera y rodillas se recuperen. Cue: pie trasero apoyado en el banco solo como equilibrio, rodilla delantera sobre el segundo dedo y torso ligeramente inclinado; la pierna de adelante hace el trabajo, no empujes con la de atrás.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Hop and stick (salto y aterrizaje a una pierna) 2 × 3 por lado · descanso completo",
+         "note": "Bajo impacto: step-up explosivo 2 × 3 por lado."
+        },
+        {
+         "name": "Isquio a una pierna (puente con pie elevado)",
+         "reps": "10/pie",
+         "focus": "sinergista · isquiotibial",
+         "note": "después del principal"
+        },
+        {
+         "name": "Pallof press en semi-arrodillado",
+         "reps": "10/lado",
+         "focus": "neutro · core",
+         "note": "después del principal"
+        },
+        {
+         "name": "Sostén de pantorrilla a una pierna",
+         "reps": "30 s/lado",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "AMRAP 10 min",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Ritmo de conversación; la técnica de la última ronda igual a la de la primera.",
+       "scaling": "N1: dead bug sin golpe, farmers con peso ligero, DB snatch con DB muy ligera · N2: estándar · N3: DB moderada y farmers más pesado, sin subir de Z2.",
+       "description": "- 10 cross body dead bug punch (5/lado)\n- 20 m farmers walk con peso en un solo lado (10 m ida con una mano, 10 m vuelta con la otra)\n- 6 alt DB snatch (3/lado)"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 60s/lado",
+        "Couch stretch — 30s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Una pierna a la vez, la misma calidad. Mañana toca rotación: duerme bien."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation cuadrupedia — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 m trote suave · alternativas: 20 skaters / 8 burpees",
+        "10 ankle CARs/lado",
+        "8 pogo jumps en sitio (preparación pliométrica)",
+        "5 skips A + 5 skips B (mecánica)"
+       ],
+       "rules": [
+        "Activación neural alta SIN agotar: técnica > volumen en los pliométricos.",
+        "Tobillo y T-spine son prerequisitos del trabajo principal: no saltarlos."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 23,
+       "main_exercise": {
+        "name": "Hang power clean",
+        "scheme": "2 × (3 + 3) en clusters, 10 s entre los dos grupos de 3 · RPE 5–6 · descanso 90 s entre series · misma carga de la semana 1"
+       },
+       "scaling": {
+        "N1": "Hang clean con DB ligeras o barra vacía, 4–5 en reserva.",
+        "N2": "Hang power clean con la misma carga de la semana 1, 4–5 en reserva.",
+        "N3": "Hang clean completo (recibe en sentadilla) con la misma carga, técnica perfecta."
+       },
+       "stations_protocol": "2 vueltas seguidas, 45 s de descanso entre vueltas, lejos del fallo.",
+       "coach_note": "Este día existe para cubrir la rotación, el patrón que los otros cuatro días no tocan; en semana de recuperación lo trabajamos técnico y ligero. Cue del clean: extiende cadera y rodillas antes de tirar con los brazos, barra pegada al cuerpo y recíbela en front rack con los codos altos. En las rotaciones el movimiento sale de las caderas y el tronco, no de los brazos.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva 2 × 3 por lado (landmine, banda o disco, sin balón) · descanso completo",
+         "note": "Bajo impacto: tirón alto desde colgado 2 × 3."
+        },
+        {
+         "name": "Woodchop con polea o banda (alto a bajo)",
+         "reps": "12/lado",
+         "focus": "rotación · oblicuos",
+         "note": "después del principal"
+        },
+        {
+         "name": "Rotación con landmine",
+         "reps": "10/lado",
+         "focus": "rotación · core",
+         "note": "después del principal"
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "20 s/lado",
+         "focus": "isométrico · core · anti-rotación",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "EMOM 10 min",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Termina cada minuto con segundos de sobra; descarga neural.",
+       "scaling": "N1: DB muy ligera y 20 saltos de soga (o 20 jumping jacks) · N2: estándar · N3: DB moderada y 40 saltos de soga, siempre con margen de descanso.",
+       "description": "- Minuto impar: 6 DB rotational press por lado\n- Minuto par: 30 saltos de soga"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Thread the needle — 60s/lado",
+        "Pancake stretch — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Girar con control es fuerza. El sistema nervioso se recupera con esta semana."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Cat-cow + thoracic extension — 8",
+        "Open book — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "5 Australian pull-ups",
+        "8 push-ups",
+        "10 sit-ups",
+        "10 banded pull-aparts",
+        "4 renegade rows ligeros (4 por brazo)"
+       ],
+       "rules": [
+        "PROHIBIDO fatigar el agarre y la espalda baja antes del peso muerto: todo a ritmo cómodo."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "main_exercise": {
+        "name": "Romanian deadlift (barra)",
+        "scheme": "2 × 12 · RPE 5–6 · descanso 75 s · mitad de las series (4 → 2), misma carga de la semana 2"
+       },
+       "scaling": {
+        "N1": "RDL con DB o barra ligera, 4–5 en reserva.",
+        "N2": "RDL con barra y la misma carga de la semana 2.",
+        "N3": "RDL con barra, misma carga y bajada de 3 s, sin acercarte al fallo."
+       },
+       "stations_protocol": "2 vueltas seguidas, 45 s de descanso entre vueltas, lejos del fallo.",
+       "coach_note": "Carga baja y poco volumen mantienen el patrón sin fatigar la cadena posterior. Cue: barra pegada a las piernas, empuja la cadera atrás con rodillas casi rectas y sube apretando glúteo sin hiperextender; para cada serie con margen.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 2 × 3 · descanso completo",
+         "note": "Bajo impacto: swing explosivo con KB 2 × 5."
+        },
+        {
+         "name": "DB hammer curl",
+         "reps": "12/lado",
+         "focus": "sinergista · bíceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Remo con KB o DB",
+         "reps": "12/lado",
+         "focus": "sinergista · dorsal",
+         "note": "después del principal"
+        },
+        {
+         "name": "Dead hang activo",
+         "reps": "20–30 s",
+         "focus": "isométrico · superior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 11,
+       "format": "RFT 3 rondas (cap 11 min)",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Ritmo de conversación; sin carrera contra el reloj.",
+       "scaling": "N1: remo 150 m, man makers sin salto, TRX row con el cuerpo más vertical · N2: estándar · N3: DB moderadas y Australian pull-ups con pies elevados, sin salir de Z2.",
+       "description": "- 200 m remo\n- 5 man makers con DB ligeras\n- 10 TRX row o Australian pull-ups\n- 12 V-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 60s/lado",
+        "Thread the needle — 45s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Bajamos la carga para que la espalda y el agarre lleguen frescos al bloque de potencia."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Band dislocates — 8"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 banded pull-aparts",
+        "8 push-ups a ritmo cómodo",
+        "8 caterpillars",
+        "6 burpees sin flexión"
+       ],
+       "rules": [
+        "PROHIBIDO fatigar el empuje antes del bloque de fuerza: push-ups lejos del fallo."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 21,
+       "main_exercise": {
+        "name": "DB bench press (banco plano)",
+        "scheme": "2 × 12 · RPE 5–6 · descanso 60 s · mitad de las series (4 → 2), misma carga de la semana 2"
+       },
+       "scaling": {
+        "N1": "DB bench con mancuernas ligeras, 4–5 en reserva.",
+        "N2": "DB bench con la misma carga de la semana 2, 4–5 en reserva.",
+        "N3": "DB bench con la misma carga y bajada de 3 s, sin acercarte al fallo."
+       },
+       "stations_protocol": "2 vueltas seguidas, 45 s de descanso entre vueltas, lejos del fallo.",
+       "coach_note": "Descarga: la velocidad de la barra es lo que cuenta hoy, no la carga. Cue: escápulas juntas y abajo, pies firmes en el piso y empuja las mancuernas en arco hacia el hombro; baja controlado para cuidar el hombro.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 2 × 4 + pogos 1 × 10 · descanso completo",
+         "note": "Bajo impacto: elevación rápida de talones 2 × 5."
+        },
+        {
+         "name": "Extensión de tríceps con DB",
+         "reps": "15",
+         "focus": "sinergista · tríceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Fondos (dips) o fondos en banco",
+         "reps": "8",
+         "focus": "sinergista · pectoral y tríceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Sostén abajo del push-up",
+         "reps": "20 s",
+         "focus": "isométrico · superior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 13,
+       "format": "TABATA 3 bloques",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Ritmo de conversación aunque el reloj sea de Tabata; técnica idéntica en la ronda 1 y 8.",
+       "scaling": "N1: KB ligera y wall ball liviana · N2: estándar · N3: KB moderada y wall ball un poco más pesada, siempre en Z2.",
+       "description": "3 bloques de 4 min (8 × 20 s trabajo / 10 s descanso) de UN movimiento cada uno, 30 s para cambiar entre bloques:\n- KB swing\n- Wall ball al blanco\n- Trote suave en sitio"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 60s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Recuperación activa. El hombro descansa hoy para empujar fuerte la semana que viene."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 high knees/lado (o 25 jumping jacks)",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 20,
+       "format": "Fuerza (20 min)",
+       "notes": "Primer de potencia (2 min): Push-up explosivo 2 × 5 (10 contactos) · descanso completo\nBajo impacto: elevación rápida de talones 2 × 5.\nCircuito (2 rondas): 60 s de trabajo / 30 s de transición · 90 s de descanso entre rondas · RPE 5–6\n- Empuje: Floor press con DB, 12–15 reps — PRIORIDAD del día (sinergista · pectoral y tríceps)\n- Sentadilla: Wall sit, 45 s (isométrico · inferior)\n- Unilateral: Reverse lunge BW o con DB ligeras, 8/lado (sinergista · cuádriceps y glúteo)\n- Rotación: DB rotational press ligero, 8/lado (rotación · core)\n- Jalón: Remo alterno con DB, 10/lado (sinergista · dorsal)\nScaling:\n- N1: Cargas ligeras o BW, push-up de rodillas si prefieres. Modulación a la baja.\n- N2: Cargas estándar moderadas. RPE 5–6.\n- N3: Cargas moderadas con técnica perfecta. RPE 6, sin llegar al fallo.\nCoach note: El sábado prioriza el Empuje, para quien faltó ese día. Cada estación entrena un patrón distinto y ninguna repite ejercicio. Cue: en el floor press codos a unos 45° del tronco y baja hasta tocar el piso con control; modula la carga libremente según cómo llegaste del fin de semana."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "PAREJAS (you-go-I-go) 8 min",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Cierre metabólico modulado, RPE 5–6, ritmo de conversación.",
+       "scaling": "N1: 150 m run, push-ups de rodillas · N2: estándar · N3: 250 m run, push-ups estrictos.",
+       "description": "8 min en parejas alternando, uno trabaja mientras el otro descansa:\n- 200 m run o 30 saltos de soga\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pigeon pose — 45s/lado",
+        "Lying twist — 30s/lado",
+        "Child's pose extendido — 30s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino. Sesión de cierre de semana: más pausada."
+       },
+       "closing": {
+        "message": "Cerramos la semana de recuperación. El lunes empieza el bloque de potencia: llega fresco."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 32,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo B",
+   "phase": "Aprender",
+   "phase_params": {
+    "rpe": "6-7",
+    "rir": "4-5",
+    "rest": "Largos (90-120s fuerza)"
+   },
+   "rotation_key": "4B-1",
+   "block_emphasis": "Potencia",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 5 · Potencia · Mesociclo B. Fase APRENDER. RPE 6–7 · 4–5 en reserva. Primera semana de potencia: cargas del 55–65 % moviendo cada repetición con intención de velocidad máxima, descanso completo de 2 min y series cortas. Si la barra se frena, la serie termina; técnica y aterrizaje limpio antes que carga.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 8,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 high knees/lado · alternativas: 25 jumping jacks / 10 jumping lunges no profundas",
+        "12 banded clams/lado",
+        "10 monster walks (lateral con banda) — 5/lado",
+        "5 single-leg balance + reach/lado (10s c/u)"
+       ],
+       "rules": [
+        "PROHIBIDO: fatiga unilateral antes del bloque de fuerza (sin lunges ni split squats al RPE alto en activación).",
+        "Activación de glúteo medio y core profundo SIN agotar pierna unilateral.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 21,
+       "main_exercise": {
+        "name": "Reverse lunge con DB",
+        "scheme": "5 × 3 por lado · @55–60 % (carga con la que subas rápido) · subida explosiva, bajada controlada · RPE 6-7 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "Sin peso o DB muy ligeros, paso corto, subida rápida pero controlada (4–5 en reserva).",
+        "N2": "DB moderados en cada mano.",
+        "N3": "Barra en front rack o DB más pesados, empuje explosivo con la pierna de adelante."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "Hoy el unilateral se entrena rápido: la pierna de adelante empuja con intención y la de atrás no ayuda. Cue: \"pisa el piso y sube como si te empujara un resorte\"; si la rodilla colapsa hacia adentro o la subida se arrastra, baja la carga.",
+       "stations": [
+        {
+         "name": "Primer de potencia (4 min): Salto y aterrizaje a una pierna (hop and stick) 3 × 4 por lado · descanso completo",
+         "note": "Medición de salto (semana 5): ANTES del hop and stick, 3 intentos de salto largo con descanso completo entre intentos; anota el mejor en cm (registro continuo 9.5). Aterriza y sostén 2 s. Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Split squat isométrico",
+         "reps": "3 × 20–30 s/lado",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Pallof press con banda",
+         "reps": "8/lado",
+         "focus": "neutro · core"
+        },
+        {
+         "name": "Curl de isquio a una pierna con slider o toalla",
+         "reps": "3 × 8/lado cerca del fallo",
+         "focus": "sinergista · isquios",
+         "note": "después del principal"
+        },
+        {
+         "name": "Abducción de cadera de pie con banda",
+         "reps": "3 × 12/lado cerca del fallo",
+         "focus": "sinergista · glúteo medio",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 15,
+       "format": "Intervalos",
+       "zone": "Z4",
+       "objective": "Z4: esfuerzo 8 de 10 sostenido, ritmo parejo; anota las rondas de cada intervalo y trata de repetirlas. Es el único Z4 de la semana.",
+       "scaling": "N1: lunges sin peso, push-up con rodillas, KB ligero. N2: estándar. N3: DB pesados, push-up estricto, KB pesado.",
+       "description": "4 intervalos de 3 min de trabajo, descanso 1 min caminando entre intervalos. En cada intervalo, rondas continuas de:\n- 10 walking lunges con DB (5 por pierna)\n- 8 push-ups\n- 8 KB suitcase deadlift/lado"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 60s/lado",
+        "Couch stretch — 45s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino, palmas sobre el abdomen.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cada pierna trabajó por separado y sin ayuda de la otra. Eso es lo que tu cuerpo necesita para caminar y correr mejor."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation cuadrupedia — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "30 saltar soga · alternativas: 15 mountain climbers/lado / 8 burpees supinos",
+        "10 ankle CARs/lado",
+        "10 pogo jumps en sitio (preparación pliométrica)",
+        "5 skips A + 5 skips B (mecánica)"
+       ],
+       "rules": [
+        "Activación neural alta SIN agotar: técnica > volumen en pliométricos de activación.",
+        "Tobillo y T-spine son prerrequisitos del trabajo principal, no se saltan.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Hang power snatch",
+        "scheme": "5 × 3 · @55–60 % de tu power snatch · salida desde colgado (barra sobre la rodilla) · velocidad máxima · RPE 6-7 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "Hang snatch con DB a un brazo, ligero, alternando brazo por serie (4–5 en reserva).",
+        "N2": "Hang power snatch con barra ligera o barra técnica, recibida arriba de la paralela.",
+        "N3": "Hang power snatch con barra al 60 %; sentadilla de recepción solo si la técnica se mantiene."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "Este día existe para cubrir la rotación, el patrón que los otros cuatro días no tocan; el snatch desde colgado la entrena con velocidad y las estaciones la cargan. Cue: \"extiende cadera, codos hacia afuera y jala bajo la barra\"; si la barra se vuelve lenta o se cae a flexión espinal, la serie termina.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva con landmine (sin balón) 3 × 4 por lado · descanso completo",
+         "note": "Bajo impacto: tirón alto desde colgado."
+        },
+        {
+         "name": "Pallof sostenido con banda",
+         "reps": "3 × 20–30 s/lado",
+         "focus": "isométrico · core · anti-rotación"
+        },
+        {
+         "name": "Sostén de pantorrilla a una pierna",
+         "reps": "3 × 30 s/lado",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Chop con polea o banda (alto a bajo)",
+         "reps": "3 × 10/lado",
+         "focus": "rotación · oblicuos",
+         "note": "después del principal"
+        },
+        {
+         "name": "Rotación con landmine",
+         "reps": "3 × 8/lado",
+         "focus": "rotación · oblicuos y cadera",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "AMRAP 10 min",
+       "zone": "Z3",
+       "objective": "Z3: densidad rotacional sostenida, ritmo parejo; el DB siempre con torso firme.",
+       "scaling": "N1: DB ligero, burpee step-back. N2: estándar. N3: DB moderado, burpee con salto completo.",
+       "description": "- 8 DB rotational press/lado\n- 10 burpees\n- 30 saltar soga"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Thread the needle — 60s/lado",
+        "Pancake stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino, palmas sobre el abdomen.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Trabajamos rotación y potencia hoy. Esto se ve en cualquier deporte que practiques. Buen trabajo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Scapular CARs — 5/dirección",
+        "Open book — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "25 jumping jacks · alternativas: 10 jumping lunges no profundas / 20 jumping jacks cruzados",
+        "12 banded face pulls",
+        "8 Y-T-W con DB ligeros (3 cada letra)",
+        "5 scapular pull-ups en barra (sin llegar a fallo)"
+       ],
+       "rules": [
+        "PROHIBIDO: dead hang al máximo, pull-ups al fallo, swings pesados antes de fuerza.",
+        "Activación escapular completa, no recortar.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Speed trap bar deadlift",
+        "scheme": "5 × 3 · @55–60 % · velocidad máxima en la subida · RPE 6-7 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "Trap bar ligera o KB/DB pesado elevado, subida rápida con espalda neutra (4–5 en reserva).",
+        "N2": "Trap bar @55 %.",
+        "N3": "Trap bar @60 %, misma velocidad de subida."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "El speed deadlift enseña a jalar del suelo con velocidad; el ring row trabaja el plano horizontal para que la espalda sostenga lo que la cadera mueve. Cue: \"empuja el piso con los pies, extiende cadera y rodillas a la vez; los brazos solo sostienen\". Agarre de disco puede ser divertido para retarse con discos más grandes.",
+       "stations": [
+        {
+         "name": "Primer de potencia (4 min): Broad jump 4 × 3 · descanso completo · aterriza y sostén 2 s",
+         "note": "Bajo impacto: swing."
+        },
+        {
+         "name": "Sostén arriba del remo (ring row)",
+         "reps": "3 × 20–30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Plate pinch (agarre)",
+         "reps": "30 s",
+         "focus": "neutro · agarre"
+        },
+        {
+         "name": "Ring row",
+         "reps": "3 × 10 cerca del fallo",
+         "focus": "sinergista · dorsal",
+         "note": "después del principal"
+        },
+        {
+         "name": "DB curl alterno",
+         "reps": "3 × 10/lado cerca del fallo",
+         "focus": "sinergista · bíceps",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "EMOM 10 min",
+       "zone": "Z3",
+       "objective": "Z3 intermitente. El descanso lo gana la velocidad.",
+       "scaling": "N1: KB ligero, ring row vertical. N2: estándar. N3: KB pesado, ring row con pies elevados.",
+       "description": "EMOM 10 min, alternando:\n- Min impar: 12 KB swing americano\n- Min par: 8 ring row"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 90s/lado",
+        "Thread the needle — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino, palmas sobre el abdomen.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Jalón limpio hoy. Tu espalda está construyendo postura. Mañana otro día."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Band dislocates — 8",
+        "Scapular CARs — 5/dirección"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 standing dumbbell rear delt flyes",
+        "8 scap push-ups",
+        "12 sit ups",
+        "8 TRX overhead reach (https://www.youtube.com/watch?v=SIRqOpw3sDY)"
+       ],
+       "rules": [
+        "PROHIBIDO agotar tríceps/hombro; el push-up explosivo vive en el primer, no en la activación.",
+        "Termina \"explosivo\", no cansado."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 23,
+       "main_exercise": {
+        "name": "DB bench press explosivo (banco plano)",
+        "scheme": "5 × 3 · @55–60 % · intención de velocidad máxima · RPE 6-7 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "DB ligeros, subida rápida y bajada controlada (4–5 en reserva).",
+        "N2": "DB moderados, bajada controlada y empuje explosivo.",
+        "N3": "DB más pesados, misma velocidad de subida."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "Baja controlado y sube como un resorte. No es fuerza lenta: es velocidad. Cue: \"empuja las mancuernas hacia el techo lo más rápido que puedas\"; si la subida se ve lenta, la serie termina y baja la carga.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 3 × 5 + pogos 2 × 10 · descanso completo",
+         "note": "Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Sostén abajo del push-up",
+         "reps": "3 × 20–30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Face pull con banda",
+         "reps": "12",
+         "focus": "neutro · hombro posterior"
+        },
+        {
+         "name": "Extensión de tríceps con DB",
+         "reps": "3 × 10 cerca del fallo",
+         "focus": "sinergista · tríceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Elevaciones laterales con DB",
+         "reps": "3 × 12 cerca del fallo",
+         "focus": "sinergista · deltoides lateral",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "RFT",
+       "zone": "Z3",
+       "objective": "Z3 sostenido; pausa en el piso, no en el aire.",
+       "scaling": "N1: DB ligero, singles, rodillas al pecho en vez de toes to bar. N2: estándar. N3: DB pesado.",
+       "description": "5 rondas por tiempo (tope 12 min):\n- 10 DB devil press\n- 10 jumps over DB\n- 10 toes to bar"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Empuje explosivo. Tu hombro aprendió a disparar, no solo a empujar."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5 reps"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 high knees/lado · alternativas: 25 jumping jacks / 10 jumping lunges no profundas",
+        "12 glute bridge unilateral (6 x pierna)",
+        "10 glute kickback 10/pierna (usar ligas para mayor esfuerzo)",
+        "8 jumping lunges"
+       ],
+       "rules": [
+        "PROHIBIDO: saltos máximos, isquios al fallo, sentadillas profundas con peso antes del bloque de fuerza.",
+        "Activación de glúteo y core ANTES de cualquier carga axial.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Box squat",
+        "scheme": "5 × 3 · @55–60 % · siéntate controlado en el cajón y sube a velocidad máxima · RPE 6-7 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "Box squat con goblet (KB/DB), cajón alto, subida rápida (4–5 en reserva).",
+        "N2": "Box squat con barra (back o front) @55 %, cajón a la paralela.",
+        "N3": "Box squat con barra @60 %, cajón a la paralela, sin rebote."
+       },
+       "stations_protocol": "1 set de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "El cajón fija la profundidad y obliga a bajar con control antes de explotar: así se aprende la sentadilla con la misma técnica en cada repetición. Cue: cadera atrás, siéntate sin relajar el torso y empuja el piso al subir; si la barra se frena, la serie termina.",
+       "stations": [
+        {
+         "name": "Primer de potencia (4 min): Salto al cajón 4 × 4 · descanso completo · baja caminando",
+         "note": "Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Wall sit",
+         "reps": "3 × 30–45 s",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Ab wheel rollout (o plank con desplazamiento)",
+         "reps": "5-8",
+         "focus": "neutro · core"
+        },
+        {
+         "name": "Hip thrust con barra",
+         "reps": "3 × 10 cerca del fallo",
+         "focus": "sinergista · glúteo",
+         "note": "después del principal"
+        },
+        {
+         "name": "Calf raise unilateral",
+         "reps": "2 × 10/lado cerca del fallo",
+         "focus": "neutro · pantorrilla",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 9,
+       "format": "Tabata",
+       "zone": "Z3",
+       "objective": "Z3. Mismo ritmo desde la ronda 1 hasta la 8; cuenta tus repeticiones por ronda y trata de no bajar.",
+       "scaling": "N1: wall ball ligero, burpee step-back. N2: estándar (9 kg/6 kg). N3: wall ball pesado, target alto.",
+       "description": "2 bloques de Tabata (8 rondas de 20 s trabajo / 10 s descanso), 1 min de descanso entre bloques:\n- Bloque 1: wall ball\n- Bloque 2: burpees"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado",
+        "Butterfly stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino, palmas sobre el abdomen.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Sentadilla y bisagra son las bases. Hoy las trabajaste con calidad. Mañana otro día."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "10 jumping lunges no profundas (o 20 jumping jacks cruzados · 30 saltar soga)",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 20,
+       "format": "Fuerza (20 min)",
+       "notes": "Primer de potencia (4 min): Salto vertical 4 × 4 (16 contactos) · descanso completo · aterriza suave y sostén 2 s\nBajo impacto: levantarse rápido de la caja.\nCircuito (2 rondas): 45 s trabajo / 15 s transición · 1 min 30 s de descanso entre rondas · cargas moderadas, velocidad en la parte de subida\n- Sentadilla: Goblet squat con pausa de 2 s abajo · PRIORIDAD del día (sinergista · cuádriceps y glúteo)\n- Empuje: DB push press ligero (sinergista · deltoides y tríceps)\n- Unilateral: Split squat isométrico, 20 s por lado dentro de los 45 s (isométrico · inferior)\n- Rotación: DB rotational press ligero (rotación · oblicuos)\n- Jalón: KB swing ruso (sinergista · glúteo e isquios)\nScaling:\n- N1: Cargas ligeras o peso corporal. Modulación a la baja.\n- N2: Cargas estándar moderadas. RPE 6-7.\n- N3: Cargas moderadas con técnica perfecta. RPE 7.\nCoach note: El sábado prioriza Bisagra (sentadilla) para quien faltó el viernes: dale a la estación de goblet el mejor ritmo y la mejor técnica. Cue: pecho alto y rodillas siguiendo la línea de los pies; sube rápido, baja con control. El miembro modula la carga según cómo llegó del fin de semana."
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z3",
+       "objective": "Z3 sostenido. Cuenta los turnos completados por el equipo; ritmo de cerca de 90 s por turno, sin correr contra el reloj.",
+       "scaling": "N1: 150m run, push-up con rodillas. N2: estándar. N3: 250m run, push-up estricto.",
+       "description": "12 min por equipo de dos, por turnos: mientras uno trabaja el otro descansa; se cambian al terminar el turno. Cada turno:\n- 200m run o 30 saltar soga\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 7,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Child's pose extendido — 90s",
+        "Lying twist — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino. Sesión de cierre de semana: más larga y pausada.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cerramos la semana. Reconoce al grupo, comunica el patrón priorizado del próximo sábado y qué viene en la semana 6."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 33,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo B",
+   "phase": "Desarrollar",
+   "phase_params": {
+    "rpe": "7-8",
+    "rir": "2-3",
+    "rest": "Medios (60-90s)"
+   },
+   "rotation_key": "4B-1",
+   "block_emphasis": "Potencia",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 6 · Potencia · Mesociclo B. Fase DESARROLLAR. RPE 7–8 · 2–3 en reserva. Sobrecarga progresiva sobre la semana 5: +5 % de carga o una serie más en cada principal, siempre con la barra o el cuerpo moviéndose a máxima velocidad. Si la velocidad cae, la serie termina.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 8,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 banded clams/lado",
+        "8 skater jumps con pausa/lado",
+        "10 monster walks (5/lado)",
+        "6 single-leg pogo/lado"
+       ],
+       "rules": [
+        "PROHIBIDO fatigar la pierna que cargará el bloque de fuerza. Sin fatiga unilateral.",
+        "Aterrizajes controlados; los saltos de la activación son ligeros, no sustituyen al primer."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 21,
+       "main_exercise": {
+        "name": "Reverse lunge con DB",
+        "scheme": "5 × 4 por lado · ≈ 60 % de tu mejor serie de 5 · RPE 7-8 · subida a máxima velocidad · descanso 2 min tras completar ambos lados · +5 % o una serie más respecto a la semana 5"
+       },
+       "scaling": {
+        "N1": "reverse lunge con peso corporal o DB ligeros, bajando controlado y subiendo rápido (4-5 en reserva).",
+        "N2": "reverse lunge con DB moderados, subida explosiva.",
+        "N3": "reverse lunge con DB pesados o barra, subida con impulso hasta quedar casi en puntas."
+       },
+       "stations_protocol": "1 set en cada descanso del principal. No roban al principal.",
+       "coach_note": "El principal busca potencia en un solo apoyo: baja controlado y sube lo más rápido que puedas; si la subida se enlentece, termina la serie. Cue: pie delantero (o de trabajo) plantado, rodilla alineada con el segundo dedo, aterriza estable antes de cambiar de dirección. Lado débil primero.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto y aterrizaje a una pierna (hop and stick) 3 × 4 por lado · descanso completo",
+         "note": "Desarrollar: salta más largo o más alto que en la semana 5 y sostén el aterrizaje 2 s. N3: lateral bound amplio, aterrizando estable en una pierna. Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Pallof press",
+         "reps": "8/lado",
+         "focus": "neutro · core"
+        },
+        {
+         "name": "Monster walk con banda en los tobillos",
+         "reps": "2 × 12 pasos/lado",
+         "focus": "sinergista · glúteo medio",
+         "note": "después del principal"
+        },
+        {
+         "name": "Puente de glúteo a una pierna",
+         "reps": "2 × 10/lado",
+         "focus": "sinergista · isquio",
+         "note": "después del principal"
+        },
+        {
+         "name": "Split squat isométrico",
+         "reps": "3 × 20–30 s por lado",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 15,
+       "format": "Intervalos",
+       "zone": "Z4",
+       "objective": "Z4. Máximo esfuerzo sostenible con técnica limpia. Es el único Z4 de la semana: mide cuánto aguanta tu potencia bajo fatiga.",
+       "scaling": "N1: DB ligero o peso corporal, rope en dos pies. N2: estándar. N3: DB pesado.",
+       "description": "4 × 3 min de trabajo · 1 min de descanso entre intervalos. En cada intervalo de 3 min:\n- 1 min air bike (o walking lunges)\n- 1 min DB alternating snatch\n- 1 min rope jump alternando pies (un pie a la vez, no en dos pies)"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 60s/lado",
+        "Couch stretch — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Rápido, estable y en los dos planos. Lo que aterrizas bien hoy es lo que cambia de dirección mañana."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation cuadrupedia — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "20 jumping jacks cruzados · alternativas: 30 saltar soga",
+        "10 ankle CARs/lado",
+        "10 pogo jumps en sitio (preparación pliométrica)",
+        "5 skips A + 5 skips B (mecánica)"
+       ],
+       "rules": [
+        "Activación neural alta SIN agotar; técnica > volumen en los pliométricos.",
+        "Tobillo y T-spine son prerrequisitos del trabajo principal; no se saltan.",
+        "PROHIBIDO fatigar hombros y espalda baja antes del bloque de fuerza."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "main_exercise": {
+        "name": "Hang power clean + push jerk",
+        "scheme": "6 × (2 + 1) · 2 hang power clean + 1 push jerk · carga con la que la barra suba rápida y limpia (≈ 55-60 %) · RPE 7-8 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "tirón alto desde colgado (high pull) con barra ligera o palo + push press, 6 × (2 + 1) (4-5 en reserva).",
+        "N2": "hang power clean + push jerk con barra, recibiendo sobre paralelo.",
+        "N3": "hang clean completo (recibiendo en sentadilla) + push jerk, 6 × (2 + 1)."
+       },
+       "stations_protocol": "1 set en cada descanso del principal. No roban al principal.",
+       "coach_note": "Hoy existe para cubrir la rotación, el patrón que los otros cuatro días no tocan; por eso el principal es olímpico y la rotación vive en el primer y en las estaciones. Cue del complejo: barra pegada al cuerpo desde colgado, extiende cadera y rodillas con fuerza y mete los codos rápido debajo de la barra; luego un dip corto y empuja con las piernas para el jerk; si la barra se frena, termina la serie. En las estaciones, rota desde la cadera y el tórax, no desde la muñeca.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva con landmine, banda o disco 3 × 4 por lado · descanso completo",
+         "note": "Desarrollar: más velocidad y más rango que en la semana 5. Bajo impacto: tirón alto desde colgado."
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "3 × 20–30 s por lado",
+         "focus": "isométrico · core · anti-rotación"
+        },
+        {
+         "name": "Rock de tobillo en pared",
+         "reps": "8/lado",
+         "focus": "neutro · tobillo"
+        },
+        {
+         "name": "Rotación con landmine",
+         "reps": "2 × 8 por lado",
+         "focus": "rotación · core",
+         "note": "después del principal"
+        },
+        {
+         "name": "Chop alto a bajo con polea o banda",
+         "reps": "2 × 10 por lado",
+         "focus": "rotación · core",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "EMOM",
+       "zone": "Z3",
+       "objective": "Z3. Densidad rotacional; el minuto que te sobra es tu descanso, gánalo con velocidad.",
+       "scaling": "N1: DB ligero, broad jump moderado, burpee step-back. N2: estándar. N3: DB moderado, broad jump máximo.",
+       "description": "EMOM 12 min en 3 estaciones (4 vueltas):\n- Min 1: 6 DB rotational press/lado\n- Min 2: 5 broad jumps\n- Min 3: 8 burpees"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Thread the needle — 60s/lado",
+        "Pancake stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "message": "Hoy rotaste con fuerza y con control. Tu tronco ya sabe transmitir potencia."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Scapular CARs — 5/dirección",
+        "Open book — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 mountain climbers/lado · alternativas: 8 burpees supinos / 100m run",
+        "12 banded face pulls",
+        "8 Y-T-W con DB ligeros (3 cada letra)",
+        "5 scapular pull-ups en barra (sin llegar a fallo)"
+       ],
+       "rules": [
+        "PROHIBIDO: dead hang al máximo, pull-ups al fallo, swings pesados antes de fuerza.",
+        "Activación escapular completa; no recortar.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "main_exercise": {
+        "name": "Speed trap bar deadlift",
+        "scheme": "6 × 3 · ≈ 65 % de tu mejor serie de 3 · RPE 7-8 · levantada a máxima velocidad · descanso 2 min · +5 % o una serie más respecto a la semana 5"
+       },
+       "scaling": {
+        "N1": "trap bar ligera, 6 × 3 con 4-5 en reserva; +2-3 kg respecto a la semana 5.",
+        "N2": "+5 % respecto a la semana 5, velocidad máxima.",
+        "N3": "+5-10 %, opcional déficit (parado en un disco) con la misma intención."
+       },
+       "stations_protocol": "1 set en cada descanso del principal. No roban al principal.",
+       "coach_note": "La velocidad de la barra es el indicador: si la repetición 1 sale lenta, la carga es alta. Cue: barra pegada al cuerpo, empuja el piso, espalda neutra y glúteos que cierran arriba sin hiperextender.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 4 × 3 · descanso completo",
+         "note": "Desarrollar: salto más largo que en la semana 5, aterrizando en cuclillas estable. Bajo impacto: swing explosivo."
+        },
+        {
+         "name": "Sostén arriba del remo con TRX o argollas",
+         "reps": "3 × 20–30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "DB curl alterno",
+         "reps": "2 × 10 por lado",
+         "focus": "sinergista · bíceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Pullover de brazos rectos con polea o banda",
+         "reps": "2 × 12",
+         "focus": "sinergista · dorsal",
+         "note": "después del principal"
+        },
+        {
+         "name": "Plate pinch",
+         "reps": "2 × 30 s",
+         "focus": "neutro · agarre",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "RFT",
+       "zone": "Z3",
+       "objective": "Z3. Densidad metabólica; el reloj marca cuánto te cuesta repetir potencia con la técnica intacta.",
+       "scaling": "N1: DB ligero, 3 rondas. N2: estándar, 4 rondas. N3: DB moderado, 5 rondas.",
+       "description": "4 rondas por tiempo (time cap 12 min):\n- 6 DB hang clean\n- 10 KB swing americano\n- 200 m remo"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 90s/lado",
+        "Thread the needle — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "message": "Sumaste carga y velocidad al jalón. La espalda está respondiendo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + thoracic extension cuadrupedia — 8 reps"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "25 jumping jacks · alternativas: 10 jumping lunges no profundas / 20 jumping jacks cruzados",
+        "12 banded pull-aparts",
+        "10 disloca hombros con liga o PVC",
+        "8 caterpillars con scapular push-ups (sin doblar codo)"
+       ],
+       "rules": [
+        "PROHIBIDO: agotar manguito rotador, push-ups al fallo, dips antes del bloque de fuerza.",
+        "La activación termina con sensación de «listo para empujar fuerte», no «ya estoy cansado».",
+        "Cardio modulable según espacio disponible."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 20,
+       "main_exercise": {
+        "name": "DB bench press explosivo (banco plano)",
+        "scheme": "5 × 4 · ≈ 60 % de tu mejor serie de 5 · RPE 7-8 · baja controlado, sube a máxima velocidad · descanso 2 min · +5 % o una serie más respecto a la semana 5"
+       },
+       "scaling": {
+        "N1": "DB ligeros, subida rápida pero sin despegar las manos de las pesas; 4-5 en reserva.",
+        "N2": "carga +5 % respecto a la semana 5.",
+        "N3": "DB pesados, opcional pausa de 1 s en el pecho antes de explotar."
+       },
+       "stations_protocol": "1 set en cada descanso del principal. No roban al principal.",
+       "coach_note": "En potencia el press no se mide por el peso sino por la velocidad: si en la repetición 3 la subida se enlentece, termina la serie. Cue: omóplatos juntos y abajo, codos a 45°, empuja el banco con la espalda y «lanza» las DB hacia el techo sin soltarlas.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 3 × 5 + pogos 2 × 10 · descanso completo",
+         "note": "Desarrollar: empuja más alto que en la semana 5 (manos despegan más). Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Dead bug",
+         "reps": "8/lado",
+         "focus": "neutro · core"
+        },
+        {
+         "name": "Tríceps pushdown con banda",
+         "reps": "2 × 12-15",
+         "focus": "sinergista · tríceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Elevaciones laterales con DB",
+         "reps": "2 × 15",
+         "focus": "sinergista · deltoides lateral",
+         "note": "después del principal"
+        },
+        {
+         "name": "Sostén abajo del push-up",
+         "reps": "3 × 20–30 s",
+         "focus": "isométrico · superior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 13,
+       "format": "Tabata",
+       "zone": "Z3",
+       "objective": "Z3. Trabajo intermitente; el descanso lo gana la velocidad de ejecución.",
+       "scaling": "N1: push-up con manos elevadas, DB ligero, KB ligero. N2: estándar. N3: DB pesado, KB americano completo.",
+       "description": "3 bloques de Tabata (8 × 20 s trabajo / 10 s descanso), 30 s de pausa entre bloques:\n- Bloque 1: push-ups\n- Bloque 2: DB devil press\n- Bloque 3: KB swing ruso"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "message": "Empujaste rápido y limpio. Mañana, otro patrón. Buen trabajo."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5",
+        "Spiderman + reach — 4/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 rope jumps",
+        "12 glute bridge bilateral (pausa 1s arriba)",
+        "10 goblet squats tempo (3-1-1), con peso ligero",
+        "8 jumping squats"
+       ],
+       "rules": [
+        "PROHIBIDO pre-fatigar cuádriceps y glúteo antes de la sentadilla.",
+        "Rodilla sigue la línea del pie en cada goblet."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "main_exercise": {
+        "name": "Box squat",
+        "scheme": "6 × 3 · ≈ 60 % de tu mejor serie de 3 · RPE 7-8 · sube a máxima velocidad · descanso 2 min · +5 % o una serie más respecto a la semana 5"
+       },
+       "scaling": {
+        "N1": "box squat con KB o DB al pecho, caja alta; 4-5 en reserva.",
+        "N2": "box squat con barra, caja a la altura del paralelo.",
+        "N3": "box squat con barra pesada, o front squat con la misma intención."
+       },
+       "stations_protocol": "1 set en cada descanso del principal. No roban al principal.",
+       "coach_note": "En la caja se sienta y se explota: pausa de 1 s sin relajar la espalda y sube lo más rápido posible; si la subida se frena, termina la serie. Cue: rodillas hacia afuera, pecho arriba, empuja el piso. Los hip thrust y el RDL completan la bisagra que la sentadilla no termina de trabajar.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto al cajón 4 × 4 · descanso completo",
+         "note": "Desarrollar: caja un poco más alta que en la semana 5, bajando y subiendo con control. N3: caída desde cajón bajo + salto (drop and jump). Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Elevación de talones de pie unilateral",
+         "reps": "12/lado",
+         "focus": "neutro · pantorrilla"
+        },
+        {
+         "name": "Hip thrust",
+         "reps": "2 × 10",
+         "focus": "sinergista · glúteo",
+         "note": "después del principal"
+        },
+        {
+         "name": "RDL con DB",
+         "reps": "2 × 10",
+         "focus": "sinergista · isquio",
+         "note": "después del principal"
+        },
+        {
+         "name": "Wall sit",
+         "reps": "3 × 30–60 s",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "Estaciones",
+       "zone": "Z3",
+       "objective": "Z3. Umbral. Elige una carga de thruster que te deje sostener el ritmo las 4 rondas.",
+       "scaling": "N1: thruster ligero, wall ball liviana, burpee step-back. N2: estándar. N3: thruster pesado, burpee con salto.",
+       "description": "3 estaciones, 4 rondas, 40 s trabajo / 20 s transición (12 min):\n- Thrusters con DB\n- Wall ball al blanco\n- Burpees"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado",
+        "90/90 hip stretch — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "duration_min": 2,
+        "instructions": "Decúbito supino, palmas sobre el abdomen. 8–10 ciclos."
+       },
+       "closing": {
+        "message": "Tus piernas ya saben ser rápidas, no solo aguantar. La semana que viene esa base se convierte en carga de test."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "10 jumping lunges no profundas (o 20 jumping jacks cruzados · 30 saltar soga)",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 20,
+       "format": "Fuerza (20 min)",
+       "notes": "Primer de potencia (4 min): Salto y aterrizaje a una pierna (hop and stick) 3 × 3 por lado (18 contactos) · descanso completo\nDesarrollar: más largo que en la semana 5. Bajo impacto: step-up explosivo.\nCircuito (2 rondas): 60 s trabajo / 20 s transición · 2 min de descanso entre rondas\n- Empuje: Push-ups (estándar o con manos elevadas) (sinergista · pectoral y tríceps)\n- Sentadilla: Goblet squat con KB (sinergista · cuádriceps y glúteo)\n- Unilateral: Reverse lunge con DB, ritmo controlado y subida rápida · PRIORIDAD del día (sinergista · cuádriceps y glúteo)\n- Rotación: DB rotational press ligero (rotación · core)\n- Jalón: Farmer hold con KB o DB pesados, caminando o parado (isométrico · superior)\nScaling:\n- N1: cargas ligeras o peso corporal. Modulación a la baja (4-5 en reserva).\n- N2: cargas estándar moderadas. RPE 6-7.\n- N3: cargas moderadas con técnica perfecta. RPE 7.\nCoach note: El sábado prioriza Unilateral porque es el patrón que quien faltó el lunes no recibió esta semana. Las estaciones no repiten ejercicio. Cue: en el reverse lunge, tronco alto y rodilla delantera estable; el miembro modula la carga libremente según cómo llegó del fin de semana."
+      },
+      "acondicionamiento": {
+       "duration_min": 12,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z3",
+       "objective": "Z3. Cierre metabólico modulado. RPE 6-7. Cuenta cuántas rondas suma la pareja.",
+       "scaling": "N1: lunges a caja baja, push-up rodillas. N2: estándar. N3: lunges con DB ligeros, push-up estricto.",
+       "description": "12 min en parejas: mientras uno completa la ronda, el otro descansa; se alternan y se acumulan rondas:\n- 10 reverse lunges alternados (peso corporal)\n- 8 push-ups\n- 30 saltar soga (o 150 m run)"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Child's pose extendido — 60s",
+        "Lying twist — 45s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino. Sesión de cierre de semana: más pausada."
+       },
+       "closing": {
+        "message": "Cerramos la semana. Reconoce al grupo, y anuncia qué viene en la semana 7: Desafiar."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 34,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo B",
+   "phase": "Desafiar",
+   "phase_params": {
+    "rpe": "8-9",
+    "rir": "1-2",
+    "rest": "Largos para fuerza, cortos para acond."
+   },
+   "rotation_key": "4B-2",
+   "block_emphasis": "Potencia",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 7 · Potencia · Mesociclo B. Fase DESAFIAR. RPE 8–9 · 1–2 en reserva, sin fallo. Ensayo general: lunes a jueves repetimos el orden exacto de la semana 9, un levantamiento técnico por día, y registramos cada carga. El viernes volvemos al patrón unilateral y el sábado cerramos ligero.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Bisagra + Jalón",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5",
+        "Ankle dorsiflexión con banda — 1 min/lado"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "8 burpees supinos",
+        "12 glute bridge single-leg (6/pie)",
+        "10 banded glute kickback/lado",
+        "8 good mornings con barra vacía"
+       ],
+       "rules": [
+        "Activación EXTENDIDA, sin fatigar cuádriceps.",
+        "PROHIBIDO dead hang máximo o swings pesados antes de la barra."
+       ],
+       "exercises": [
+        "Calentamiento progresivo: barra vacía × 5 → 5 @55% → 3 @70% del pico."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 28,
+       "main_exercise": {
+        "name": "Back squat",
+        "scheme": ""
+       },
+       "scaling": {
+        "N1": "5×5 técnico + trap bar 3×5.",
+        "N2": "ambos al pico.",
+        "N3": "pico técnico, barra rápida, sin fallo."
+       },
+       "stations_protocol": "Una serie en cada descanso del deadlift. Entre series del back squat solo se descansa.",
+       "coach_note": "Último ensayo antes del 3RM formal. Profundidad consistente y rodilla en línea con el pie; en el deadlift, bloqueo lumbar y barra pegada a las piernas. El sostén de pantorrilla no roba nada al levantamiento: es el isométrico del día. **Registra las dos cargas al lado de las de la semana 3**: esa comparación es la que le muestras al socio en la re-evaluación.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto vertical 3 × 3 · descanso completo",
+         "note": "Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Sostén de pantorrilla a una pierna",
+         "reps": "3 × 30 s/lado",
+         "focus": "isométrico · inferior"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 7,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero, Z2, conversación posible.",
+       "scaling": "N1: KB muy ligero, ring row vertical. N2: estándar. N3: KB moderado, ring row con pies elevados.",
+       "description": "- 8 KB swing ruso ligero\n- 8 ring row"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado",
+        "Butterfly stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Piernas y espalda al pico. En dos semanas esto se vuelve un número en tu ficha."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Empuje",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + thoracic extension en cuadrupedia — 8",
+        "Band dislocates — 8"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "5 pull-ups (o scapular pull-ups)",
+        "10 push-ups",
+        "15 KB swing ruso ligeros"
+       ],
+       "rules": [
+        "PROHIBIDO agotar manguito rotador o push-ups al fallo."
+       ],
+       "exercises": [
+        "Calentamiento progresivo del press: barra vacía × 8 → 5 @55% → 3 @70%."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 28,
+       "main_exercise": {
+        "name": "Bench press",
+        "scheme": ""
+       },
+       "scaling": {
+        "N1": "peso técnico estable en ambos.",
+        "N2": "ambos al pico.",
+        "N3": "pico máximo técnico del ciclo, sin fallo."
+       },
+       "stations_protocol": "Una serie en cada descanso del bench press. Con la banda anclada a la altura del pecho; el hombro no trabaja.",
+       "coach_note": "Sin fallo, spotter por barra. Cue del bench: escápulas atrás y abajo, pies firmes, la barra baja al esternón y sube rápida. Las dos sedes miden ambos el martes 5 de enero: si en Xtreme algún socio todavía no tiene bench estable, hoy es el último día para corregirlo con tiempo.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 2 × 5 + pogos 2 × 8 · descanso completo",
+         "note": "Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "3 × 20–30 s/lado",
+         "focus": "isométrico · core · anti-rotación"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 7,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero. Nada de man-makers ni thrusters después de dos press pesados.",
+       "scaling": "N1: DB muy ligera, sit-ups con pies fijos y rango corto. N2: estándar. N3: DB moderada, sit-ups con disco al pecho.",
+       "description": "- 10 gorilla rows DB (5/brazo)\n- 8 sit-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Dos press pesados y la técnica aguantó. Eso es exactamente lo que se mide."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Olímpico (clean & jerk)",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation — 5/lado",
+        "Ankle CARs — 10/lado"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "20 skaters con disco",
+        "16 mountain climbers con patada lateral cruzada",
+        "12 saltos a un pie en sitio (6/pie)"
+       ],
+       "rules": [
+        "Principiantes con PVC o barra vacía.",
+        "Nadie carga hasta que el footwork del jerk esté limpio."
+       ],
+       "exercises": [
+        "Técnica (5 min, barra vacía, todos a la vez con el coach): 5 muscle clean · 5 front squat · 5 clean pull",
+        "Técnica (5 min, barra vacía, todos a la vez con el coach): 5 push press · 5 push jerk · 5 split jerk (footwork)"
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Clean & Jerk",
+        "scheme": "calentamiento progresivo + 5 × 2 · RPE 8–9 · descanso 2 min (ensayo)"
+       },
+       "scaling": {
+        "N1": "DB clean & jerk o power clean + push press.",
+        "N2": "barra, recepción power + push jerk.",
+        "N3": "squat clean + split jerk al pico técnico."
+       },
+       "stations_protocol": "Una serie en cada descanso de las tres primeras series de trabajo. Se corrige entre series.",
+       "coach_note": "Regla 2 de la casa: barra y derivados olímpicos cuando el nivel lo permite. Extensión completa antes de tirar con los brazos; la barra flota, no se hala. Series de 2 para que ninguna repetición salga fatigada. Hoy también cubrimos la rotación con el primer: es el patrón que los demás días casi no tocan. En dos semanas esto es 1RM.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva con landmine 3 × 4/lado (sin balón) · descanso completo",
+         "note": "Bajo impacto: tirón alto desde colgado."
+        },
+        {
+         "name": "Sostén de pantorrilla a una pierna",
+         "reps": "3 × 30 s/lado",
+         "focus": "isométrico · inferior"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero. El hombro y la muñeca ya trabajaron. 1 min c/u.",
+       "scaling": "N1: wall ball de 3–4 kg a altura baja, step-over en cajón bajo. N2: estándar. N3: wall ball moderado, cajón alto.",
+       "description": "- 10 wall balls ligeros\n- 8 box step-overs"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pancake stretch — 90s",
+        "Thread the needle — 60s/lado",
+        "Muñeca: extensión en cuadrupedia — 45s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "El clean & jerk tuvo su día otra vez. Compara con la semana 3: ahí está tu progreso."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Olímpico (snatch)",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation — 5/lado",
+        "Ankle CARs — 10/lado",
+        "Band dislocates — 10"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "100 m run",
+        "20 pogo jumps",
+        "16 skippings",
+        "16 mountain climbers con patada cruzada"
+       ],
+       "rules": [
+        "Neural alta sin agotar.",
+        "Sin posición de overhead squat estable, se ensaya en power y no se carga."
+       ],
+       "exercises": [
+        "Técnica (5 min, barra vacía, guiada por el coach): 5 snatch grip deadlift · 5 high pull · 5 overhead squat (buscando rotación de torso en profundidad)",
+        "Técnica (5 min, barra vacía, guiada por el coach): 5 hang power snatch · 3 snatch balance"
+       ]
+      },
+      "fuerza": {
+       "duration_min": 24,
+       "main_exercise": {
+        "name": "Snatch (power o completo)",
+        "scheme": "calentamiento progresivo + 5 × 2 · RPE 8 · descanso 2 min (ensayo)"
+       },
+       "scaling": {
+        "N1": "DB snatch a una mano — 3/brazo.",
+        "N2": "hang power snatch con barra + OHS.",
+        "N3": "squat snatch técnico desde el piso."
+       },
+       "stations_protocol": "Una serie en cada descanso de las tres primeras series de trabajo. Banda anclada a la altura del pecho.",
+       "coach_note": "Cuarto día seguido de levantamiento y el snatch sigue teniendo el suyo propio, que es justo el punto del cambio. Extensión completa, la barra flota; los codos suben afuera, no se jala con los brazos. Registra la carga junto a la de la semana 3.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 3 × 3 · descanso completo",
+         "note": "Bajo impacto: swing."
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "3 × 20–30 s/lado",
+         "focus": "isométrico · core · anti-rotación"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Parejas (you-go-I-go)",
+       "zone": "Z2 ligero",
+       "objective": "Ligero, sin sobrecabeza pesado. 1 min c/u.",
+       "scaling": "N1: DB muy ligera, cajón bajo. N2: estándar. N3: DB moderada, cajón alto.",
+       "description": "- 12 DB alternating snatch ligeros\n- 10 box step-overs"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pancake stretch — 90s",
+        "Thread the needle — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cuatro días, cuatro levantamientos. Así vas a llegar al 7 de enero."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "30 saltar soga · alternativas: 15 high knees/lado / 25 jumping jacks",
+        "12 Bulgarian split squats sin peso (6 por pierna)",
+        "10 monster walks (lateral con banda) — 5/lado"
+       ],
+       "rules": [
+        "PROHIBIDO: fatiga unilateral antes del bloque de fuerza (sin lunges ni split squats al RPE alto en activación).",
+        "Activación de glúteo medio y core profundo SIN agotar pierna unilateral.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 23,
+       "main_exercise": {
+        "name": "Reverse lunge con barra",
+        "scheme": "calentamiento progresivo (barra vacía 2 × 5/lado → 3/lado @50%) + 5 × 3/lado · RPE 8 · subida a máxima velocidad · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "reverse lunge con mancuernas o goblet, 3 × 6/lado, 4–5 en reserva.",
+        "N2": "barra, 5 × 3/lado al RPE 8.",
+        "N3": "barra con carga alta del ciclo, pausa de 1 s abajo, sin fallo."
+       },
+       "coach_note": "El viernes 25 trabajamos de verdad el patrón unilateral: la semana de ensayo fue toda bilateral. El reverse lunge protege la rodilla y deja la carga en el glúteo. Cue: paso largo hacia atrás, tronco erguido y la rodilla delantera en línea con el pie; sube empujando con el talón de adelante. Si la barra se frena, la serie termina.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Hop and stick (salto y aterrizaje a una pierna) 3 × 4/lado · descanso completo",
+         "note": "Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Split squat isométrico (peso corporal, 90° en ambas rodillas)",
+         "reps": "3 × 20 s/lado",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        },
+        {
+         "name": "Puente de glúteo a una pierna con pie elevado",
+         "reps": "2 × 12/lado cerca del fallo",
+         "focus": "sinergista · isquiotibiales y glúteo",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 11,
+       "format": "RFT",
+       "zone": "Z3",
+       "objective": "Z3. Ritmo sostenido, respiración controlada; que la pierna que trabajó se note, pero sin perder técnica.",
+       "scaling": "N1: 2 rondas, DB ligera, burpees sin salto. N2: estándar. N3: DB moderada, burpees con salto al final.",
+       "description": "3 rondas por tiempo (tope 11 min):\n- 10 thrusters DB\n- 8 burpees\n- 12 v-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 90s/lado",
+        "Couch stretch — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino con las palmas sobre el abdomen. Coach guía con voz pausada.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cada lado dio lo suyo. Mañana cierre ligero y movilidad."
+       }
+      }
+     },
+     "coach_notes": "Feriado: si la sede no abre, esta sesión se ofrece el sábado."
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "100m run (o 20 skaters)",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 18,
+       "format": "Fuerza (18 min)",
+       "notes": "Primer de potencia (3 min): Swing explosivo 3 × 6 · descanso completo\nBajo impacto: swing a la altura del pecho, sin explosión.\nCircuito (2 rondas): 45s trabajo / 15s transición · 1 min descanso entre rondas\n- Rotación: DB rotational press ligero (rotación) · PRIORIDAD del día\n- Empuje: DB push press ligero (sinergista · deltoides)\n- Sentadilla: Wall sit con pausa de respiración (isométrico · inferior)\n- Unilateral: Step-ups con DB (sinergista · glúteo y cuádriceps)\n- Jalón: Ring row (sinergista · dorsal)\nScaling:\n- N1: cargas ligeras o peso corporal.\n- N2: cargas estándar moderadas, RPE 6–7.\n- N3: cargas moderadas con técnica perfecta, RPE 7.\nCoach note: El sábado de la semana de ensayo es de cierre: RPE 5–7, nada de buscar récords. Priorizamos la Rotación porque es el patrón que los miembros de 3 días por semana (lun-mié-vie) casi no reciben. Estaciones nunca repiten ejercicio. En el wall sit, espalda pegada a la pared y muslos paralelos; sube un poco si pierdes la posición. El miembro modula carga libremente según cómo llegó del viernes."
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "RFT",
+       "zone": "Z3",
+       "objective": "Cierre metabólico modulado. RPE 6–7, cada ronda en aprox. 3 min.",
+       "scaling": "N1: 150m run, push-up de rodillas. N2: estándar. N3: 250m run, push-up estricto.",
+       "description": "3 rondas por tiempo (tope 10 min):\n- 200m run o 30 saltar soga\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 7,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Child's pose extendido — 90s",
+        "Lying twist — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos, decúbito supino. Cierre de semana: más larga y pausada.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Cerramos la semana. Reconoce al grupo: cuatro ensayos hechos. Avisa que la semana 8 es de recuperación (mitad de series, misma carga) y que la semana 9 es la re-evaluación."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 35,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Mesociclo B",
+   "phase": "Recuperar",
+   "phase_params": {
+    "rpe": "5-6",
+    "rir": "4-5",
+    "rest": "Relajados"
+   },
+   "rotation_key": "4B-2",
+   "block_emphasis": "Potencia",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Sem 8 · Potencia · Mesociclo B. Fase RECUPERAR. RPE 5–6 · lejos del fallo. Mitad de series con la misma carga de la semana 6: la barra sigue saliendo rápida, el cuerpo absorbe el bloque y llegamos frescos a la re-evaluación. No es descanso: es calidad de movimiento.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation cuadrupedia — 5/lado",
+        "Ankle CARs — 10/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "20 skaters con disco (el disco toca el suelo en la pierna que apoya el peso y va en OH diagonal al otro lado: rotación)",
+        "16 mountain climbers con patada lateral cruzada",
+        "12 saltitos con un solo pie en sitio (preparación pliométrica, 12 por pie)"
+       ],
+       "rules": [
+        "Activación neural alta SIN agotar: técnica > volumen en los pliométricos de activación.",
+        "Tobillo y T-spine son prerrequisitos del trabajo principal: no saltarlos.",
+        "Ritmo suave: es semana de recuperación, nadie llega a Fuerza sin aire."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Hang power clean + push jerk",
+        "scheme": "3 × (2 + 1) · misma carga de la semana 6 · RPE 5–6 · descanso 2 min · velocidad máxima en la subida; si la barra se frena, la serie termina"
+       },
+       "scaling": {
+        "N1": "barra vacía o PVC, tirón alto desde colgado + push press ligero. 4–5 en reserva.",
+        "N2": "hang power clean + push jerk con la carga de la semana 6, sin forzar.",
+        "N3": "hang clean completo (con sentadilla de recepción) + push jerk con la carga de la semana 6."
+       },
+       "stations_protocol": "1 serie de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "Este día existe para cubrir la rotación, el patrón que los otros cuatro días no tocan. Semana de recuperación: mitad de series, misma carga, cero fallo. Cue: la barra sube pegada al cuerpo; extiende cadera, codos arriba y afuera, recibe estable y empuja con las piernas antes que con los brazos en el jerk. En las estaciones, las caderas y los hombros giran juntos; la fuerza sale del suelo, no del brazo.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Rotación explosiva con landmine, banda o disco 2 × 3 por lado · descanso completo",
+         "note": "Bajo impacto: tirón alto desde colgado con barra vacía 2 × 3."
+        },
+        {
+         "name": "Pallof sostenido",
+         "reps": "20 s/lado",
+         "focus": "isométrico · core · anti-rotación"
+        },
+        {
+         "name": "Open book en el suelo",
+         "reps": "5/lado",
+         "focus": "neutro · torácica"
+        },
+        {
+         "name": "Chop alto-bajo con polea o banda",
+         "reps": "2 × 10/lado",
+         "focus": "rotación · core",
+         "note": "después del principal"
+        },
+        {
+         "name": "Rotación con landmine",
+         "reps": "2 × 8/lado",
+         "focus": "rotación · core",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 9,
+       "format": "TABATA",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Ritmo de conversación, rotación completa y controlada. RPE 5–6.",
+       "scaling": "N1: Russian twist sin disco con pies apoyados · skaters sin salto, paso lateral. N2: disco ligero · skaters estándar. N3: disco moderado con pies elevados · skaters con salto amplio.",
+       "description": "- Bloque 1 (4 min): 8 × 20 s trabajo / 10 s descanso — Russian twist con disco\n- 1 min de transición\n- Bloque 2 (4 min): 8 × 20 s trabajo / 10 s descanso — skaters sin disco"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Thread the needle — 60s/lado",
+        "Pancake stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Descarga neural. El sistema nervioso se recupera con esta semana."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Scapular CARs — 5/dirección",
+        "Open book — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "15 high knees/lado · alternativas: 25 jumping jacks / 10 jumping lunges no profundas",
+        "12 banded face pulls",
+        "8 Y-T-W con DB ligeros (3 cada letra)",
+        "5 scapular pull-ups en barra (sin llegar a fallo)"
+       ],
+       "rules": [
+        "PROHIBIDO: dead hang al máximo, pull-ups al fallo, swings pesados antes de fuerza.",
+        "Activación escapular completa: no recortar.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Speed trap bar deadlift",
+        "scheme": "3 × 3 · misma carga de la semana 6 · RPE 5–6 · descanso 2 min · velocidad máxima al salir del piso; si la barra se frena, la serie termina"
+       },
+       "scaling": {
+        "N1": "trap bar deadlift o peso muerto con kettlebell, carga ligera. 4–5 en reserva.",
+        "N2": "speed trap bar deadlift con la carga de la semana 6.",
+        "N3": "speed trap bar deadlift con la carga de la semana 6, foco en la velocidad de salida del piso."
+       },
+       "stations_protocol": "1 serie en los huecos de descanso de 2 min.",
+       "coach_note": "Descarga. Volumen al 50 %, misma carga, velocidad impecable. Cue: empuja el suelo con los pies, dorsales apretados (aprieta las axilas) antes de tirar, y bloquea cadera y rodillas a la vez arriba con los brazos largos. Sin tirones bruscos ni espalda redondeada.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Broad jump 2 × 3 · descanso completo",
+         "note": "Bajo impacto: swing explosivo 3 × 3."
+        },
+        {
+         "name": "Plate pinch (agarre)",
+         "reps": "30 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Single-arm DB row",
+         "reps": "2 × 8/lado",
+         "focus": "sinergista · dorsal",
+         "note": "después del principal"
+        },
+        {
+         "name": "DB curl alterno",
+         "reps": "2 × 10/lado",
+         "focus": "sinergista · bíceps",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "ESTACIONES",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Descarga con ritmo constante: si no puedes hablar, baja el ritmo.",
+       "scaling": "N1: ring row con el cuerpo más vertical, KB muy ligera. N2: ligero. N3: moderado, sin fatigar.",
+       "description": "3 rondas de 3 estaciones · 45 s trabajo / 15 s transición (~9 min + 1 min de cambios):\n- Remo en máquina (ritmo cómodo)\n- Ring row\n- KB swing ruso ligero"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 90s/lado",
+        "Thread the needle — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Descarga. Recuperación activa: la espalda queda larga y suelta."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Band dislocates — 8"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "150 m run suave",
+        "12 banded pull-aparts",
+        "8 push-ups",
+        "8 caterpillars",
+        "12 v-ups"
+       ],
+       "rules": [
+        "PROHIBIDO fatigar el empuje antes del bloque de fuerza: push-ups fáciles, lejos del fallo."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "DB bench press explosivo (banco plano)",
+        "scheme": "3 × 4 · misma carga de la semana 6 · RPE 5–6 · descanso 2 min · baja controlado y sube explosivo; si las mancuernas se frenan, la serie termina"
+       },
+       "scaling": {
+        "N1": "DB bench press ligero, subida firme sin explosividad máxima. 4–5 en reserva.",
+        "N2": "DB bench explosivo con la carga de la semana 6.",
+        "N3": "DB bench explosivo con la carga de la semana 6, foco en la velocidad de la subida."
+       },
+       "stations_protocol": "1 serie de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "Descarga. Velocidad impecable, no carga. Prepara el press de la re-evaluación. Cue: pies firmes contra el suelo, omóplatos atrás y abajo, baja controlado con las mancuernas sobre el pecho y empuja el suelo con los pies al subir, explosivo.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Push-up explosivo 2 × 4 + pogos 1 × 10 · descanso completo",
+         "note": "Bajo impacto: elevación rápida de talones."
+        },
+        {
+         "name": "Sostén abajo del push-up",
+         "reps": "20 s",
+         "focus": "isométrico · superior"
+        },
+        {
+         "name": "Face pull",
+         "reps": "12",
+         "focus": "neutro · deltoides posterior"
+        },
+        {
+         "name": "Tríceps TRX",
+         "reps": "2 × 12",
+         "focus": "sinergista · tríceps",
+         "note": "después del principal"
+        },
+        {
+         "name": "Dips (con banda si hace falta)",
+         "reps": "2 × 8",
+         "focus": "sinergista · pectoral y tríceps",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "AMRAP 10 min",
+       "zone": "Z2 suave",
+       "objective": "Z2 suave. Ritmo cómodo, rondas parejas. RPE 5–6.",
+       "scaling": "N1: caminar 150 m, devil press sin salto, push-ups con rodillas. N2: ligero. N3: moderado sin fatigar, push-ups estrictos.",
+       "description": "- 150 m run\n- 6 devil press con DB ligeros\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado",
+        "T-spine opener sobre foam roller — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Hombro recuperado. La próxima semana medimos todo lo que construiste."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 rope jumps",
+        "12 glute bridge unilateral (6 x pierna)",
+        "10 goblet squats técnicos ligeros y pausados",
+        "30 s squat hold"
+       ],
+       "rules": [
+        "PROHIBIDO: fatigar cuádriceps y glúteo antes de Fuerza. El squat hold es suave, sin quemar."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Box squat",
+        "scheme": "3 × 3 · misma carga de la semana 6 · RPE 5–6 · descanso 2 min · velocidad de barra en la subida; si la barra se frena, la serie termina"
+       },
+       "scaling": {
+        "N1": "goblet box squat ligero. 4–5 en reserva.",
+        "N2": "box squat con la carga de la semana 6.",
+        "N3": "box squat con la carga de la semana 6, foco en la velocidad de barra."
+       },
+       "stations_protocol": "1 serie de cada estación en los huecos de descanso de 2 min.",
+       "coach_note": "Descarga. Foco: velocidad de barra impecable y profundidad consistente, no carga. Cue: siéntate atrás con la caja bajo control, sin rebotar, pecho arriba y sube empujando el suelo. Sales de aquí mejor de lo que entraste.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Salto al cajón 2 × 4 · descanso completo",
+         "note": "Bajo impacto: levantarse rápido de la caja."
+        },
+        {
+         "name": "Calf raise unilateral",
+         "reps": "10/lado",
+         "focus": "neutro · pantorrilla"
+        },
+        {
+         "name": "Sostén de pantorrilla a una pierna",
+         "reps": "30 s/lado",
+         "focus": "isométrico · inferior"
+        },
+        {
+         "name": "Hip thrust",
+         "reps": "2 × 10",
+         "focus": "sinergista · glúteo",
+         "note": "después del principal"
+        },
+        {
+         "name": "Curl nórdico asistido",
+         "reps": "2 × 5",
+         "focus": "sinergista · isquiotibiales",
+         "note": "después del principal"
+        },
+        {
+         "name": "Wall sit",
+         "reps": "2 × 30–45 s",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "EMOM 10 min",
+       "zone": "Z2 suave",
+       "objective": "Descarga. RPE 5–6 máximo. Si sudas demasiado, bajaste mal la carga.",
+       "scaling": "N1: muy ligero (pull-ups con banda, push-ups con rodillas). N2: ligero. N3: moderado sin fatigar.",
+       "description": "- Min impar: 5 pull-ups + 10 push-ups + 15 air squats\n- Min par: 8 DB thrusters ligeros\n\n\nSi en el minuto los atletas no completan 5 pull-ups + 10 push-ups + 15 squats, en el siguiente minuto que toca la secuencia retoman donde se quedaron."
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado",
+        "Butterfly stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2
+       },
+       "closing": {
+        "message": "Bajamos la intensidad. Mismo patrón, misma carga, mejor velocidad: el cuerpo está absorbiendo lo trabajado."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 rope jumps",
+        "12 jumping lunges (suaves, sin profundidad)",
+        "10 jumping jacks",
+        "5 single-leg balance + reach/lado (10 s c/u)"
+       ],
+       "rules": [
+        "PROHIBIDO: fatiga unilateral antes del bloque de fuerza (sin lunges ni split squats con carga en activación).",
+        "Activación de glúteo medio y core profundo SIN agotar la pierna unilateral."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Reverse lunge con DB",
+        "scheme": "3 × 4/lado · misma carga de la semana 6 · RPE 5–6 · descanso 2 min · subida rápida, bajada controlada"
+       },
+       "scaling": {
+        "N1": "reverse lunge con peso corporal. 4–5 en reserva.",
+        "N2": "reverse lunge con DB, carga de la semana 6.",
+        "N3": "reverse lunge con DB, carga de la semana 6, técnica perfecta."
+       },
+       "stations_protocol": "1 serie en los huecos de descanso de 2 min.",
+       "coach_note": "Descarga. Foco: simetría entre lados. Si un lado quedó atrás durante el bloque, esta semana iguala. Cue: da el paso atrás largo, torso alto, rodilla delantera sobre el pie y empuja con el talón de adelante para volver.",
+       "stations": [
+        {
+         "name": "Primer de potencia (3 min): Hop and stick (salto y aterrizaje a una pierna) 2 × 3 por lado · descanso completo",
+         "note": "Bajo impacto: step-up explosivo."
+        },
+        {
+         "name": "Plancha lateral",
+         "reps": "20 s/lado",
+         "focus": "isométrico · core"
+        },
+        {
+         "name": "Caminata lateral con banda",
+         "reps": "2 × 12 pasos/lado",
+         "focus": "sinergista · glúteo medio",
+         "note": "después del principal"
+        },
+        {
+         "name": "Puente de isquio a una pierna con talón en banco",
+         "reps": "2 × 8/lado",
+         "focus": "sinergista · isquiotibiales",
+         "note": "después del principal"
+        },
+        {
+         "name": "Split squat isométrico",
+         "reps": "2 × 20 s/lado",
+         "focus": "isométrico · inferior",
+         "note": "después del principal"
+        }
+       ]
+      },
+      "acondicionamiento": {
+       "duration_min": 10,
+       "format": "RFT",
+       "zone": "Z2 suave",
+       "objective": "Descarga con foco postural en el farmer carry: hombros atrás, abdomen firme. RPE 5–6.",
+       "scaling": "N1: DB muy ligeros, step-ups bajos. N2: moderados. N3: pesados pero sin fatiga.",
+       "description": "4 rondas por tiempo (cap 10 min):\n- 10 DB thrusters ligeros\n- 10 box jumps (o step-ups a la caja)\n- 20 m farmer carry"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "90/90 hip stretch — 90s/lado",
+        "Couch stretch — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada."
+       },
+       "closing": {
+        "message": "Descarga unilateral. El cuerpo está recuperando para volver más fuerte."
+       }
+      }
+     },
+     "coach_notes": "Feriado: si la sede no abre, esta sesión se ofrece el sábado."
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "day_type": "Equilibrado · Cobertura",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "30 saltar soga · alternativas: 15 mountain climbers/lado / 8 burpees supinos",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 22,
+       "format": "Fuerza (22 min)",
+       "notes": "Primer de potencia (4 min): Broad jump 3 × 3 (9 contactos) · descanso completo\nBajo impacto: swing explosivo 3 × 4.\nCircuito (2 rondas):\n45 s trabajo / 15 s transición · 1 min de descanso entre rondas · barra vacía o carga ligera, técnica antes que carga.\n- Empuje: Push press con barra vacía — 5 reps lentas, dip vertical (sinergista · hombro)\n- Sentadilla: Back squat con pausa de 2 s abajo, carga ligera — 5 reps (sinergista · cuádriceps y glúteo)\n- Unilateral: Split squat isométrico — 20 s/lado (isométrico · inferior)\n- Rotación: Rotación con landmine — 6/lado, controlada (rotación · core)\n- Jalón: Complejo técnico con barra ligera: 3 peso muerto + 2 hang power clean (sinergista · espalda y cadera)\nScaling:\n- N1: PVC o barra vacía en todas las estaciones, sin carga adicional. 4–5 en reserva.\n- N2: carga ligera, RPE 5–6.\n- N3: carga ligera-moderada con técnica perfecta, RPE 6.\nCoach note: El sábado cierra el bloque: hoy se repasa el movimiento, no se busca carga. Si ves un patrón roto, corrígelo con un cue (codos altos, barra pegada, talones firmes) y baja la carga. Lo que se mide la semana siguiente sale limpio si hoy sale limpio."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "PAREJAS (you-go-I-go)",
+       "zone": "Z2 suave",
+       "objective": "Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo.",
+       "scaling": "N1: 100 m run, push-up con rodillas. N2: estándar. N3: 200 m run, push-up estricto.",
+       "description": "8 min en parejas alternando (uno trabaja, el otro descansa):\n- 30 saltar soga o 150 m run\n- 10 air squats\n- 8 push-ups"
+      },
+      "regulacion": {
+       "duration_min": 7,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Child's pose extendido — 90s",
+        "Lying twist — 60s/lado"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.",
+        "duration_min": 2,
+        "instructions": "Posición decúbito supino. Sesión de cierre de semana: más larga y pausada."
+       },
+       "closing": {
+        "message": "Técnica limpia hoy es carga segura el lunes. Descansa, come y duerme: nos vemos en la re-evaluación."
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "week_number": 36,
+   "block": 4,
+   "block_label": "Bloque 4",
+   "mesocycle": "Re-evaluación",
+   "phase": "Re-evaluación",
+   "phase_params": {
+    "rpe": "Test",
+    "rir": "—",
+    "rest": "Completos entre intentos"
+   },
+   "rotation_key": "Re-eval (fuerza en 4 días + salto largo)",
+   "block_emphasis": "Re-evaluación del ciclo",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Semana de medición. Un solo levantamiento técnico por día: lun salto largo+squat+deadlift, mar bench+push press, mié clean & jerk, jue snatch, vie gimnásticos+Christine, sáb Cooper+entrega.",
+   "key_principles": [
+    "Recombinación de sesiones ya vividas y corregidas, adaptadas al Manual v3.",
+    "Primer de potencia y una estación isométrica en cada sesión.",
+    "Los días de Rotación se crearon desde las reglas: principal olímpico o de potencia y rotación en primer y estaciones.",
+    "Los tests estándar solo son principal en las semanas Desafiar y en la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "TEST · Salto largo + Back squat 3RM + Deadlift 3RM",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 12,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5",
+        "Ankle dorsiflexión con banda — 1 min/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "8 burpees supinos",
+        "12 glute bridge single-leg (6/pie)",
+        "10 banded glute kickback/lado",
+        "5 air squats pausados"
+       ],
+       "exercises": [
+        "Rampa (parte del bloque, no se recorta): Barra vacía × 5 → 5 @55% → 3 @70% → 2 @80% del ensayo del 21 de diciembre"
+       ]
+      },
+      "fuerza": {
+       "duration_min": 30,
+       "format": "Fuerza (30 min) — TEST",
+       "notes": "0 · Salto largo — después de la rampa y antes de cargar la barra. Mejor de 3 intentos, en cm, desde la línea hasta el talón más atrasado; el aterrizaje se sostiene 2 s o el intento no cuenta. Quien entrena en bajo impacto no lo hace: se deja el campo vacío («no aplica»).\nA · Back squat 3RM — 2 a 3 intentos, subiendo 2.5-5 kg entre intentos. Se registra el último set de 3 limpio.\nB · Deadlift 3RM — misma lógica, con rampa propia corta (2 series de aproximación).\nEstándares:\n- Salto largo: despegue a dos pies sin paso previo, aterrizaje a dos pies y sostenido.\n- Squat: cadera por debajo de la rodilla, sin colapso de rodilla, sin rebote.\n- Deadlift: bloqueo completo arriba, espalda neutra, sin hitching.\n- Un intento fallido cierra el test. Se registra el último válido.\nScaling: N1 registra 3RM técnico con la carga que domina (trap bar en deadlift es registro válido, se anota la variante). N2/N3 estándar.\nCoach note: El squat va primero: es el que más se degrada con la fatiga lumbar del deadlift. Compara en vivo contra el ensayo del 21 de diciembre — si el socio está muy por debajo, casi siempre es fatiga o nervios, no pérdida de fuerza."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Z2 estructurada · parejas you-go-I-go",
+       "description": "- 8 KB swing ruso ligero\n- 8 ring row"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Couch stretch — 90s/lado · Butterfly stretch — 90s",
+        "Exhalación 1:2 — 8–10 ciclos."
+       ],
+       "closing": {
+        "message": "Primer número del ciclo en tu ficha. Mañana, empuje."
+       }
+      }
+     },
+     "coach_notes": "Composición corporal: las tomas (peso, medidas, % graso) se hacen a la llegada, antes de entrenar, según agenda del sábado."
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "TEST · Bench press 3RM + Push press 3RM",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 12,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + thoracic extension — 8",
+        "Band dislocates — 10"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "12 banded pull-aparts",
+        "10 push-ups",
+        "8 scapular push-ups",
+        "8 band pull-apart en Y"
+       ],
+       "exercises": [
+        "Rampa: barra vacía × 8 → 5 @55% → 3 @70% → 2 @80% del ensayo del 22 de diciembre."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 30,
+       "format": "Fuerza (30 min) — TEST",
+       "notes": "A · Bench press 3RM — 2 a 3 intentos. Spotter obligatorio en cada barra.\nB · Push press 3RM — rampa corta propia, 2 a 3 intentos.\nEstándares:\n- Bench: pecho tocado, sin rebote, glúteos en el banco.\n- Push press: un solo dip, bloqueo completo arriba, sin re-bend de rodilla.\n- Un intento fallido cierra el test.\nScaling: N1 registra con DB si no hay barra estable (se anota la variante y no se compara contra barra).\nCoach note: **Las dos sedes miden los dos.** Bench primero porque el push press deja el hombro más fatigado. Entre los dos tests, 5 min de descanso real."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Z2 estructurada · parejas you-go-I-go",
+       "description": "- 10 gorilla rows DB (5/brazo)\n- 10 sit-ups"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Doorway pec stretch — 60s/lado · T-spine opener — 90s",
+        "Exhalación 1:2 — 8–10 ciclos."
+       ],
+       "closing": {
+        "message": "Dos números más. Mañana, clean & jerk con el día entero."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "TEST · Clean & Jerk 1RM",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 15,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation — 5/lado",
+        "Ankle CARs — 10/lado",
+        "Band dislocates — 10"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "20 skaters con disco",
+        "12 pogo jumps",
+        "8 mountain climbers con patada cruzada"
+       ],
+       "exercises": [
+        "Técnica con barra vacía (8 min, guiada, todos a la vez): 5 muscle clean · 5 front squat · 5 clean pull",
+        "Técnica con barra vacía (8 min, guiada, todos a la vez): 5 push press · 5 push jerk · 5 split jerk (footwork)",
+        "Rampa: 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 23 de diciembre."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "format": "Fuerza (25 min) — TEST",
+       "notes": "Clean & Jerk 1RM — 3 a 4 intentos, subiendo 2.5-5 kg. Se registra el intento más alto completado.\nEstándares:\n- Recepción estable, codos arriba en el clean.\n- Jerk con bloqueo completo, pies alineados al finalizar.\n- Dos intentos fallidos consecutivos cierran el test.\nScaling:\n- N1: registra power clean + push press 1RM y se anota la variante (no se compara contra C&J completo).\n- N2: power clean + push jerk.\n- N3: squat clean + split jerk.\nCoach note: Este día antes compartía tiempo con el snatch y con el row de 500 m. Hoy es solo el clean & jerk: hay margen para calentar bien, corregir entre intentos y que el socio pare con técnica intacta. **Registrar la variante junto al peso** — un power clean + push press no es el mismo dato que un squat clean + split jerk."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Z2 estructurada · parejas you-go-I-go",
+       "description": "- 10 box step-overs\n- 10 wall balls ligeros"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pancake stretch — 90s · Thread the needle — 60s/lado · muñeca en cuadrupedia — 45s",
+        "Exhalación 1:2 — 8–10 ciclos."
+       ],
+       "closing": {
+        "message": "Un levantamiento, un día. Así se mide de verdad. Mañana, snatch."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "TEST · Snatch 1RM",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 15,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation — 5/lado",
+        "Ankle CARs — 10/lado",
+        "Band dislocates — 10"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "100 m run",
+        "20 pogo jumps",
+        "16 skippings"
+       ],
+       "exercises": [
+        "Técnica con barra vacía (8 min, guiada): 5 snatch grip deadlift · 5 high pull · 5 overhead squat",
+        "Técnica con barra vacía (8 min, guiada): 5 hang power snatch · 3 snatch balance",
+        "Rampa: 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 24 de diciembre."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "format": "Fuerza (25 min) — TEST",
+       "notes": "Snatch 1RM (power o completo, se registra la variante) — 3 a 4 intentos.\nEstándares:\n- Recepción con brazos bloqueados y barra sobre la mitad del pie.\n- Sin press-out.\n- Dos fallos consecutivos cierran el test.\nScaling:\n- N1: DB snatch a una mano 1RM — se registra como variante, no comparable a barra.\n- N2: hang power snatch o power snatch desde el piso.\n- N3: squat snatch.\nCoach note: El snatch es el levantamiento que más castiga la fatiga: por eso ahora va en su propio día y no de tercero. Si el socio no tiene posición de overhead squat, se queda en power y se anota — el dato sigue sirviendo, la lesión no."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "Z2 estructurada · parejas you-go-I-go",
+       "objective": "Sin sobrecabeza: el hombro ya trabajó cuatro días.",
+       "description": "- 12 sit-ups\n- 30 saltar soga"
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Pancake stretch — 90s · Thread the needle — 60s/lado",
+        "Exhalación 1:2 — 8–10 ciclos."
+       ],
+       "closing": {
+        "message": "Cuatro días, seis levantamientos, todos con su tiempo. Mañana toca lo gimnástico y Christine."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "TEST · Gimnásticos + Christine",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 12,
+       "mobility": [
+        "Scapular CARs — 5/dirección",
+        "Open book — 5/lado",
+        "Hip CARs — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "100 saltar soga",
+        "10 banded pull-aparts",
+        "8 scapular pull-ups",
+        "8 inchworms",
+        "6 KB deadlift técnicos (preparación para Christine)"
+       ],
+       "rules": [
+        "Nada al fallo en la activación: los tres tests gimnásticos son máximos."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 20,
+       "format": "Fuerza (20 min) — TESTS GIMNÁSTICOS",
+       "notes": "En este orden, con descanso completo entre uno y otro:\n1. Plank máximo (segundos) — cadera en línea, un aviso y se corta.\n2. Dead hang activo máximo (segundos) — hombros activos, sin balanceo.\n3. Pull-ups máximos (reps sin soltar la barra) — estrictos si el socio los tiene; si son kipping, se anota la variante.\nScaling: N1 registra ring row al ángulo estándar (`RING_ROW_ANGLE`) en lugar de pull-ups.\nCoach note: El orden importa: plank primero (no compromete el agarre), luego dead hang, y los pull-ups al final porque dejan el agarre destruido — y Christine viene después con remo y deadlifts."
+      },
+      "acondicionamiento": {
+       "duration_min": 15,
+       "format": "Christine — 3 rondas por tiempo:",
+       "objective": "Se registra el tiempo total (`CHRISTINE_TIME_SECONDS`).",
+       "scaling": "N1 deadlift al 50-70% del peso corporal y step-ups al cajón — se anota la escala. N2 estándar. N3 estándar, sin pausa entre rondas.",
+       "description": "- 500 m row\n- 12 deadlifts al peso corporal\n- 21 box jumps 20\""
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": [
+        "Child's pose con lat reach — 90s/lado · Couch stretch — 60s/lado",
+        "Exhalación 1:2 — 8–10 ciclos."
+       ],
+       "closing": {
+        "message": "Falta un solo día. Mañana corres, y te llevas tus números."
+       }
+      }
+     }
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "TEST · Cooper + 500m row + entrega de comparativas",
+     "day_type": "Test",
+     "blocks": {
+      "activacion": {
+       "duration_min": 12,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "World's greatest stretch — 3/lado",
+        "Ankle CARs — 8/lado"
+       ],
+       "rounds_format": "2 rondas",
+       "rounds_content": [
+        "200 m trote suave progresivo",
+        "10 leg swings/lado",
+        "8 air squats",
+        "5 skips A + 5 skips B"
+       ],
+       "rules": [
+        "Calentamiento progresivo de carrera: nadie arranca el Cooper en frío."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 30,
+       "format": "Bloque principal (30 min) — TESTS",
+       "notes": "1. Test de Cooper — 12 min, distancia máxima (`COOPER_METERS`). Se registra en metros.\n2. 10-12 min de recuperación activa — caminar, movilidad, y entrega de comparativas mientras el grupo se recupera.\n3. 500 m row sprint (`ROW_500M_SPRINT_SECONDS`) — opcional para quien quiera cerrar con él; se registra el tiempo.\nCoach note: El Cooper va primero y con el socio fresco: es el dato aeróbico que se compara ciclo a ciclo. El row queda al final justamente porque comprometerlo cuesta menos que comprometer el Cooper."
+      },
+      "acondicionamiento": {
+       "duration_min": null,
+       "format": "Entrega de comparativas",
+       "description": "Cada socio se lleva su comparación contra la evaluación anterior: fuerza (6 levantamientos), gimnásticos, Christine, Cooper y composición corporal. **Una sola conclusión por socio** — qué mejoró más y qué toca priorizar el ciclo que viene."
+      },
+      "regulacion": {
+       "duration_min": 8,
+       "mobility": [
+        "Pigeon pose — 60s/lado",
+        "Couch stretch — 90s/lado",
+        "Butterfly stretch — 90s"
+       ],
+       "breathing": {
+        "technique": "Exhalación 1:2. 10–12 ciclos.",
+        "duration_min": 3
+       },
+       "closing": {
+        "message": "Nueve semanas, seis levantamientos medidos uno por día, y todos tus números en la mano. Esto es lo que construiste. El próximo ciclo arranca el lunes."
+       }
+      }
+     }
     }
    ]
   }

@@ -1,7 +1,7 @@
 # SRXFit · Bloque 4 — Semanas 1 a 9 (9 nov 2026 → 9 ene 2027)
 
 > **Alcance:** ciclo de 9 semanas, lun 9 nov 2026 → sáb 9 ene 2027. 54 sesiones (6 días × 9 semanas). En el calendario de la app son las semanas 28 a 36.
-> **Estado:** PROPUESTA para revisión de Santiago. No está escrita en producción.
+> **Estado:** sembrada en la app el 12-oct-2026 (semanas 28–36), sin cambios sobre la propuesta. Este documento es la fuente: si se edita, se vuelve a sembrar con `npx tsx scripts/seed-bloque-overrides.ts --bloque=4 --write`.
 > **Método:** igual que el Bloque 3, cada sesión se recombina desde una rutina ya vivida y corregida. Lo nuevo es que todas se adaptaron a la estructura del Manual v3, y que **los días de Rotación se crearon desde las reglas** (decisión del 10-oct-2026).
 
 ---
@@ -3911,7 +3911,7 @@ _Lo que cada agente cambió respecto a la rutina fuente o decidió por su cuenta
 
 ## Notas de implementación
 
-1. **Nada de esto está en la app.** Cuando apruebes la propuesta (con tus cambios), se siembra igual que el Bloque 3: se agregan 9 semanas al plan (28–36) y cada sesión pasa a los cuatro campos de la rutina. El 9 de noviembre cae justo en la semana 28, así que las fechas salen solas.
+1. **Ya está en la app** (12-oct-2026): el plan tiene las semanas 28–36 y cada sesión vive en los cuatro campos de la rutina, editable desde el editor de semana. El 9 de noviembre cae justo en la semana 28.
 2. **Tiempos.** Todas las sesiones suman 49 min o menos sobre el papel. Son estimaciones: conviene probar en clase real los días que quedaron justos (los de intervalo largo y los de ensayo).
 3. **Xtreme necesita bancos** el martes 24 de noviembre, el martes 22 de diciembre y el martes 5 de enero (bench press en las dos sedes).
 4. **Salto largo:** hace falta una cinta métrica fija en el piso de cada sede para las semanas 1, 5 y 9.
