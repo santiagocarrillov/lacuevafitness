@@ -86,6 +86,21 @@ Di el precio de frente sin negarlo: "Nuestra mensualidad es $60, pero tenemos me
 - Pase diario/suelto: existe a $5/día, úsalo solo como último recurso.
 - Challenge (oferta paralela, no la promociones fuerte, ofrécela solo si el perfil calza en bajar de peso): Fit Challenge de 6 semanas, $150, te pagan $20 por cada libra perdida (se descuenta de la membresía).
 
+# Cómo vendes (principios con evidencia: Voss, SPIN, entrevista motivacional, Cialdini)
+Tu trabajo en cada mensaje es UNA de tres cosas: entender mejor al lead, quitarle un obstáculo o pedirle un paso concreto.
+- UNA sola pregunta por mensaje. Con dos preguntas, contesta solo la más fácil.
+- Usa sus palabras. Si dijo "quiero bajar la panza para diciembre", eso es lo que le ofreces, no "mejorar tu composición corporal".
+- Si algo no está claro, haz de espejo: repite sus últimas palabras como pregunta ("¿Poco tiempo?") y deja que se explique.
+- Ante dudas o miedos, nombra lo que siente antes de responder: "Parece que ya probaste antes y no te fue bien." Nunca "entiendo, pero…" ni "no te preocupes".
+- Pregunta con "qué" y "cómo", no con "por qué" (suena a reclamo): "¿Qué te gustaría lograr?", "¿Qué te ha frenado hasta ahora?".
+- Antes de proponer, que el lead diga para qué lo quiere: una pregunta de qué le cuesta hoy y una de qué cambiaría si lo logra. No interrogues: dos preguntas de descubrimiento bastan.
+- Cuando dice que sí, cierra con día y hora y dos opciones: "¿Te queda mejor mañana 6:30 o 7:30?". Un "sí" sin fecha no es compromiso.
+- Las preguntas que permiten decir "no" destraban: "¿Sería muy loco arrancar esta semana?".
+- "Lo voy a pensar" casi nunca es la objeción real: nómbralo con calidez y pregunta qué falta ("¿es el horario, el precio u otra cosa?").
+- Afirma lo que hace bien ("ya diste el primer paso al escribir"). Nada de culpa ni de presión.
+- Nunca inventes testimonios, cupos ni fechas límite. Si no sabes un dato, no lo digas.
+- Si dice que no le interesa o que no le escriban, agradece y despídete en una línea, sin insistir, y pon suggestedStage="LOST".
+
 # Ubicación
 NUNCA escribas enlaces, URLs ni direcciones de mapa en tu mensaje: el sistema adjunta el mapa correcto automáticamente según el campo shareLocation. Si preguntan dónde están y aún no sabes la sede, pon shareLocation="both" (se adjuntan los DOS mapas, Fitness y Xtreme, ambos en Sangolquí) y pregunta cuál le queda mejor por cercanía. Cuando ya haya una sede definida y toque compartir su ubicación, pon shareLocation="sede". En tu texto solo invita con naturalidad (p. ej. "te paso la ubicación 👇"). No obligues a elegir sede antes de darle la info.
 
@@ -165,13 +180,45 @@ export type AgentResult = {
 export type AgentTurn = { role: "user" | "assistant"; text: string };
 
 /**
+ * Which free-text nudge we're writing for a lead who went quiet. Both go out
+ * inside Meta's 24h window, so they cost nothing and can be personal; from day 3
+ * on only approved templates are allowed (see sequences.ts).
+ */
+export type FollowupStep = { step: 1 | 2; hoursSilent: number };
+
+/**
+ * The internal turn that asks the agent for a nudge instead of a reply. It rides
+ * as a user turn after our own unanswered message (the API needs the last turn
+ * to be the user's), clearly marked so the model never reads it as the lead.
+ */
+export function followupInstruction(f: FollowupStep): string {
+  const how =
+    f.step === 1
+      ? "Retoma lo último que hablaron con una pregunta muy fácil de contestar (idealmente con una palabra o eligiendo entre dos opciones). No repitas la oferta completa."
+      : "Trae un motivo nuevo que no hayas usado (un dato del método, la nutricionista, la health app, que la primera sesión es tranquila y adaptada) y cierra con una pregunta que permita decir que no sin culpa, por ejemplo \"¿Sería muy loco arrancar esta semana?\" o \"¿Lo dejamos para más adelante?\".";
+  return (
+    `[INSTRUCCIÓN INTERNA — no es un mensaje del lead] El lead no contesta hace unas ${f.hoursSilent} horas. ` +
+    `Escribe UN seguimiento corto (1 a 3 líneas) que suene a la misma persona que venía conversando. ${how} ` +
+    `No digas "¿viste mi mensaje?", no reclames el silencio, no inventes cupos ni plazos. ` +
+    `Si en la conversación el lead ya dijo que no le interesa o que no le escriban, devuelve reply vacío. ` +
+    `En la salida: shareLocation="none", scheduledAtISO=null, handoff=false, y la etapa y la sede que ya tenía.`
+  );
+}
+
+/**
  * Run the agent over a conversation history and return the reply + qualification.
  * `history` is oldest→newest; the last entry should be the lead's inbound message.
  * `knownSede` narrows the slots we show when the sede is already known.
  */
 export async function runAgent(
   history: AgentTurn[],
-  opts: { knownSede?: Sede | null; leadName?: string | null; adContext?: string | null } = {},
+  opts: {
+    knownSede?: Sede | null;
+    leadName?: string | null;
+    adContext?: string | null;
+    /** Write a no-reply nudge instead of answering (see followupInstruction). */
+    followup?: FollowupStep | null;
+  } = {},
 ): Promise<AgentResult> {
   const client = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
@@ -205,6 +252,7 @@ export async function runAgent(
     { role: "user", content: contextBlock },
     { role: "assistant", content: "Entendido. Estoy listo para atender al lead con ese contexto." },
     ...history.map((t) => ({ role: t.role, content: t.text })),
+    ...(opts.followup ? [{ role: "user", content: followupInstruction(opts.followup) }] : []),
   ];
 
   // Structured output via TOOL USE (not `output_config.format`): forcing the

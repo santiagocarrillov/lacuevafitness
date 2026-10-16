@@ -154,3 +154,10 @@ inbox con el bot en pausa (la atiende el staff).
 
 `sendTemplate(..., urlButton)` manda el código del botón URL. Pruebas: `npm run test:avisos` (modo prueba).
 Primer corte (5 oct, modo prueba): 5 días sin venir, 28 menos de 3/semana, 7 trials, 4 mediciones, 2 recordatorios.
+
+
+## Cadencia de leads (16 oct 2026) — BORRADORES, falta el visto bueno de Santiago
+En `src/lib/whatsapp/template-catalog.ts`; se envían a Meta desde WhatsApp › Plantillas. Categoría **Marketing**. Hasta que Meta las apruebe, los toques del día 7 y del día 14 se cancelan (no se mandan).
+
+- `lead_dia7` (día 7 sin respuesta): "¡Hola {{1}}! 👋 Hace unos días hablamos de tus dos semanas de evaluación en La Cueva por $9. ¿Qué es lo que más te frena para empezar: el horario, el precio u otra cosa? Respóndeme y lo resolvemos juntos. 💪"
+- `lead_dia14` (día 14, despedida): "¡Hola {{1}}! ¿Ya descartaste la idea de empezar a entrenar? 🙂 Si es así, no hay problema y no te escribo más por ahora. Y si solo ha sido falta de tiempo, respóndeme y te ayudo a encontrar un horario que te quede."

@@ -10,7 +10,7 @@
  */
 
 import "dotenv/config";
-import { nextSendableAt } from "../src/lib/whatsapp/sequences";
+import { nextSendableAt, noReplyTimes } from "../src/lib/whatsapp/sequences";
 
 /** Construye un instante a partir de la hora de Ecuador. */
 const ec = (iso: string) => new Date(`${iso}-05:00`);
@@ -47,5 +47,36 @@ const okTz = salida.getTime() === medianocheUTC.getTime();
 if (!okTz) fallos++;
 console.log(`${okTz ? "✅" : "❌"} medianoche UTC = 19:00 EC → sale ya (no se confunde con la hora del servidor)`);
 
-console.log(fallos === 0 ? "\n✅ Todo correcto (franja de envío)" : `\n❌ ${fallos} fallo(s)`);
+// ── Cadencia de no respuesta ────────────────────────────────────────────────
+// Lo que protege: que los dos toques gratis caigan DENTRO de la ventana de 24 h
+// y en horario humano, y que los de plantilla respeten la franja.
+console.log("\nCadencia de no respuesta (el lead escribe y respondemos al instante):");
+const cadencia: Array<[string, string | null, string | null, string, string]> = [
+  // [último mensaje del lead = nuestra respuesta, toque 1, toque 2, día 3, por qué]
+  ["2026-10-13T10:00", "2026-10-13T13:00", "2026-10-14T08:00", "2026-10-16T10:00", "media mañana: +3 h y a las 8 del día siguiente"],
+  ["2026-10-13T19:30", "2026-10-14T08:00", "2026-10-14T17:30", "2026-10-16T19:30", "noche: el +3 h espera a las 8"],
+  ["2026-10-13T06:30", "2026-10-13T09:30", "2026-10-13T20:30", "2026-10-16T08:00", "madrugada: el segundo se adelanta a las 20:30 para no perder la ventana"],
+  ["2026-10-13T23:00", "2026-10-14T08:00", "2026-10-14T20:30", "2026-10-17T08:00", "muy tarde: el segundo no sale a las 21:00, sale 20:30"],
+  ["2026-10-13T22:50", "2026-10-14T08:00", "2026-10-14T20:50", "2026-10-17T08:00", "22:50: el segundo cabe a las 20:50"],
+];
+for (const [cuando, t1, t2, d3, porque] of cadencia) {
+  const r = noReplyTimes(ec(cuando), ec(cuando));
+  const same = (a: Date | null, b: string | null) => (a === null ? b === null : b !== null && a.getTime() === ec(b).getTime());
+  const ok = same(r.first, t1) && same(r.second, t2) && same(r.templates[3], d3);
+  if (!ok) fallos++;
+  const f = (d: Date | null) => (d ? hhmm(d) : "—");
+  console.log(`${ok ? "✅" : "❌"} ${cuando.slice(11)} → ${f(r.first)} · ${f(r.second)} · día 3 ${f(r.templates[3])}  · ${porque}`);
+}
+// Sin mensaje del lead no hay ventana: no hay toques gratis.
+const sinVentana = noReplyTimes(ec("2026-10-13T10:00"), null);
+const okSin = sinVentana.first === null && sinVentana.second === null;
+if (!okSin) fallos++;
+console.log(`${okSin ? "✅" : "❌"} sin mensaje del lead: ningún toque de texto libre`);
+// Respondimos casi al cierre de la ventana: los toques gratis ya no caben.
+const tarde = noReplyTimes(ec("2026-10-14T09:00"), ec("2026-10-13T10:00"));
+const okTarde = tarde.first === null && tarde.second === null;
+if (!okTarde) fallos++;
+console.log(`${okTarde ? "✅" : "❌"} respuesta a 23 h del lead: no se manda texto libre fuera de la ventana`);
+
+console.log(fallos === 0 ? "\n✅ Todo correcto (franja de envío y cadencia)" : `\n❌ ${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);

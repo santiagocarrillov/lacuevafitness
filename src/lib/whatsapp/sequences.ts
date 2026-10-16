@@ -20,9 +20,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { sendText, sendTemplate, describeSendError } from "./client";
-import { renderTemplate, templateForFollowup } from "./templates";
+import { renderTemplate, templateForFollowup, templateName } from "./templates";
 import { SEDE_INFO } from "./agent";
-import type { FollowupKind, Sede } from "@/generated/prisma/client";
+import { writeNoReplyNudge } from "./followup-writer";
+import { fetchMetaTemplates } from "./graph";
+import type { FollowupKind, LeadStage, Sede } from "@/generated/prisma/client";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 /** Ecuador es UTC-5 todo el año (no hay horario de verano). */
@@ -31,10 +33,11 @@ const EC_OFFSET_MS = 5 * 60 * 60 * 1000;
 /**
  * Techo de plantillas por día (hora de Ecuador). Cada plantilla cuesta y, si un
  * lote grande genera bloqueos, Meta baja la calidad del número y se cae el canal
- * entero. Santiago pidió arrancar con un lote chico y medir: 15/día. Ponerlo en 0
+ * entero. Santiago pidió arrancar con un lote chico y medir: 15/día; el 16 oct
+ * 2026 lo subió a 25 (siguiente paso: 40 si la calidad del número aguanta). Ponerlo en 0
  * apaga los envíos por plantilla sin tocar código.
  */
-const TEMPLATE_DAILY_LIMIT = Number(process.env.WHATSAPP_TEMPLATE_DAILY_LIMIT ?? 15);
+const TEMPLATE_DAILY_LIMIT = Number(process.env.WHATSAPP_TEMPLATE_DAILY_LIMIT ?? 25);
 
 /**
  * Cuánto puede llegar tarde un followup antes de que mandarlo haga más daño que
@@ -149,6 +152,120 @@ export async function scheduleTrialReminders(
   );
 }
 
+// ── Cadencia para leads que dejan de contestar ──────────────────────────────
+
+/** Toques de la cadencia de no respuesta, en orden. */
+const NO_REPLY_KINDS: FollowupKind[] = ["NO_REPLY_2H", "NO_REPLY_1D", "NO_REPLY_3D", "NO_REPLY_7D", "NO_REPLY_14D"];
+
+/** Los dos primeros van dentro de la ventana de 24 h: texto libre que redacta el agente. */
+const WRITTEN_STEP: Partial<Record<FollowupKind, 1 | 2>> = { NO_REPLY_2H: 1, NO_REPLY_1D: 2 };
+
+/**
+ * Etapas en que un lead sigue en la cadencia. Agendado, en prueba, no-show,
+ * convertido o perdido tienen su propio camino (o ninguno).
+ */
+const NO_REPLY_STAGES: LeadStage[] = ["NEW", "CONTACTED", "NEGOTIATING"];
+
+/** Cuántos seguimientos redacta el agente por corrida (cada uno es una llamada al modelo). */
+const WRITTEN_PER_RUN = 10;
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** El mismo día de Ecuador a las 20:30 (o el anterior si `prevDay`). */
+function ecuadorEvening(at: Date, prevDay: boolean): Date {
+  const ec = new Date(at.getTime() - EC_OFFSET_MS);
+  if (prevDay) ec.setUTCDate(ec.getUTCDate() - 1);
+  ec.setUTCHours(20, 30, 0, 0);
+  return new Date(ec.getTime() + EC_OFFSET_MS);
+}
+
+/**
+ * Programa la cadencia para un lead que acaba de recibir nuestra respuesta.
+ *
+ * Pedido de Santiago (16 oct 2026): seguir SIEMPRE y a tiempo. Antes los
+ * NO_REPLY existían pero nada los programaba (solo un script a mano), y 364 de
+ * 410 conversaciones llevaban más de 72 h en silencio. Se cuenta desde nuestro
+ * último mensaje; cada respuesta nueva del agente reinicia la cadencia.
+ *
+ *   +3 h          texto libre, lo redacta el agente (gratis, dentro de la ventana)
+ *   antes de que cierre la ventana (~22 h tras su último mensaje): texto libre
+ *   día 3         plantilla reengagement_no_reply
+ *   día 7         plantilla lead_dia7
+ *   día 14        plantilla lead_dia14 (despedida: "¿ya descartaste…?")
+ *
+ * Todo cae en la franja de envío. El segundo toque, si caería de noche o de
+ * madrugada, se adelanta a las 20:30 para no perder la ventana gratis.
+ * `processDueFollowups` cancela lo pendiente si el lead contesta o cambia de etapa.
+ */
+export async function scheduleNoReplyCadence(
+  conversationId: string,
+  opts: { sentAt: Date; lastInboundAt: Date | null; firstName: string | null; lastName?: string | null },
+): Promise<void> {
+  await cancelNoReplyCadence(conversationId, "reemplazado por una cadencia nueva");
+
+  const name = templateName(opts.firstName, opts.lastName);
+  const hola = name === "qué tal" ? "¡Hola!" : `¡Hola ${name}!`;
+  const t = noReplyTimes(opts.sentAt, opts.lastInboundAt);
+
+  if (t.first) {
+    await scheduleFollowup(conversationId, "NO_REPLY_2H", t.first,
+      `${hola} ¿Te queda mejor entrenar en la mañana o en la tarde? Así te paso los horarios. 💪`);
+  }
+  if (t.second) {
+    await scheduleFollowup(conversationId, "NO_REPLY_1D", t.second,
+      `${hola} ¿Sería muy loco arrancar tus dos semanas esta semana? Si prefieres dejarlo para más adelante, me dices sin problema. 🙂`);
+  }
+
+  // Días 3, 7 y 14: plantillas. El texto guardado es el de la plantilla, por si
+  // al dispararse el lead hubiera reabierto la ventana.
+  const ctx = { firstName: opts.firstName, lastName: opts.lastName, sede: null, trialScheduledAt: null };
+  for (const [kind, days] of [["NO_REPLY_3D", 3], ["NO_REPLY_7D", 7], ["NO_REPLY_14D", 14]] as const) {
+    const spec = templateForFollowup(kind, ctx);
+    if (!spec) continue;
+    await scheduleFollowup(conversationId, kind, t.templates[days], renderTemplate(spec));
+  }
+}
+
+/**
+ * Cuándo sale cada toque (puro, para probarlo: scripts/test-followups.ts).
+ * `first`/`second` son null cuando no caben dentro de la ventana gratis.
+ */
+export function noReplyTimes(
+  sentAtDate: Date,
+  lastInboundAt: Date | null,
+): { first: Date | null; second: Date | null; templates: Record<3 | 7 | 14, Date> } {
+  const sentAt = sentAtDate.getTime();
+  // Margen para no mandar texto libre en el filo: el cron corre cada 15 min.
+  const windowEnd = lastInboundAt ? lastInboundAt.getTime() + WINDOW_MS - 45 * 60 * 1000 : 0;
+
+  // Toque 1: +3 h.
+  const firstAt = nextSendableAt(new Date(sentAt + 3 * HOUR_MS));
+  const first = firstAt.getTime() < windowEnd ? firstAt : null;
+
+  // Toque 2: justo antes de que cierre la ventana, en horario humano.
+  let second: Date | null = null;
+  if (lastInboundAt) {
+    let at = new Date(lastInboundAt.getTime() + 22 * HOUR_MS);
+    const hour = new Date(at.getTime() - EC_OFFSET_MS).getUTCHours();
+    if (hour >= SEND_WINDOW_END_H) at = ecuadorEvening(at, false);
+    else if (hour < SEND_WINDOW_START_H) at = ecuadorEvening(at, true);
+    const notBefore = first ? first.getTime() + 4 * HOUR_MS : sentAt + 6 * HOUR_MS;
+    if (at.getTime() >= notBefore && at.getTime() < windowEnd) second = at;
+  }
+
+  const day = (n: number) => nextSendableAt(new Date(sentAt + n * DAY_MS));
+  return { first, second, templates: { 3: day(3), 7: day(7), 14: day(14) } };
+}
+
+/** Cancela los toques pendientes de la cadencia (el lead contestó, agendó, pidió parar…). */
+export async function cancelNoReplyCadence(conversationId: string, reason: string): Promise<void> {
+  await prisma.scheduledFollowup.updateMany({
+    where: { conversationId, kind: { in: NO_REPLY_KINDS }, status: "PENDING" },
+    data: { status: "CANCELED", errorMessage: reason },
+  });
+}
+
 export type ProcessSummary = {
   due: number;
   sent: number;
@@ -160,6 +277,8 @@ export type ProcessSummary = {
   templateThrottled: number;
   /** Conversations whose scheduled hand-back to the bot came due. */
   botResumed: number;
+  /** Seguimientos de no respuesta que redactó el agente en esta corrida. */
+  written: number;
 };
 
 /**
@@ -199,6 +318,17 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     sentAsTemplate: 0,
     templateThrottled: 0,
     botResumed,
+    written: 0,
+  };
+  // Plantillas aprobadas en Meta, pedidas una sola vez y solo si hacen falta.
+  // Si la consulta falla, no se frena nada (null): Meta rechazará lo que no exista.
+  let approved: Set<string> | null | undefined;
+  const isApproved = async (name: string) => {
+    if (approved === undefined) {
+      const { templates, error } = await fetchMetaTemplates();
+      approved = error ? null : new Set(templates.filter((t) => t.status === "APPROVED").map((t) => t.name));
+    }
+    return approved === null || approved.has(name);
   };
 
   // Presupuesto de plantillas de la corrida: lo que queda del techo del día.
@@ -228,6 +358,52 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
       conv.lastInboundAt != null &&
       now.getTime() - new Date(conv.lastInboundAt).getTime() < WINDOW_MS;
 
+    if (NO_REPLY_KINDS.includes(f.kind)) {
+      // El lead contestó después de que se programó: la cadencia ya no aplica (el
+      // agente le respondió y programó una nueva si hacía falta).
+      if (conv.lastInboundAt && conv.lastInboundAt > f.createdAt) {
+        await mark(f.id, "CANCELED", "el lead contestó");
+        summary.skipped += 1;
+        continue;
+      }
+      if (conv.lead && !NO_REPLY_STAGES.includes(conv.lead.stage)) {
+        await mark(f.id, "CANCELED", `el lead pasó a ${conv.lead.stage}`);
+        summary.skipped += 1;
+        continue;
+      }
+    }
+
+    const writtenStep = WRITTEN_STEP[f.kind];
+    if (writtenStep) {
+      // Texto libre o nada: estos toques no gastan plantilla.
+      if (!withinWindow) {
+        await mark(f.id, "CANCELED", "se cerró la ventana de 24 h");
+        summary.skipped += 1;
+        continue;
+      }
+      if (summary.written >= WRITTEN_PER_RUN) continue; // sigue PENDING: la próxima corrida
+      const written = await writeNoReplyNudge(conv.id, writtenStep);
+      summary.written += 1;
+      if (written && "skip" in written) {
+        await mark(f.id, "CANCELED", "el agente no escribe: el lead pidió parar");
+        await cancelNoReplyCadence(conv.id, "el lead pidió parar");
+        summary.skipped += 1;
+        continue;
+      }
+      const text = written?.text ?? message;
+      try {
+        const sent = await sendText(conv.externalId, text);
+        await recordOutbound(conv.id, text, sent.messageId);
+        await markSent(f.id, { ...(f.payload as object), message: text, writtenByAgent: written != null }, null);
+        await touchOutbound(conv.id);
+        summary.sent += 1;
+      } catch (err) {
+        await mark(f.id, "FAILED", describeSendError(err));
+        summary.failed += 1;
+      }
+      continue;
+    }
+
     if (!withinWindow) {
       // Las plantillas se arman con datos del lead. Una conversación de socio no
       // tiene lead: sus recordatorios son otra cadena y todavía no existen.
@@ -235,6 +411,11 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
       if (!spec) {
         await mark(f.id, "FAILED", `fuera de ventana 24h y ${f.kind} no tiene plantilla aplicable`);
         summary.failed += 1;
+        continue;
+      }
+      if (!(await isApproved(spec.name))) {
+        await mark(f.id, "CANCELED", `plantilla ${spec.name} sin aprobar en Meta`);
+        summary.skipped += 1;
         continue;
       }
       if (templateBudget <= 0) {

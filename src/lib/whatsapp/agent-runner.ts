@@ -18,10 +18,10 @@ import { prisma } from "@/lib/prisma";
 import type { LeadStage, Sede } from "@/generated/prisma/client";
 import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
 import { sendText, describeSendError } from "./client";
-import { scheduleTrialReminders } from "./sequences";
+import { cancelNoReplyCadence, scheduleNoReplyCadence, scheduleTrialReminders } from "./sequences";
 import { notifyStaffOfBotHandoff } from "@/lib/push/notify-staff";
 import { adContextLine } from "./referral";
-import { mediaTurnMarker } from "./media";
+import { agentHistory } from "./history";
 import { asksForHuman, handoffReply, isThirdRepeat } from "./guards";
 import { templateName } from "./templates";
 
@@ -84,11 +84,6 @@ function locationSuffix(share: AgentResult["shareLocation"], sede: Sede | null):
     return `\n\n${line("FITNESS_CENTER")}\n${line("XTREME")}`;
   }
   return "";
-}
-
-/** A media row's body is either the lead's caption or our "[kind]" placeholder. */
-function mediaCaption(body: string): string | null {
-  return /^\[[a-z ]+\]$/i.test(body.trim()) ? null : body;
 }
 
 export function agentEnabled(): boolean {
@@ -190,15 +185,7 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     return { status: "skipped", reason: "last message is not inbound" };
   }
 
-  const history: AgentTurn[] = conversation.messages.map((m) => ({
-    role: m.direction === "INBOUND" ? "user" : "assistant",
-    // A file the model cannot open is announced as such. Storing "[audio]" as if it
-    // were the lead's words is how voice notes got answered blind (18 sep).
-    text:
-      m.direction === "INBOUND" && m.mediaKind
-        ? mediaTurnMarker(m.mediaKind, m.mediaVoice === true, m.mediaKind === "audio" ? null : mediaCaption(m.body))
-        : m.body,
-  }));
+  const history: AgentTurn[] = agentHistory(conversation.messages);
   const leadName = conversation.lead
     ? [conversation.lead.firstName, conversation.lead.lastName].filter(Boolean).join(" ") || null
     : null;
@@ -349,6 +336,11 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
       }),
       prisma.conversation.update({ where: { id: conversation.id }, data: { lastOutboundAt: new Date() } }),
     ]);
+    await followUpIfSilent(conversation, {
+      handoff: forceHandoff,
+      booked: result.scheduledAtISO != null,
+      stage: stage ?? conversation.lead?.stage ?? null,
+    });
     return forceHandoff ? { status: "handoff", sent: true } : { status: "sent" };
   } catch (err) {
     const summary = describeSendError(err);
@@ -368,5 +360,31 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
       console.error("[whatsapp-agent] could not persist send failure", dbErr);
     }
     return { status: "error", error: err instanceof Error ? err.message : "send error" };
+  }
+}
+
+/**
+ * After a sent reply: (re)start the no-reply cadence, or stop it when the lead
+ * booked, asked for a person or left the funnel. Never throws — the reply
+ * already went out.
+ */
+async function followUpIfSilent(
+  conversation: { id: string; lastInboundAt: Date | null; lead: { firstName: string | null; lastName: string | null } | null },
+  outcome: { handoff: boolean; booked: boolean; stage: LeadStage | null },
+): Promise<void> {
+  try {
+    const open = outcome.stage === "NEW" || outcome.stage === "CONTACTED" || outcome.stage === "NEGOTIATING";
+    if (!conversation.lead || outcome.handoff || outcome.booked || !open) {
+      await cancelNoReplyCadence(conversation.id, outcome.handoff ? "pasó a una persona" : `etapa ${outcome.stage ?? "?"}`);
+      return;
+    }
+    await scheduleNoReplyCadence(conversation.id, {
+      sentAt: new Date(),
+      lastInboundAt: conversation.lastInboundAt,
+      firstName: conversation.lead.firstName,
+      lastName: conversation.lead.lastName,
+    });
+  } catch (err) {
+    console.error("[whatsapp-agent] no se pudo programar el seguimiento", { conversationId: conversation.id, err });
   }
 }
