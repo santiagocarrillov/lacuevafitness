@@ -140,11 +140,14 @@ Pantalla **WhatsApp › Avisos** (`/dashboard/comunicacion/avisos`, OWNER): inte
 (`MemberNoticeSetting`; apagado = modo prueba, muestra a quién le escribiría) y últimos enviados.
 Sale de verdad solo si está prendido **y** Meta aprobó la plantilla. Cada aviso tiene una clave única
 (`MemberNotice.key`): nunca sale dos veces. Máx. 25 por aviso por día. La respuesta del socio llega al
-inbox con el bot en pausa (la atiende el staff).
+inbox con el bot en pausa (la atiende el staff), salvo con el **modo socio** prendido
+(`WHATSAPP_AGENT_SOCIOS=true`, 16 oct 2026): ahí le contesta el agente (nombra el problema, ofrece una
+solución, cierra con "¿qué día vuelves?") y pasa a una persona lesiones, cobros/pagos y reclamos, con
+tarea en el pool de la sede.
 
 | Aviso | Regla |
 |---|---|
-| Días sin venir | Paga, venía seguido (≥ 6 visitas en 30 días), al 3.er día sin venir sin contar domingos. Una vez por ausencia. |
+| Días sin venir | Paga y venía seguido (≥ 1,5 visitas/sem): al perder **2 sesiones de su ritmo** de las 4 semanas hasta su última visita (a diario: 2 días hábiles; L-M-V: 2 de esos días; nuevos: 3 días hábiles). Solo en la 2.ª–3.ª sesión perdida, nunca atrasado. Una vez por ausencia. `src/lib/whatsapp/absence-rhythm.ts`, `npm run test:ausencia`. Después: tarea "Escribirle" a los 7 días y "Llamar" a los 14 (`src/lib/tasks/auto.ts`). |
 | Menos de 3 por semana | 3–5 visitas en 14 días. Máx. una al mes; no si recibió "días sin venir" esa semana. |
 | Cumpleaños | Activos y en evaluación con fecha de nacimiento. |
 | Cita del trial | Por agendar (trial $9) con fecha límite futura; crea el enlace `/cita/[código]` del botón. |

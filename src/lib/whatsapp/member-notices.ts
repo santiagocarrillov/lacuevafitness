@@ -2,7 +2,8 @@
 // OWNER screen call it). Each kind has its rule, its approved template and a
 // switch: off = test mode (we only list who would get it). A notice goes out
 // once per `key` (MemberNotice.key is unique), never twice the same day.
-// Rules agreed with Santiago, 5 oct 2026 (target: 3 visits a week for everyone).
+// Rules agreed with Santiago, 5 oct 2026 (target: 3 visits a week for everyone);
+// AUSENCIA by each socio's rhythm since 16 oct 2026 (see absence-rhythm.ts).
 
 import { prisma } from "@/lib/prisma";
 import type { Sede } from "@/generated/prisma/client";
@@ -16,11 +17,13 @@ import { sendTemplate } from "@/lib/whatsapp/client";
 import { phoneKey } from "@/lib/whatsapp/contact";
 import { renderTemplate, templateName } from "@/lib/whatsapp/templates";
 import { approvedTemplateNames } from "@/lib/whatsapp/graph";
+import { absenceDecision } from "@/lib/whatsapp/absence-rhythm";
+import { memberModeEnabled } from "@/lib/whatsapp/member-mode";
 
 export type NoticeKind = "AUSENCIA" | "FRECUENCIA" | "CUMPLEANOS" | "NUTRI_TRIAL" | "NUTRI_MEDICION" | "NUTRI_RECORDATORIO" | "TESTS";
 
 export const NOTICE_KINDS: { kind: NoticeKind; template: string; label: string; rule: string; automatic: boolean }[] = [
-  { kind: "AUSENCIA", template: "socio_ausencia", label: "Días sin venir", rule: "Socio que paga y venía seguido, al tercer día sin venir (sin contar domingos). Una vez por ausencia.", automatic: true },
+  { kind: "AUSENCIA", template: "socio_ausencia", label: "Días sin venir", rule: "Socio que paga y venía seguido, cuando pierde 2 de sus sesiones habituales según su ritmo de las últimas 4 semanas (a diario: 2 días hábiles seguidos; L-M-V: 2 de esos días). Socios nuevos: como si vinieran 3 veces por semana. Una vez por ausencia.", automatic: true },
   { kind: "FRECUENCIA", template: "socio_frecuencia_baja", label: "Menos de 3 veces por semana", rule: "En las últimas 2 semanas vino entre 3 y 5 veces (1,5 a 2,5 por semana). Máximo una vez al mes; no si ya recibió el de días sin venir esa semana.", automatic: true },
   { kind: "CUMPLEANOS", template: "socio_cumpleanos", label: "Cumpleaños", rule: "Socios activos y en evaluación, el día de su cumpleaños.", automatic: true },
   { kind: "NUTRI_TRIAL", template: "nutricion_evaluacion_trial", label: "Cita nutricional del trial", rule: "Quien pagó los $9 y aún no tiene cita, con su fecha límite y el enlace para agendar.", automatic: true },
@@ -44,6 +47,8 @@ export type NoticeCandidate = {
   /** Booking-link reason: the code is created only when actually sending. */
   invite?: { reason: "TRIAL" | "MEASUREMENT"; deadline: string | null };
   preview: string;
+  /** Why it was picked (rhythm, last visit…), for the dry run and the screen. */
+  why?: string;
 };
 
 const notStaff = { OR: [{ userId: null }, { user: { role: "MEMBER" as const } }] };
@@ -74,9 +79,9 @@ export async function planNotices(now = new Date()): Promise<NoticeCandidate[]> 
 
   // ── Attendance: AUSENCIA and FRECUENCIA ──
   const payers = await prisma.member.findMany({
-    where: { status: "ACTIVE", ...notStaff, memberships: payingNow(now), joinedAt: { lte: new Date(now.getTime() - 21 * DAY) } },
+    where: { status: "ACTIVE", ...notStaff, memberships: payingNow(now) },
     select: {
-      id: true, firstName: true, lastName: true, sede: true, phone: true,
+      id: true, firstName: true, lastName: true, sede: true, phone: true, joinedAt: true,
       attendance: { where: { recordedAt: { gte: new Date(now.getTime() - 45 * DAY) } }, orderBy: { recordedAt: "desc" }, select: { recordedAt: true } },
       notices: { where: { createdAt: { gte: new Date(now.getTime() - 31 * DAY) }, status: "SENT" }, select: { kind: true, createdAt: true } },
     },
@@ -85,12 +90,14 @@ export async function planNotices(now = new Date()): Promise<NoticeCandidate[]> 
     if (isStaffFreeTraining(m.firstName, m.lastName)) continue;
     const first = templateName(m.firstName, m.lastName);
     const visits = m.attendance.map((a) => a.recordedAt);
-    if (visits.length) {
+    const absence = absenceDecision(visits.map((v) => ecuadorDateString(v)), ecuadorDateString(m.joinedAt), today);
+    if (absence.due) {
       const lastDay = ecuadorDateString(visits[0]);
-      const gone = trainingDaysBetween(lastDay, today);
-      const regular = visits.filter((v) => v.getTime() >= visits[0].getTime() - 30 * DAY).length >= 6;
-      if (gone === 3 && regular) out.push(candidate("AUSENCIA", `AUSENCIA:${m.id}:${lastDay}`, m, [first, "3"]));
+      const c = candidate("AUSENCIA", `AUSENCIA:${m.id}:${lastDay}`, m, [first, String(trainingDaysBetween(lastDay, today))]);
+      out.push({ ...c, why: absence.why });
     }
+    // FRECUENCIA reads two weeks: a socio of less than three is still settling in.
+    if (m.joinedAt.getTime() > now.getTime() - 21 * DAY) continue;
     const last14 = visits.filter((v) => v.getTime() >= now.getTime() - 14 * DAY).length;
     const recentlyNudged = m.notices.some((n) => n.kind === "FRECUENCIA" || (n.kind === "AUSENCIA" && n.createdAt.getTime() >= now.getTime() - 7 * DAY));
     // 3–5 visits in two weeks = 1,5–2,5 a week ("veces" stays plural); fewer is an absence.
@@ -176,7 +183,9 @@ export async function sendNotice(c: NoticeCandidate, createdById: string | null 
     const conv =
       (await prisma.conversation.findUnique({ where: { channel_externalId: { channel: "WHATSAPP", externalId } }, select: { id: true } })) ??
       (await prisma.conversation.findUnique({ where: { memberId: c.memberId }, select: { id: true } })) ??
-      (await prisma.conversation.create({ data: { memberId: c.memberId, sede: c.sede, channel: "WHATSAPP", externalId, botPaused: true }, select: { id: true } }));
+      (await prisma.conversation.create({ data: { memberId: c.memberId, sede: c.sede, channel: "WHATSAPP", externalId, botPaused: !memberModeEnabled() }, select: { id: true } }));
+    // A socio's reply goes to the agent in socio mode; with it off, to the staff.
+    const pause = memberModeEnabled() ? {} : { botPaused: true, botResumeAt: null };
     await prisma.$transaction([
       prisma.message.create({
         data: {
@@ -184,8 +193,7 @@ export async function sendNotice(c: NoticeCandidate, createdById: string | null 
           body: c.preview, sentByUserId: createdById, llmGenerated: false, sendStatus: "SENT", sendAttemptedAt: new Date(),
         },
       }),
-      // A socio's reply goes to the staff, not to the sales agent.
-      prisma.conversation.update({ where: { id: conv.id }, data: { botPaused: true, botResumeAt: null, lastOutboundAt: new Date() } }),
+      prisma.conversation.update({ where: { id: conv.id }, data: { ...pause, lastOutboundAt: new Date() } }),
       prisma.memberNotice.update({ where: { key: c.key }, data: { status: "SENT", error: null, messageId: sent.messageId } }),
     ]);
     return { key: c.key, status: "SENT" };

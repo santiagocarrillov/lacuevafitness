@@ -24,6 +24,8 @@ import { adContextLine } from "./referral";
 import { agentHistory } from "./history";
 import { asksForHuman, handoffReply, isThirdRepeat } from "./guards";
 import { templateName } from "./templates";
+import { memberModeEnabled, socioOf, SOCIO_SELECT } from "./member-mode";
+import { runMemberTurn } from "./member-agent-runner";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -159,7 +161,8 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
-      lead: true,
+      lead: { include: { member: { select: SOCIO_SELECT } } },
+      member: { select: SOCIO_SELECT },
       messages: { orderBy: { createdAt: "asc" }, take: 30 },
     },
   });
@@ -184,6 +187,12 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
   if (!last || last.direction !== "INBOUND") {
     return { status: "skipped", reason: "last message is not inbound" };
   }
+
+  // A socio (paying or paused) gets the socio mode, not the sales pitch — also
+  // one who still writes from the conversation they had as a lead.
+  const socio = socioOf(conversation);
+  if (socio && memberModeEnabled()) return runMemberTurn(conversation, socio, { autoSend: autoSendEnabled() });
+  if (socio && !conversation.leadId) return { status: "skipped", reason: "socio: modo socio apagado" };
 
   const history: AgentTurn[] = agentHistory(conversation.messages);
   const leadName = conversation.lead

@@ -15,6 +15,7 @@ import { markAsRead } from "@/lib/whatsapp/client";
 import { parseReferral, leadAttributionUpdate } from "@/lib/whatsapp/referral";
 import { mediaPlaceholder } from "@/lib/whatsapp/media";
 import { reactionBody, type WaReaction } from "@/lib/whatsapp/reactions";
+import { memberModeEnabled } from "@/lib/whatsapp/member-mode";
 
 // ── Meta webhook payload types (subset we use) ─────────────────────────────
 
@@ -263,8 +264,9 @@ async function ingestInbound(
           channel: "WHATSAPP",
           externalId: waUserId,
           lastInboundAt: occurredAt,
-          // El agente vende. A un socio que escribe lo atiende una persona.
-          botPaused: true,
+          // Con el modo socio apagado, a un socio que escribe lo atiende una
+          // persona; prendido, le contesta el agente con sus límites.
+          botPaused: !memberModeEnabled(),
         },
       });
     } else {

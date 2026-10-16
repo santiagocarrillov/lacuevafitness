@@ -48,7 +48,7 @@ export const TEMPLATE_CATALOG: CatalogTemplate[] = [
     name: "socio_ausencia",
     category: "UTILITY",
     label: "Días sin venir",
-    when: "Socio activo que lleva 3 días seguidos sin asistir (una vez por ausencia).",
+    when: "Socio activo que perdió 2 de sus sesiones habituales según su ritmo (una vez por ausencia).",
     body: "¡Hola {{1}}! 👋 Esperamos que estés muy bien. Llevas {{2}} días sin venir a entrenar a La Cueva. Te extrañamos. Si necesitas ayuda o podemos ser de servicio para que puedas retomar, respóndenos y será un placer. 💪",
     variables: ["nombre", "días sin venir"],
     example: ["Andrea", "3"],

@@ -18,7 +18,7 @@ Diagnóstico del 16-oct-2026 (solo lectura, datos de la app). Meta: 110 socios p
   - 24 % contestó a la recuperación de no-show.
   - 35 % de los que terminaron la prueba de $9 compró un plan. El cierre después de la prueba es el paso que mejor convierte, y hoy el agente no lo hace.
 - **Socios actuales: el agente no hace nada.**
-  - Si un socio escribe, el bot se pausa.
+  - Si un socio escribe, el bot se pausa (cambia con el modo socio, ver abajo).
   - Los avisos de socio (ausencia, frecuencia baja, cumpleaños, nutrición) están apagados.
   - No hay recordatorio de renovación.
   - 21 socios vencen en los próximos 14 días, 4 de ellos hoy. 11 no han venido en 14 días.
@@ -116,10 +116,18 @@ Los dos primeros son gratis y los escribe el agente en vivo, retomando lo que el
 (no texto fijo). Hoy NO_REPLY_2H/1D/3D existen pero nada los programa.
 
 ### Socios que dejan de venir (detalla la Fase 4)
-- **Disparador propuesto: 2 sesiones esperadas perdidas**, según su ritmo de las últimas 4
-  semanas. Quien viene a diario: 2 días hábiles. Quien viene L-M-V: al faltar 2 de esos días.
-  Hoy la regla es "tercer día sin venir (sin domingos)" y está apagada. "Dos días seguidos"
-  para todos haría saltar a casi todos los que vienen 3 veces por semana.
+> **Hecho (16 oct 2026, rama `feat/retencion-socios-whatsapp`):** regla por ritmo en
+> `src/lib/whatsapp/absence-rhythm.ts` (`npm run test:ausencia`), modo socio del agente
+> (`member-mode.ts`, `member-agent-runner.ts`, `MEMBER_SYSTEM_PROMPT`; `npm run test:modo-socio`)
+> detrás de `WHATSAPP_AGENT_SOCIOS=true`, y la escalera 7/14 días en `src/lib/tasks/auto.ts`.
+> Corrida en seco: `npx tsx --env-file=.env scripts/ausencia-en-seco.ts`.
+
+- **Disparador: 2 sesiones esperadas perdidas**, según su ritmo de las 4 semanas que terminan
+  en su última visita. Quien viene a diario: 2 días hábiles. Quien viene L-M-V: al faltar 2 de
+  esos días. Quien tiene más días habituales que visitas (1,5/sem repartidas en L-M-X) se
+  pondera: cada día suyo vale lo que suele venir. Nuevos (< 2 semanas): como si vinieran 3
+  por semana (3 días hábiles). Menos de 1,5/sem: sin aviso (los cubren las tareas). Solo sale
+  en la 2.ª o 3.ª sesión perdida; nunca como aviso atrasado.
 - **Mensaje:** plantilla `socio_ausencia` (ya redactada). Si el socio contesta, el agente
   conversa en "modo socio": nombra el problema, ofrece una solución concreta (horario, rutina
   más corta, coach, nutricionista, pausa) y cierra con "¿qué día vuelves?". Lesiones, cobros y

@@ -61,6 +61,7 @@ export default async function AvisosPage() {
                         <li key={c.key} className="px-3 py-2">
                           <Link href={`/dashboard/socios/${c.memberId}`} className="font-medium hover:underline">{c.name}</Link>
                           {!c.phone && <span className="ml-2 text-xs text-amber-700">sin celular</span>}
+                          {c.why && <p className="text-xs text-foreground/70">Ritmo: {c.why}</p>}
                           <p className="text-xs text-muted-foreground">{c.preview}</p>
                         </li>
                       ))}
