@@ -105,3 +105,60 @@ export function handoffReply(reason: "asked" | "repeat", name: string | null): s
     ? `¡Claro${who}! 🙌 Ya le aviso a una persona del equipo para que te escriba o te llame en cuanto pueda.`
     : `Perdón${who}, creo que te estoy preguntando lo mismo 🙈 Te paso con una persona del equipo para que te ayude mejor; te escribe en cuanto pueda.`;
 }
+
+// ── Socios: lo que siempre atiende una persona ──────────────────────────────
+//
+// Santiago (16 oct 2026): el agente contesta a los socios, pero lesiones, cobros
+// y reclamos los ve una persona. El prompt lo pide; esto lo garantiza, igual que
+// con Ibeth: ante la duda, pasa a una persona (un falso positivo cuesta un
+// mensaje del equipo; un falso negativo es un bot opinando sobre una rodilla).
+const MEMBER_PERSON_TOPICS: Array<{ reason: "lesion" | "cobro" | "reclamo"; patterns: RegExp[] }> = [
+  {
+    reason: "lesion",
+    patterns: [
+      /\blesi(on|one|onad[oa]|ones)\b/, /\blastim/, /\bdolor(es)?\b/, /\bme duel[ea]n?\b/, /\b(esguince|desgarro|fractura|tendinitis|hernia|contractura|luxacion)\b/,
+      /\bme (torci|dobl[eo]|operaron|van a operar)\b/, /\b(cirugia|operacion|fisio|fisioterap\w*|traumatolog\w*)\b/, /\bcertificado medico\b/,
+    ],
+  },
+  {
+    reason: "cobro",
+    patterns: [
+      /\bcobr(o|os|aron|an|ar|ando)\b/, /\bpag(o|os|ue|ar|ado|aron|e)\b/, /\bfactura/, /\bdeuda\b/, /\b(le|les) debo\b/,
+      /\btransferencia\b/, /\bdeposit(o|e|ar)\b/, /\brenov(ar|acion|e)\b/, /\bcuanto (cuesta|vale|sale|es la|seria)\b/, /\bprecio\b/,
+      /\bdescuento\b/, /\b(reembolso|devolucion|devuelv)/, /\bcongel(ar|o|e|amiento)\b/, /\b(pausar|suspender|cancelar) (mi |el )?(plan|membresia|mensualidad)\b/,
+    ],
+  },
+  {
+    reason: "reclamo",
+    patterns: [
+      /\b(queja|quejarme|reclamo|reclamar)\b/, /\bpesim[oa]\b/, /\bmal(a)? (servicio|atencion|trato)\b/, /\binaceptable\b/,
+      /\bdecepcion/, /\bgroser[oa]\b/, /\bfalta de respeto\b/, /\bestoy (muy )?(molest|enojad|indignad)/,
+    ],
+  },
+];
+
+/** ¿Algún mensaje del socio toca un tema que solo atiende una persona? Devuelve cuál. */
+export function memberNeedsPerson(inboundTexts: string[]): "lesion" | "cobro" | "reclamo" | null {
+  const folded = inboundTexts.map(foldText);
+  for (const topic of MEMBER_PERSON_TOPICS) {
+    if (folded.some((f) => topic.patterns.some((re) => re.test(f)))) return topic.reason;
+  }
+  return null;
+}
+
+/** Lo que se le dice al socio cuando lo pasamos a una persona. */
+export function memberHandoffReply(reason: "lesion" | "cobro" | "reclamo" | "persona" | "no_se", name: string | null): string {
+  const who = name ? `, ${name}` : "";
+  switch (reason) {
+    case "lesion":
+      return `Gracias por contarme${who} 🙏 Le paso tu mensaje a tu coach para que te escriba y adaptemos tu rutina. Lo importante es que te recuperes bien.`;
+    case "cobro":
+      return `¡Claro${who}! Eso lo ve la administración: ya les aviso para que te escriban en cuanto puedan.`;
+    case "reclamo":
+      return `Gracias por decírnoslo${who}, de verdad. Le paso tu mensaje a una persona del equipo para que lo revise y te escriba.`;
+    case "persona":
+      return handoffReply("asked", name);
+    case "no_se":
+      return `Déjame confirmarlo${who}: le paso tu pregunta a recepción para que te responda en cuanto puedan.`;
+  }
+}

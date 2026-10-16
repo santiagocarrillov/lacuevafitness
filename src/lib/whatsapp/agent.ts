@@ -62,12 +62,15 @@ export function sedeSlots24h(sede: Sede): string[] {
 }
 
 // ── Persona / system prompt (canonical copy from the playbook) ──────────────
-export const SYSTEM_PROMPT = `Eres asesor(a) de ventas de La Cueva (dos sedes en Sangolquí, Ecuador: La Cueva Fitness y La Cueva Xtreme). Atiendes por WhatsApp. Respondes SIEMPRE en español ecuatoriano, cálido, cercano, directo y sin jerga. Nunca suenas a robot ni a formulario. Haces preguntas, no interrogas. Mensajes cortos, estilo WhatsApp (usa emojis con moderación).
-
-# Cómo hablas (registro)
+/** How La Cueva sounds. Shared by the sales prompt and the socio prompt. */
+const REGISTRO = `# Cómo hablas (registro)
 Tuteo ecuatoriano, siempre. NUNCA vosea ni uses formas rioplatenses: se te escapa "contame" y suena argentino. Es "cuéntame". Lo mismo con cualquier otra: "vení"→"ven", "mirá"→"mira", "tenés"→"tienes", "querés"→"quieres", "podés"→"puedes", "sos"→"eres", "fijate"→"fíjate", "escribime"→"escríbeme". Nada de "vos" ni "che". Tampoco españolismos ("vale", "guay", "tío") ni mexicanismos ("órale", "ándale").
 Sí conservas la calidez de aquí: "chévere", "de una", "full", "pana" están bien y son parte de la voz de La Cueva. Neutral no significa frío ni acartonado — significa que no suenes de otro país.
-NUNCA digas "bacán": la palabra de La Cueva es "chévere". Se dice "¡Qué chévere que te animes!", no "¡Bacán que te animes!".
+NUNCA digas "bacán": la palabra de La Cueva es "chévere". Se dice "¡Qué chévere que te animes!", no "¡Bacán que te animes!".`;
+
+export const SYSTEM_PROMPT = `Eres asesor(a) de ventas de La Cueva (dos sedes en Sangolquí, Ecuador: La Cueva Fitness y La Cueva Xtreme). Atiendes por WhatsApp. Respondes SIEMPRE en español ecuatoriano, cálido, cercano, directo y sin jerga. Nunca suenas a robot ni a formulario. Haces preguntas, no interrogas. Mensajes cortos, estilo WhatsApp (usa emojis con moderación).
+
+${REGISTRO}
 
 # La oferta irresistible (tu gancho por defecto)
 $9 por dos semanas de evaluación. Copy de Santiago: "Entrena dos semanas por tan solo $9 y aprovecha todo un proceso de evaluación de tu condición física y de salud con datos científicos para que puedas saber cómo es el mejor entrenamiento para ti."
@@ -220,8 +223,6 @@ export async function runAgent(
     followup?: FollowupStep | null;
   } = {},
 ): Promise<AgentResult> {
-  const client = new Anthropic(); // reads ANTHROPIC_API_KEY from env
-
   // Slots context: show the known sede's, or both when undecided.
   const sedesToShow: Sede[] = opts.knownSede ? [opts.knownSede] : ["FITNESS_CENTER", "XTREME"];
   // No incluimos las URLs de mapas a propósito: el sistema las adjunta de forma
@@ -255,23 +256,32 @@ export async function runAgent(
     ...(opts.followup ? [{ role: "user", content: followupInstruction(opts.followup) }] : []),
   ];
 
-  // Structured output via TOOL USE (not `output_config.format`): forcing the
-  // long, emoji-heavy free-text `reply` through the json_schema grammar was
-  // producing intermittent character corruption ("te resento La escue") and the
-  // occasional empty field. A forced tool call lets the model write the JSON
-  // naturally, which is far more robust for conversational text. `effort` still
-  // lives inside `output_config` (a recent API surface — cast to keep tsc green).
+  const parsed = await callResponder<AgentResult>(SYSTEM_PROMPT, OUTPUT_SCHEMA, messages, "Devuelve la respuesta de WhatsApp para el lead + su calificación estructurada.");
+  return { ...parsed, reply: normalizeRegistro(parsed.reply ?? "") };
+}
+
+/**
+ * One forced tool call → the structured answer.
+ *
+ * Structured output via TOOL USE (not `output_config.format`): forcing the
+ * long, emoji-heavy free-text `reply` through the json_schema grammar was
+ * producing intermittent character corruption ("te resento La escue") and the
+ * occasional empty field. A forced tool call lets the model write the JSON
+ * naturally, which is far more robust for conversational text. `effort` still
+ * lives inside `output_config` (a recent API surface — cast to keep tsc green).
+ */
+async function callResponder<T>(
+  system: string,
+  schema: object,
+  messages: { role: string; content: string }[],
+  description: string,
+): Promise<T> {
+  const client = new Anthropic(); // reads ANTHROPIC_API_KEY from env
   const params = {
     model: MODEL,
     max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    tools: [
-      {
-        name: "responder",
-        description: "Devuelve la respuesta de WhatsApp para el lead + su calificación estructurada.",
-        input_schema: OUTPUT_SCHEMA,
-      },
-    ],
+    system,
+    tools: [{ name: "responder", description, input_schema: schema }],
     tool_choice: { type: "tool", name: "responder" },
     output_config: { effort: EFFORT },
     messages,
@@ -282,7 +292,124 @@ export async function runAgent(
   if (!toolUse || toolUse.type !== "tool_use") {
     throw new Error("El agente no devolvió la llamada a la herramienta 'responder'.");
   }
-  const parsed = toolUse.input as AgentResult;
+  return toolUse.input as T;
+}
+
+// ── Modo socio ──────────────────────────────────────────────────────────────
+//
+// Until 16 oct 2026 a socio who wrote paused the bot ("el agente vende"), and one
+// who had been a lead got the $9 pitch. Santiago's call: the agent answers socios
+// too, with limits — its job there is getting them back to training, by the table
+// of dropout causes in the ventas-conversacionales skill (seguimientos.md):
+// name the problem, offer one concrete solution, close with "¿qué día vuelves?".
+// Injuries, money and complaints go to a person (also enforced in code, guards.ts).
+
+export const MEMBER_SYSTEM_PROMPT = `Eres del equipo de La Cueva (dos sedes en Sangolquí, Ecuador: La Cueva Fitness y La Cueva Xtreme). Atiendes por WhatsApp a un SOCIO: ya entrena con nosotros y conoce el método SRXFIT. No es un prospecto: NUNCA le ofrezcas las dos semanas por $9, ni le expliques el método, ni le hables de precios de mensualidad.
+
+${REGISTRO}
+
+# Tu objetivo
+Que vuelva a entrenar y no se nos vaya. Cada mensaje hace estas tres cosas, en este orden y en 1 a 3 líneas:
+1. Nombra lo que le pasa, con sus palabras ("Suena a que el horario nuevo del trabajo te complicó"). Nunca "entiendo, pero…" ni "no te preocupes".
+2. Ofrece UNA solución concreta, no un recordatorio (tabla de abajo).
+3. Cierra con un día: "¿Qué día vuelves?" o dos opciones ("¿Te espero mañana 6:30 o el jueves?").
+UNA sola pregunta por mensaje. Cero culpa, cero reproche por los días sin venir. Afirma lo que ha logrado si viene al caso.
+
+# Causas típicas y qué ofrecer
+- Falta de tiempo / cambió su horario: otro turno de su sede (solo los de la lista que te damos), o una sesión más corta ese día; si solo puede 2 días, que vengan esos 2 días fijos.
+- No ve resultados / se estancó: revisar su progreso y sus medidas con su coach, o una cita con la nutricionista de planta (se agenda desde su app de La Cueva).
+- Aburrimiento, desmotivación o se siente solo: venir con un amigo, el reto del mes, o entrenar en el turno donde está la gente de su nivel; su coach se lo presenta.
+- Viaje o enfermedad (que no sea lesión): ¡que se recupere / buen viaje! Pregunta qué día cree que vuelve. Si quiere pausar o congelar el plan, eso lo registra la administración: handoff=true.
+- Solo saluda o pregunta algo simple (horarios de su sede, si hay clase hoy): contesta y, si lleva días sin venir, cierra con el día para volver.
+
+# Límites (pasa a una persona: handoff=true)
+- Lesión, dolor o un tema de salud: NUNCA diagnostiques ni recomiendes ejercicios ni reposo. Dile con calidez que su coach le escribe para adaptar la rutina. handoffReason="lesion".
+- Cobros, pagos, facturas, renovación, deudas, precios, descuentos o cambios de plan: no prometas nada; dile que alguien de la administración le escribe enseguida. handoffReason="cobro".
+- Reclamo o queja (de un coach, de la sede, de un cobro, de la app): agradece que lo cuente, nombra el malestar sin justificarte ni discutir, y dile que una persona del equipo lo revisa. handoffReason="reclamo".
+- Pide hablar con una persona, o algo que no sabes con certeza (horarios del sábado, datos de su plan): handoffReason="persona" o "no_se".
+No prometas nada que dependa de la administración ni inventes horarios, cupos, retos o fechas. Si no sabes un dato, no lo digas.
+
+# Notas de voz, fotos y archivos (NO los puedes abrir)
+Si ves "[El cliente envió una NOTA DE VOZ / IMAGEN / ...]", no lo escuchaste ni lo viste: pídele con naturalidad que te lo escriba. Si parece un comprobante de pago o un certificado médico, handoff=true (cobro o lesion).
+
+# Tu salida
+Devuelve SIEMPRE el JSON con:
+- reply: el mensaje de WhatsApp (en español, listo para enviar, sin enlaces ni URLs).
+- causa: la causa principal de que no venga, si la dijo: tiempo, resultados, motivacion, viaje_enfermedad, lesion, dinero, otra, o ninguna.
+- handoff: true si hay que pasar a una persona.
+- handoffReason: lesion, cobro, reclamo, persona, no_se, o ninguno.
+- vuelve: el día que dijo que vuelve, en sus palabras ("el lunes", "mañana 6:30"), o null.`;
+
+const MEMBER_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    reply: { type: "string", description: "Mensaje de WhatsApp listo para enviar, en español. SIN enlaces ni URLs." },
+    causa: { type: "string", enum: ["tiempo", "resultados", "motivacion", "viaje_enfermedad", "lesion", "dinero", "otra", "ninguna"] },
+    handoff: { type: "boolean" },
+    handoffReason: { type: "string", enum: ["lesion", "cobro", "reclamo", "persona", "no_se", "ninguno"] },
+    vuelve: { type: ["string", "null"] },
+  },
+  required: ["reply", "causa", "handoff", "handoffReason", "vuelve"],
+  additionalProperties: false,
+} as const;
+
+export type MemberHandoffReason = "lesion" | "cobro" | "reclamo" | "persona" | "no_se";
+
+export type MemberAgentResult = {
+  reply: string;
+  causa: "tiempo" | "resultados" | "motivacion" | "viaje_enfermedad" | "lesion" | "dinero" | "otra" | "ninguna";
+  handoff: boolean;
+  handoffReason: MemberHandoffReason | "ninguno";
+  vuelve: string | null;
+};
+
+/** What the agent knows about the socio, for its context block. Pure: built by the runner. */
+export type MemberContext = {
+  firstName: string | null;
+  sede: Sede;
+  /** Calendar days since the last visit, or null if we have none on record. */
+  daysSinceLastVisit: number | null;
+  /** "L-X-V (3/sem)", from absence-rhythm.ts. */
+  rhythm: string | null;
+};
+
+/** The context turn for a socio. Exported so the test can check what the model sees. */
+export function memberContextBlock(ctx: MemberContext, now = new Date()): string {
+  const nowEcuador = new Intl.DateTimeFormat("es-EC", {
+    timeZone: "America/Guayaquil",
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(now);
+  const i = SEDE_INFO[ctx.sede];
+  const gone =
+    ctx.daysSinceLastVisit == null
+      ? "No tenemos asistencias registradas recientes."
+      : ctx.daysSinceLastVisit <= 1
+        ? "Vino a entrenar hace poco (hoy o ayer)."
+        : `Su última asistencia fue hace ${ctx.daysSinceLastVisit} días.`;
+  return (
+    `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}.
+
+` +
+    `Socio: ${ctx.firstName ?? "sin nombre registrado"} · sede ${i.name}.
+` +
+    `${gone}${ctx.rhythm ? ` Su ritmo de las últimas semanas: ${ctx.rhythm}.` : ""}
+
+` +
+    `Turnos de ${i.name} (L–V, hora de inicio, la clase dura una hora): mañana ${i.morning} · tarde ${i.evening}.
+` +
+    `Los sábados hay clases para socios, pero no tienes sus horarios: si preguntan, que recepción le confirme (handoff=true, no_se).`
+  );
+}
+
+/** The agent's reply to a socio (see MEMBER_SYSTEM_PROMPT). */
+export async function runMemberAgent(history: AgentTurn[], ctx: MemberContext): Promise<MemberAgentResult> {
+  const messages = [
+    { role: "user", content: memberContextBlock(ctx) },
+    { role: "assistant", content: "Entendido. Estoy listo para atender al socio con ese contexto." },
+    ...history.map((t) => ({ role: t.role, content: t.text })),
+  ];
+  const parsed = await callResponder<MemberAgentResult>(MEMBER_SYSTEM_PROMPT, MEMBER_OUTPUT_SCHEMA, messages, "Devuelve la respuesta de WhatsApp para el socio y si hay que pasarlo a una persona.");
   return { ...parsed, reply: normalizeRegistro(parsed.reply ?? "") };
 }
 

@@ -22,6 +22,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { respondToInboundConversation } from "./agent-runner";
+import { memberModeEnabled } from "./member-mode";
 
 /**
  * Cuánto se le da al camino en tiempo real antes de considerarlo fallido. El
@@ -52,8 +53,8 @@ export async function answerUnansweredInbounds(
     where: {
       // Con el bot en pausa hay una persona al mando: meterse sería peor.
       botPaused: false,
-      // El agente vende. A un socio que escribe lo atiende alguien del equipo.
-      leadId: { not: null },
+      // Sin el modo socio, a un socio que escribe lo atiende alguien del equipo.
+      ...(memberModeEnabled() ? {} : { leadId: { not: null } }),
       lastInboundAt: {
         not: null,
         lte: new Date(now.getTime() - GRACE_MS),

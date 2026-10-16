@@ -14,9 +14,15 @@ import type { LeadStage, Sede, StaffTaskType } from "@/generated/prisma/client";
 import { blockOf, evaluationGaps } from "@/lib/srxfit/group-stats";
 import { notifyStaff } from "@/lib/push/notify-staff";
 
-/** How many "N días sin venir" calls per sede per day — a list nobody can finish is noise. */
+/** How many "N días sin venir" tasks per sede, per step, per day — a list nobody can finish is noise. */
 const INACTIVE_CAP_PER_SEDE = 8;
-const INACTIVE_MIN_DAYS = 7;
+/**
+ * The absence ladder (Santiago, 16 oct 2026). Before day 7 the automatic WhatsApp
+ * (aviso AUSENCIA, by the socio's rhythm) and the agent's replies own it; at 7 the
+ * sede's admin writes with a concrete solution; at 14 it's a phone call.
+ */
+export const INACTIVE_MESSAGE_DAYS = 7;
+export const INACTIVE_CALL_DAYS = 14;
 const INACTIVE_MAX_DAYS = 30;
 const RENEWAL_WINDOW_DAYS = 3;
 /** "Evaluar a X" per sede per day: the full list lives in SRXFIT › Evaluaciones. */
@@ -211,16 +217,63 @@ async function planEndings(today: Date, todayStr: string): Promise<AutoTaskPlan[
   });
 }
 
+const SOLUTIONS =
+  "cambio de horario, una rutina más corta, hablar con su coach o con la nutricionista, o una pausa si viaja o está enfermo";
+
+/**
+ * One step of the absence ladder for a socio who hasn't come in `days` calendar
+ * days, or null. `openKeys`: the socio's open "inactive…" tasks. Keys carry the
+ * last visit, so coming back and lapsing again starts a new ladder. The call
+ * keeps the old `inactive:` key: the calls created before the ladder count.
+ */
+export function inactivePlan(
+  m: { id: string; firstName: string; lastName: string | null; sede: Sede },
+  last: Date,
+  days: number,
+  openKeys: string[],
+): AutoTaskPlan | null {
+  const lastDay = last.toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
+  if (days < INACTIVE_MESSAGE_DAYS || days > INACTIVE_MAX_DAYS) return null;
+  if (days < INACTIVE_CALL_DAYS) {
+    if (openKeys.length) return null; // already being handled
+    return {
+      autoKey: `inactive7:${m.id}:${lastDay}`,
+      reason: "inasistencia",
+      title: `Escribirle a ${name(m)}: ${days} días sin venir`,
+      detail:
+        `Última asistencia: ${shortDate(last)}. Escríbele por WhatsApp desde su ficha (revisa antes si ya contestó al aviso). ` +
+        `Ofrécele una solución, no un recordatorio: ${SOLUTIONS}. Cierra con «¿qué día vuelves?». ` +
+        "Si es una lesión, un cobro o un reclamo, que lo vea el coach o la administración.",
+      type: "WHATSAPP",
+      priority: 0,
+      sede: m.sede,
+      memberId: m.id,
+      dueMinutes: null,
+    };
+  }
+  if (openKeys.some((k) => k.startsWith("inactive:"))) return null;
+  return {
+    autoKey: `inactive:${m.id}:${lastDay}`,
+    reason: "inasistencia",
+    title: `Llamar a ${name(m)}: ${days} días sin venir`,
+    detail:
+      `Última asistencia: ${shortDate(last)}. Ya van dos semanas: llámalo, no solo por WhatsApp. Pregúntale qué pasó, ` +
+      `repite con sus palabras lo que te cuente y ofrécele una solución concreta: ${SOLUTIONS}. ` +
+      "Termina con un día para volver y anota el resultado al cerrar la tarea.",
+    type: "CALL",
+    priority: 1,
+    sede: m.sede,
+    memberId: m.id,
+    dueMinutes: null,
+  };
+}
+
 async function planInactive(now: Date): Promise<AutoTaskPlan[]> {
   const members = await prisma.member.findMany({
     where: {
       status: "ACTIVE",
       memberships: {
         some: { state: "ACTIVE", endsAt: { gte: now }, plan: { billingCycle: { not: "ONE_TIME" } } },
-      },
-      // One open "sin venir" call per person at a time.
-      staffTasks: {
-        none: { autoKey: { startsWith: "inactive:" }, status: { in: ["TODO", "IN_PROGRESS", "WAITING"] } },
       },
     },
     select: {
@@ -230,6 +283,10 @@ async function planInactive(now: Date): Promise<AutoTaskPlan[]> {
       sede: true,
       user: { select: { role: true } },
       attendance: { orderBy: { recordedAt: "desc" }, take: 1, select: { recordedAt: true } },
+      staffTasks: {
+        where: { autoKey: { startsWith: "inactive" }, status: { in: ["TODO", "IN_PROGRESS", "WAITING"] } },
+        select: { autoKey: true },
+      },
     },
   });
 
@@ -237,30 +294,21 @@ async function planInactive(now: Date): Promise<AutoTaskPlan[]> {
     .filter((m) => !isStaffMember(m) && m.attendance.length > 0)
     .map((m) => {
       const last = m.attendance[0].recordedAt;
-      return { m, last, days: Math.floor((now.getTime() - last.getTime()) / DAY) };
+      const days = Math.floor((now.getTime() - last.getTime()) / DAY);
+      return { days, plan: inactivePlan(m, last, days, m.staffTasks.map((t) => t.autoKey!)) };
     })
-    .filter((x) => x.days >= INACTIVE_MIN_DAYS && x.days <= INACTIVE_MAX_DAYS)
+    .filter((x): x is { days: number; plan: AutoTaskPlan } => x.plan !== null)
     // Longest gone first: they're the closest to not coming back.
     .sort((a, b) => b.days - a.days);
 
-  const perSede = new Map<Sede, number>();
+  const perSedeStep = new Map<string, number>();
   const out: AutoTaskPlan[] = [];
-  for (const { m, last, days } of plans) {
-    const n = perSede.get(m.sede) ?? 0;
+  for (const { plan } of plans) {
+    const slot = `${plan.sede}:${plan.type}`;
+    const n = perSedeStep.get(slot) ?? 0;
     if (n >= INACTIVE_CAP_PER_SEDE) continue;
-    perSede.set(m.sede, n + 1);
-    out.push({
-      // Keyed to the last visit: if they come back and lapse again, that's a new call.
-      autoKey: `inactive:${m.id}:${last.toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" })}`,
-      reason: "inasistencia",
-      title: `Llamar a ${name(m)}: ${days} días sin venir`,
-      detail: `Última asistencia: ${shortDate(last)}. Pregúntale cómo va y si le sirve otro horario.`,
-      type: "CALL",
-      priority: 0,
-      sede: m.sede,
-      memberId: m.id,
-      dueMinutes: null,
-    });
+    perSedeStep.set(slot, n + 1);
+    out.push(plan);
   }
   return out;
 }
@@ -359,6 +407,19 @@ export async function generateAutoTasks(opts: { dryRun?: boolean } = {}): Promis
           await tx.staffTaskEntry.create({
             data: { taskId: t.id, kind: "EVENT", body: `La creó automáticamente (${p.reason}).` },
           });
+          // Day 14: the call replaces the day-7 message still open.
+          if (p.reason === "inasistencia" && p.type === "CALL" && p.memberId) {
+            const open = await tx.staffTask.findMany({
+              where: { autoKey: { startsWith: `inactive7:${p.memberId}:` }, status: { in: ["TODO", "IN_PROGRESS", "WAITING"] } },
+              select: { id: true },
+            });
+            for (const o of open) {
+              await tx.staffTask.update({ where: { id: o.id }, data: { status: "CANCELED" } });
+              await tx.staffTaskEntry.create({
+                data: { taskId: o.id, kind: "EVENT", body: "Cancelada automáticamente: ya van 14 días, la reemplaza la llamada." },
+              });
+            }
+          }
           // A trial that already got the old "Cobrar renovación" task: the close replaces it.
           if (p.reason === "cierre de trial") {
             const old = await tx.staffTask.findFirst({
