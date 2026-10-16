@@ -5,6 +5,8 @@ import { answerUnansweredInbounds } from "@/lib/whatsapp/unanswered";
 // Runs on Node (Prisma + crypto) and must never be cached.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// The agent writes up to 10 no-reply nudges per run (a model call each).
+export const maxDuration = 300;
 
 /**
  * GET /api/cron/followups — fire due WhatsApp followups (reminders, nudges).

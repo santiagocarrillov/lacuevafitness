@@ -16,6 +16,7 @@
     "test:registro": "tsx scripts/test-registro.ts",
     "test:busqueda": "tsx scripts/test-busqueda.ts",
     "test:followups": "tsx scripts/test-followups.ts",
+    "test:seguimientos": "tsx scripts/test-seguimientos.ts",
     "test:alta": "tsx scripts/test-alta-socio.ts",
     "test:horarios": "tsx scripts/test-horarios.ts",
     "test:reacciones": "tsx scripts/test-reacciones.ts",

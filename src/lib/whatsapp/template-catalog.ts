@@ -1,9 +1,12 @@
-// Member and nutrition templates to submit to Meta (pure — client-safe).
+// Member, nutrition and lead-cadence templates to submit to Meta (pure — client-safe).
 // The text here IS what gets submitted, and once approved it must not change:
 // Meta only sends the exact approved body. Variables {{n}} go in order; the
 // examples are what Meta's reviewer sees. URL buttons carry their own {{1}}
 // (the booking token), independent of the body variables.
 // Texts approved by Santiago with his edits (5 oct 2026). docs/whatsapp-templates.md
+// lead_dia7 / lead_dia14 (16 oct 2026): drafts for Santiago to approve before
+// submitting from WhatsApp › Plantillas; until Meta approves them the day-7 and
+// day-14 touches are canceled, not sent (sequences.ts).
 
 export type CatalogTemplate = {
   name: string;
@@ -23,6 +26,24 @@ export const BOOKING_URL = "https://www.lacuevasrxfit.com/cita/{{1}}";
 const BOOKING_EXAMPLE = "https://www.lacuevasrxfit.com/cita/k3m9q2";
 
 export const TEMPLATE_CATALOG: CatalogTemplate[] = [
+  {
+    name: "lead_dia7",
+    category: "MARKETING",
+    label: "Lead: ¿qué te frena?",
+    when: "Lead que no contesta hace 7 días (cadencia de seguimiento; se corta si contesta o agenda).",
+    body: "¡Hola {{1}}! 👋 Hace unos días hablamos de tus dos semanas de evaluación en La Cueva por $9. ¿Qué es lo que más te frena para empezar: el horario, el precio u otra cosa? Respóndeme y lo resolvemos juntos. 💪",
+    variables: ["nombre"],
+    example: ["Andrea"],
+  },
+  {
+    name: "lead_dia14",
+    category: "MARKETING",
+    label: "Lead: ¿ya lo descartaste?",
+    when: "Lead que no contesta hace 14 días: último toque de la cadencia, permite decir que no.",
+    body: "¡Hola {{1}}! ¿Ya descartaste la idea de empezar a entrenar? 🙂 Si es así, no hay problema y no te escribo más por ahora. Y si solo ha sido falta de tiempo, respóndeme y te ayudo a encontrar un horario que te quede.",
+    variables: ["nombre"],
+    example: ["Andrea"],
+  },
   {
     name: "socio_ausencia",
     category: "UTILITY",

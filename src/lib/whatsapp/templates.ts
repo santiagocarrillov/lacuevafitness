@@ -31,9 +31,12 @@ export const TEMPLATE_LANGUAGE = "es";
  * se puede usar todavía: Conversation solo se ata a Lead, no a Member.
  */
 const TEMPLATE_BY_KIND: Partial<Record<FollowupKind, string>> = {
-  NO_REPLY_2H: "reengagement_no_reply",
-  NO_REPLY_1D: "reengagement_no_reply",
+  // NO_REPLY_2H y NO_REPLY_1D no llevan plantilla a propósito: van dentro de la
+  // ventana como texto libre que redacta el agente, y si la ventana ya cerró se
+  // cancelan en vez de gastar la plantilla del día 3 (sequences.ts).
   NO_REPLY_3D: "reengagement_no_reply",
+  NO_REPLY_7D: "lead_dia7",
+  NO_REPLY_14D: "lead_dia14",
   NOSHOW_RECOVERY_1D: "noshow_recuperacion",
   NOSHOW_RECOVERY_3D: "noshow_recuperacion",
   TRIAL_REMINDER_24H: "recordatorio_eval_24h",

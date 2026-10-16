@@ -74,7 +74,17 @@ Es el día en que arrancan sus dos semanas y se hace la evaluación inicial.
 - **Fitness Center** — mañana 5:30/6:30/7:30/8:30/9:30 · tarde 4:30/5:30/6:30/7:30/8:30. Maps: https://maps.app.goo.gl/DPquYpZSwpKHcS9AA
 - **Xtreme** — mañana 6:00/7:00/8:00/9:00/10:00 · tarde 5:00/6:00/7:00/8:00/9:00. Maps: https://maps.app.goo.gl/LxRZs9fG4yRYMEqA9
 
-## Cadencia de seguimiento si no responde (del proceso viejo)
+## Cómo vende el agente (16 oct 2026)
+Principios con evidencia (Voss, SPIN, entrevista motivacional, Cialdini, intenciones de implementación), resumidos en la sección "Cómo vendes" del `SYSTEM_PROMPT` (`src/lib/whatsapp/agent.ts`). La versión completa y reutilizable para otros agentes es el skill `ventas-conversacionales` (`~/.claude/skills/ventas-conversacionales/`). En corto: una pregunta por mensaje, sus palabras, espejo y etiqueta antes que argumento, preguntas de "qué/cómo", cierre con día y hora y dos opciones, nada inventado, y respetar el "no".
+
+## Cadencia de seguimiento si no responde (en código desde el 16 oct 2026)
+Se programa sola cada vez que el agente responde (`scheduleNoReplyCadence` en `sequences.ts`) y se corta si el lead contesta, agenda, pasa a una persona o sale del embudo:
+- **+3 h** y **antes de que cierre la ventana de 24 h** (~22 h; si cae de noche, 20:30): texto libre que redacta el agente retomando la conversación. Gratis.
+- **Día 3:** plantilla `reengagement_no_reply`. **Día 7:** `lead_dia7` ("¿qué te frena?"). **Día 14:** `lead_dia14` (despedida estilo Voss: "¿Ya descartaste la idea de empezar a entrenar?"). Las dos últimas se cancelan solas hasta que Meta las apruebe.
+- Tope de plantillas: 25/día (`WHATSAPP_TEMPLATE_DAILY_LIMIT`).
+- Prueba: `npm run test:followups` (horarios) y `npm run test:seguimientos` (en seco, lo que escribiría el agente).
+
+## Cadencia del proceso viejo (referencia)
 6 contactos en los primeros 3 días; luego 1/día por 2 semanas (~10 mensajes). Rotar assets: testimonio, saludo de la nutricionista, video de rutina, link de la metodología, arte motivacional, antes/después. (Fuera de ventana de 24h de Meta → template aprobada.)
 
 ## Manejo de objeciones
