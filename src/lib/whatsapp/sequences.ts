@@ -23,6 +23,7 @@ import { sendText, sendTemplate, describeSendError } from "./client";
 import { renderTemplate, templateForFollowup, templateName } from "./templates";
 import { SEDE_INFO } from "./agent";
 import { writeNoReplyNudge } from "./followup-writer";
+import { createPostponeTask } from "./postpone";
 import { fetchMetaTemplates } from "./graph";
 import type { FollowupKind, LeadStage, Sede } from "@/generated/prisma/client";
 
@@ -214,7 +215,7 @@ export async function scheduleNoReplyCadence(
   }
   if (t.second) {
     await scheduleFollowup(conversationId, "NO_REPLY_1D", t.second,
-      `${hola} ¿Sería muy loco arrancar tus dos semanas esta semana? Si prefieres dejarlo para más adelante, me dices sin problema. 🙂`);
+      `${hola} Esta semana todavía puedes arrancar tus dos semanas por $9. ¿Qué día te quedaría mejor? Si prefieres dejarlo para más adelante, me dices sin problema. 🙂`);
   }
 
   // Días 3, 7 y 14: plantillas. El texto guardado es el de la plantilla, por si
@@ -384,6 +385,15 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
       if (summary.written >= WRITTEN_PER_RUN) continue; // sigue PENDING: la próxima corrida
       const written = await writeNoReplyNudge(conv.id, writtenStep);
       summary.written += 1;
+      if (written && "postpone" in written) {
+        // Dijo antes que le escribiéramos en otra fecha: nada de cadencia, una
+        // tarea para ese día (ver postpone.ts).
+        await mark(f.id, "CANCELED", "el lead pidió que le escribamos más adelante");
+        await cancelNoReplyCadence(conv.id, `el lead pidió que le escribamos el ${written.postpone.toISOString().slice(0, 10)}`);
+        if (conv.lead) await createPostponeTask(conv.lead, written.postpone, written.said);
+        summary.skipped += 1;
+        continue;
+      }
       if (written && "skip" in written) {
         await mark(f.id, "CANCELED", "el agente no escribe: el lead pidió parar");
         await cancelNoReplyCadence(conv.id, "el lead pidió parar");

@@ -2,7 +2,8 @@
  * Prueba en seco de los seguimientos que redacta el agente: toma conversaciones
  * reales donde el lead dejó de contestar y muestra qué le escribiría en el toque
  * de +3 h y en el de antes de que cierre la ventana. NO envía nada y NO escribe
- * en la base (solo lee).
+ * en la base (solo lee): si el lead había pedido que le escribamos otro día,
+ * solo dice qué tarea se crearía.
  *
  * Uso:  npx tsx scripts/test-seguimientos.ts [cuántas=10]
  * Requiere ANTHROPIC_API_KEY y DATABASE_URL.
@@ -37,7 +38,11 @@ async function main() {
     }
     for (const step of [1, 2] as const) {
       const r = await writeNoReplyNudge(c.id, step);
-      const out = r == null ? "(falló: se usaría el texto fijo)" : "skip" in r ? "(no escribe: el lead pidió parar)" : r.text;
+      const out =
+        r == null ? "(falló o no pasó las guardas: se usaría el texto fijo)"
+        : "skip" in r ? "(no escribe: el lead pidió parar)"
+        : "postpone" in r ? `(no escribe: pidió que le escribamos el ${r.postpone.toISOString().slice(0, 10)} → tarea para ese día)`
+        : r.text;
       console.log(`  ✍️  toque ${step}: ${out}`);
     }
   }

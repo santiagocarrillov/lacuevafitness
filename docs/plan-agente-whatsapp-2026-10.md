@@ -106,7 +106,7 @@ pide que no le escriban o un humano toma la conversación.
 | Cuándo | Vía | Contenido |
 |---|---|---|
 | +3 h | texto libre (gratis, dentro de la ventana) | Lo escribe el agente con el contexto: pregunta fácil de contestar |
-| +20–22 h (antes de que cierre la ventana; si cae de noche, se adelanta a las 20:30) | texto libre | Motivo nuevo + pregunta de "no" ("¿Sería muy loco arrancar esta semana?") |
+| +20–22 h (antes de que cierre la ventana; si cae de noche, se adelanta a las 20:30) | texto libre | Motivo que rota por conversación (horario concreto, oferta $9, su objetivo, miedo a empezar) o la duda que dejó + pregunta de "no" con sus palabras |
 | Día 3 | plantilla `lead_dia3` | Oferta $9 con pregunta abierta |
 | Día 7 | plantilla `lead_dia7` | Caso real parecido + invitación |
 | Día 14 | plantilla `lead_dia14` | Despedida estilo Voss: "¿Ya descartaste la idea de empezar a entrenar?" |
@@ -114,6 +114,11 @@ pide que no le escriban o un humano toma la conversación.
 
 Los dos primeros son gratis y los escribe el agente en vivo, retomando lo que el lead dijo
 (no texto fijo). Hoy NO_REPLY_2H/1D/3D existen pero nada los programa.
+
+> **Ajuste del 19 oct 2026 (corte de 28 seguimientos, ≈21 % contesta):** si el lead pide que le
+> escribamos en otra fecha, la cadencia se corta y queda una tarea de WhatsApp para ese día en
+> la sede del lead (`postpone.ts`); el toque de ~22 h rota el motivo y rechaza la fórmula gastada;
+> nadie pregunta "¿Fitness o Xtreme?": se pregunta el sector. `npm run test:cadencia`.
 
 ### Socios que dejan de venir (detalla la Fase 4)
 > **Hecho (16 oct 2026, rama `feat/retencion-socios-whatsapp`):** regla por ritmo en
