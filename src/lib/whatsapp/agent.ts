@@ -78,7 +78,7 @@ Es un PROCESO de 2 semanas: el lead entrena con nosotros dos semanas y en ese ti
 
 # Qué es La Cueva (método SRXFIT) — copy aprobado
 "Entrenamos con nuestro propio método, el SRXFIT: entrenamiento funcional y de fuerza, guiado y basado en ciencia, enfocado en tu salud, longevidad y figura. Comparado con CrossFit tiene similitudes, pero el SRXFIT es mucho más planificado, adaptado a ti, y sin competitividad con riesgo de lesiones peligrosas. No es 'llegar y sufrir': es entrenar con datos y con seguimiento."
-Diferenciador fuerte: una health app donde cada atleta ve su progreso, rutinas, plan nutricional (hay nutricionista de planta) y asistencias.
+Diferenciador fuerte: la app de La Cueva, donde cada atleta ve su progreso, rutinas, plan nutricional (hay nutricionista de planta) y asistencias. Di "app" o "nuestra app", no "health app".
 IMPORTANTE: el método es el MISMO en ambas sedes. NO diferencies por levantamientos olímpicos. La sede se elige por ubicación/horario que le convenga al lead.
 
 # Precios (solo si preguntan o dudan por plata) — tono aprobado
@@ -98,23 +98,38 @@ Tu trabajo en cada mensaje es UNA de tres cosas: entender mejor al lead, quitarl
 - Pregunta con "qué" y "cómo", no con "por qué" (suena a reclamo): "¿Qué te gustaría lograr?", "¿Qué te ha frenado hasta ahora?".
 - Antes de proponer, que el lead diga para qué lo quiere: una pregunta de qué le cuesta hoy y una de qué cambiaría si lo logra. No interrogues: dos preguntas de descubrimiento bastan.
 - Cuando dice que sí, cierra con día y hora y dos opciones: "¿Te queda mejor mañana 6:30 o 7:30?". Un "sí" sin fecha no es compromiso.
-- Las preguntas que permiten decir "no" destraban: "¿Sería muy loco arrancar esta semana?".
+- Las preguntas que permiten decir "no" destraban (que el lead pueda contestar "no" sin culpa a un día concreto). Escríbelas con tus palabras y no repitas la misma fórmula en una conversación.
 - "Lo voy a pensar" casi nunca es la objeción real: nómbralo con calidez y pregunta qué falta ("¿es el horario, el precio u otra cosa?").
 - Afirma lo que hace bien ("ya diste el primer paso al escribir"). Nada de culpa ni de presión.
 - Nunca inventes testimonios, cupos ni fechas límite. Si no sabes un dato, no lo digas.
 - Si dice que no le interesa o que no le escriban, agradece y despídete en una línea, sin insistir, y pon suggestedStage="LOST".
 
 # Ubicación
-NUNCA escribas enlaces, URLs ni direcciones de mapa en tu mensaje: el sistema adjunta el mapa correcto automáticamente según el campo shareLocation. Si preguntan dónde están y aún no sabes la sede, pon shareLocation="both" (se adjuntan los DOS mapas, Fitness y Xtreme, ambos en Sangolquí) y pregunta cuál le queda mejor por cercanía. Cuando ya haya una sede definida y toque compartir su ubicación, pon shareLocation="sede". En tu texto solo invita con naturalidad (p. ej. "te paso la ubicación 👇"). No obligues a elegir sede antes de darle la info.
+NUNCA escribas enlaces, URLs ni direcciones de mapa en tu mensaje: el sistema adjunta el mapa correcto automáticamente según el campo shareLocation. Si preguntan dónde están y aún no sabes la sede, pon shareLocation="both" (se adjuntan los DOS mapas, Fitness y Xtreme, ambos en Sangolquí) y pregunta por qué sector vive o se mueve para recomendarle una (ver "Elegir la sede"). Cuando ya haya una sede definida y toque compartir su ubicación, pon shareLocation="sede". En tu texto solo invita con naturalidad (p. ej. "te paso la ubicación 👇"). No obligues a elegir sede antes de darle la info.
 
 # Cómo es cada sede por dentro (tamaño e instalaciones)
 Úsalo cuando pregunten si el gimnasio es grande, cómo es el espacio, o qué diferencia hay entre las sedes. Habla con orgullo de las dos: el método SRXFIT es idéntico en ambas y la sede se elige por cercanía y horario, nunca porque una sea "mejor".
 - **La Cueva Xtreme** es la que la gente conoce como "el grande": más de 460 m² solo para entrenar, dentro de La Casona del Colibrí, un complejo deportivo de 2 hectáreas donde hay únicamente tres negocios — tenis, fútbol y nuestro gimnasio. Si alguien pregunta por "el gimnasio grande", se refiere a esta.
 - **La Cueva Fitness** es nuestra primera sucursal y es más pequeña: 240 m² de espacio para entrenar más una pista interna en balcón de 50 metros lineales. Es espaciosa, bonita y muy bien equipada; lo que no tiene es un terreno tan grande alrededor.
-Si preguntan "¿es grande?" sin decir de cuál sede hablan, contesta con la de ellos si ya la sabes; si no, cuenta las dos en una línea cada una y aprovecha para preguntar cuál les queda más cerca.
+Si preguntan "¿es grande?" sin decir de cuál sede hablan, contesta con la de ellos si ya la sabes; si no, cuenta las dos en una línea cada una y aprovecha para preguntar por qué sector viven o se mueven.
+
+# Elegir la sede (la eliges tú, no el lead)
+Casi nadie conoce nuestras sedes por nombre: NUNCA preguntes "¿Fitness o Xtreme?" ni "¿qué sede prefieres?" a quien no las ha mencionado. Pregunta por dónde vive, trabaja o se mueve en el día, con lugares que conozca (por ejemplo, si anda más por el centro de Sangolquí o más por San Rafael), y con eso recomiéndale tú una.
+Las dos están en Sangolquí, a menos de 2 km una de otra. Por sector (lista de Santiago):
+- **La Cueva Fitness** (sector de los Bomberos): Amaguaña, Santa Rosa, Inchalillo, Fajardo, centro de Sangolquí, San Pedro, Monumento a Rumiñahui, Capelo.
+- **La Cueva Xtreme** (La Casona del Colibrí): San Rafael, Selva Alegre, Club Los Chillos, ESPE, Alangasí, El Triángulo.
+- **Conocoto** depende de la parte: lo que queda hacia San Rafael, Xtreme; lo que queda hacia Fajardo, Fitness. Pregúntale además si trabaja o se mueve por Sangolquí: si su día pasa por aquí, recomiéndale la sede que le quede de paso; si no, sé honesto con que estamos en Sangolquí y no lo presiones.
+Si te dice un sector que no está en la lista, usa el más cercano que sí esté; si no lo sabes con certeza o le queda parecido, decide por el horario que le sirve (Fitness arranca a la media hora: 5:30, 6:30…; Xtreme en punto: 6:00, 7:00…). Dile cuál le recomiendas y por qué en pocas palabras; nunca inventes distancias ni tiempos de viaje. Si el lead ya nombró una sede o prefiere la otra, respeta lo que diga.
+- **La Armenia:** hace unos 6 años tuvimos una sede en La Armenia (cerca de Conocoto) y la cerramos; todavía hay una pared con nuestro logo, por eso hay quien pregunta por ella. Si alguien la menciona, dile con naturalidad que esa sede ya no existe y que ahora estamos en Sangolquí con dos sedes; pregúntale si Sangolquí le queda a mano. Nunca la ofrezcas ni des a entender que sigue abierta.
+
+# Si pide que le escribamos más adelante
+Si el lead dice que ahora no puede y pide que le escribamos después (tiene pagado otro gimnasio hasta cierta fecha, viaja, empieza en enero, "escríbeme la otra semana", "después de quincena"), no insistas ni le ofrezcas agendar ya: agradece, confirma en una línea cuándo le escribimos ("¡De una! Te escribo el 5 de noviembre 🙌") y devuelve contactarDesde con esa fecha. Desde ese momento no recibe más seguimientos automáticos y ese día una persona del equipo le escribe.
+- contactarDesde va en formato "YYYY-MM-DD". Resuelve "la otra semana", "a fin de mes", "en enero" con la fecha actual que te damos. Si dice hasta cuándo no puede ("tengo pagado hasta el 5"), usa ese día. Si quiere arrancar en un día que queda a más de 2 días, usa el día anterior a ese, para agendarle a tiempo.
+- Si solo dice "más adelante" sin fecha, usa 14 días desde hoy y dile que le escribes en un par de semanas.
+- Si quiere agendar dentro de hoy, mañana o pasado mañana, eso no es posponer: agenda. Si dijo que no le interesa, eso tampoco: es LOST. En cualquier otro caso, contactarDesde=null.
 
 # Agendar la primera sesión (arranque de sus dos semanas)
-Ofrece los horarios de la sede del lead (te los damos abajo). Enmárcalo como "tu primera sesión" / "arrancas tus dos semanas", no como "tu evaluación" suelta. Agenda solo para hoy, mañana o máximo pasado mañana; si pide más de 2 días, no agendes aún y mantén el seguimiento. Al confirmar, pon shareLocation="sede" para adjuntar el mapa de la sede (no escribas el enlace tú) y pide que llegue 15 min antes.
+Ofrece los horarios de la sede del lead (te los damos abajo). Enmárcalo como "tu primera sesión" / "arrancas tus dos semanas", no como "tu evaluación" suelta. Agenda solo para hoy, mañana o máximo pasado mañana; si pide más de 2 días, no agendes aún: devuelve contactarDesde con el día anterior (ver "Si pide que le escribamos más adelante"). Al confirmar, pon shareLocation="sede" para adjuntar el mapa de la sede (no escribas el enlace tú) y pide que llegue 15 min antes.
 
 # Notas de voz, fotos y archivos (NO los puedes abrir)
 Por este canal solo te llega TEXTO. Cuando veas un turno marcado como "[El cliente envió una NOTA DE VOZ / IMAGEN / ...]", significa que el cliente mandó un archivo que tú NO escuchaste ni viste. Nunca finjas que lo revisaste ni adivines su contenido.
@@ -138,6 +153,7 @@ Devuelve SIEMPRE el JSON con:
 - horarioPreferido: preferencia de horario si la dio (o null).
 - handoff: true si hay que pasar a un humano.
 - suggestedStage: etapa sugerida del lead en el funnel.
+- contactarDesde: la fecha "YYYY-MM-DD" en que el lead pidió que le volvamos a escribir (ver "Si pide que le escribamos más adelante"), o null.
 - scheduledAtISO: si en ESTE mensaje confirmas la primera sesión (arranque de las dos semanas) con día y hora concretos (dentro de hoy, mañana o máximo pasado mañana, y en un horario válido de la sede), devuelve la fecha-hora en ISO 8601 con zona de Ecuador, formato "YYYY-MM-DDTHH:MM:00-05:00" (usa la fecha/hora actual que te doy en el contexto para resolver "mañana", etc.). Si no hay cita confirmada aún, devuelve null.`;
 
 // ── Structured output schema ────────────────────────────────────────────────
@@ -162,9 +178,10 @@ const OUTPUT_SCHEMA = {
       type: "string",
       enum: ["NEW", "CONTACTED", "SCHEDULED_TRIAL", "NEGOTIATING", "CONVERTED", "LOST"],
     },
+    contactarDesde: { type: ["string", "null"], description: "YYYY-MM-DD en que el lead pidió que le volvamos a escribir, o null." },
     scheduledAtISO: { type: ["string", "null"] },
   },
-  required: ["reply", "shareLocation", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "scheduledAtISO"],
+  required: ["reply", "shareLocation", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "contactarDesde", "scheduledAtISO"],
   additionalProperties: false,
 } as const;
 
@@ -177,6 +194,8 @@ export type AgentResult = {
   horarioPreferido: string | null;
   handoff: boolean;
   suggestedStage: "NEW" | "CONTACTED" | "SCHEDULED_TRIAL" | "NEGOTIATING" | "CONVERTED" | "LOST";
+  /** "YYYY-MM-DD": the lead asked us to write again that day (see postpone.ts). */
+  contactarDesde: string | null;
   scheduledAtISO: string | null;
 };
 
@@ -186,8 +205,51 @@ export type AgentTurn = { role: "user" | "assistant"; text: string };
  * Which free-text nudge we're writing for a lead who went quiet. Both go out
  * inside Meta's 24h window, so they cost nothing and can be personal; from day 3
  * on only approved templates are allowed (see sequences.ts).
+ *
+ * `angle` is the reason the second touch brings (picked by the caller, see
+ * pickNudgeAngle); `avoid` lists what a first draft got wrong, for the retry.
  */
-export type FollowupStep = { step: 1 | 2; hoursSilent: number };
+export type FollowupStep = { step: 1 | 2; hoursSilent: number; angle?: NudgeAngle; avoid?: string[] };
+
+/**
+ * Reasons the ~22 h touch can bring. Left to itself the model wrote the same
+ * one every time (corte del 19 oct 2026: "nutricionista de planta + health app +
+ * nada de llegar y sufrir + ¿Sería muy loco arrancar esta semana?"), so the code
+ * picks one per conversation and the leads, together, get a spread. There's no
+ * social-proof angle on purpose: we have no verified testimonials to give it.
+ */
+export const NUDGE_ANGLES = {
+  horario:
+    "Propón un día concreto y dos horas de la lista de horarios (de su sede si ya la sabes; si no, de la que le convenga por lo que te contó), para que conteste con una palabra.",
+  oferta:
+    "Recuérdale en una línea algo concreto de las dos semanas por $9 que todavía no le hayas dicho (entrena las dos semanas guiado por un coach y al final sabe, con datos de su condición física y salud, qué entrenamiento le conviene) y pregúntale qué día arrancaría.",
+  objetivo:
+    "Conecta con lo que dijo que quiere lograr, con sus palabras, y cuéntale en una línea cómo se trabaja eso desde la primera semana. Si no dijo objetivo, pregúntale qué le gustaría lograr.",
+  arranque:
+    "Quítale el miedo a empezar: no necesita estar en forma, la primera sesión arranca con su evaluación y el entrenamiento se adapta a su nivel. Cierra con un día concreto para arrancar.",
+} as const;
+export type NudgeAngle = keyof typeof NUDGE_ANGLES;
+
+/**
+ * The angle for a conversation: stable (a retry of the same nudge keeps it) and
+ * spread across leads. FNV-1a over the id — any cheap, even hash does.
+ */
+export function pickNudgeAngle(seed: string): NudgeAngle {
+  const angles = Object.keys(NUDGE_ANGLES) as NudgeAngle[];
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 0x01000193);
+  return angles[(h >>> 0) % angles.length];
+}
+
+/**
+ * Lines the nudges kept repeating. The prompt asks for variety; these are the
+ * checks behind it (nudgeIssues), so a draft that still uses one is rewritten.
+ */
+const WORN_OUT = [
+  "¿Sería muy loco…?",
+  "nada de \"llegar y sufrir\"",
+  "la nutricionista y la app juntas como argumento de cajón",
+];
 
 /**
  * The internal turn that asks the agent for a nudge instead of a reply. It rides
@@ -197,15 +259,42 @@ export type FollowupStep = { step: 1 | 2; hoursSilent: number };
 export function followupInstruction(f: FollowupStep): string {
   const how =
     f.step === 1
-      ? "Retoma lo último que hablaron con una pregunta muy fácil de contestar (idealmente con una palabra o eligiendo entre dos opciones). No repitas la oferta completa."
-      : "Trae un motivo nuevo que no hayas usado (un dato del método, la nutricionista, la health app, que la primera sesión es tranquila y adaptada) y cierra con una pregunta que permita decir que no sin culpa, por ejemplo \"¿Sería muy loco arrancar esta semana?\" o \"¿Lo dejamos para más adelante?\".";
+      ? "Retoma lo último que hablaron con una pregunta muy fácil de contestar (idealmente con una palabra o eligiendo entre dos opciones). No repitas la oferta completa. " +
+        "Si todavía no sabes qué sede le conviene, pregúntale por qué sector vive o se mueve (p. ej. si anda más por el centro de Sangolquí o más por San Rafael); nunca le preguntes \"¿Fitness o Xtreme?\": no conoce las sedes por nombre."
+      : "Si el lead dejó una pregunta o duda sin resolver (precio, horario, ubicación, miedo a no estar en forma…), resuélvela: ese es tu motivo. " +
+        `Si no, tu motivo es este: ${NUDGE_ANGLES[f.angle ?? "horario"]} ` +
+        "Cierra con UNA pregunta corta que pueda contestar con un sí o un no sin culpa, escrita con tus palabras. " +
+        `No copies ejemplos ni frases de este prompt y no uses estas fórmulas gastadas: ${WORN_OUT.join("; ")}. ` +
+        "No inventes testimonios ni cifras de otros socios.";
+  const fix = f.avoid?.length
+    ? ` Tu borrador anterior no sirvió porque ${f.avoid.join("; ")}. Escríbelo de nuevo sin eso.`
+    : "";
   return (
     `[INSTRUCCIÓN INTERNA — no es un mensaje del lead] El lead no contesta hace unas ${f.hoursSilent} horas. ` +
-    `Escribe UN seguimiento corto (1 a 3 líneas) que suene a la misma persona que venía conversando. ${how} ` +
+    `Escribe UN seguimiento corto (1 a 3 líneas) que suene a la misma persona que venía conversando. ${how}${fix} ` +
     `No digas "¿viste mi mensaje?", no reclames el silencio, no inventes cupos ni plazos. ` +
     `Si en la conversación el lead ya dijo que no le interesa o que no le escriban, devuelve reply vacío. ` +
+    `Si pidió que le escribamos más adelante, devuelve reply vacío y contactarDesde con esa fecha (o 14 días desde hoy si no dio una). ` +
     `En la salida: shareLocation="none", scheduledAtISO=null, handoff=false, y la etapa y la sede que ya tenía.`
   );
+}
+
+/**
+ * What's wrong with a drafted nudge, in words the retry instruction can use.
+ * Empty = it can go out. Pure (scripts/test-posponer.ts).
+ */
+export function nudgeIssues(text: string, step: FollowupStep["step"]): string[] {
+  const issues: string[] = [];
+  const t = text.toLocaleLowerCase("es-EC");
+  // Naming both sedes in a nudge is the "¿Fitness o Xtreme?" question in any wording.
+  if (/\bfitness\b/.test(t) && /\bxtreme\b/.test(t)) {
+    issues.push("le preguntaste por la sede por su nombre (pregunta por el sector donde vive o se mueve)");
+  }
+  if (step === 2) {
+    if (/ser[ií]a\s+(muy\s+)?loco/.test(t)) issues.push("usaste la fórmula «¿Sería muy loco…?»");
+    if (/llegar\s+y\s+sufrir/.test(t)) issues.push("repetiste «llegar y sufrir»");
+  }
+  return issues;
 }
 
 /**
@@ -486,7 +575,15 @@ export function preferChevere(text: string): string {
  * una regla nueva no se quede sin aplicar en la mitad de los sitios.
  */
 export function normalizeRegistro(text: string): string {
-  return preferChevere(neutralizeVoseo(text));
+  return plainApp(preferChevere(neutralizeVoseo(text)));
+}
+
+/**
+ * "health app" → "app". The old approved copy said "health app"; Santiago wants
+ * plain "app" (19 oct 2026), and the nudges kept the old wording.
+ */
+export function plainApp(text: string): string {
+  return text.replace(/(?<!\p{L})health\s+app(?!\p{L})/giu, (m: string) => matchCase(m, "app"));
 }
 
 /** Respeta la capitalización del original: "Contame" → "Cuéntame". */

@@ -26,6 +26,7 @@ import { asksForHuman, handoffReply, isThirdRepeat } from "./guards";
 import { templateName } from "./templates";
 import { memberModeEnabled, socioOf, SOCIO_SELECT } from "./member-mode";
 import { runMemberTurn } from "./member-agent-runner";
+import { closePostponeTasks, createPostponeTask, parsePostponeDate } from "./postpone";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -308,6 +309,24 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     });
   }
 
+  // "Escríbeme después del 5 de noviembre": stop the cadence and leave a task for
+  // that day instead (postpone.ts). Done before sending — the request stands even
+  // if our reply doesn't go out.
+  const postponeUntil =
+    conversation.lead && !result.scheduledAtISO && stage !== "LOST" && stage !== "CONVERTED"
+      ? parsePostponeDate(result.contactarDesde)
+      : null;
+  if (postponeUntil && conversation.lead) {
+    await cancelNoReplyCadence(conversation.id, `el lead pidió que le escribamos el ${postponeUntil.toISOString().slice(0, 10)}`)
+      .catch((err) => console.error("[whatsapp-agent] no se pudo cortar la cadencia", err));
+    const said = burst.join(" / ") || null;
+    await createPostponeTask(
+      { ...conversation.lead, sede: resolvedSede ?? conversation.lead.sede },
+      postponeUntil,
+      said,
+    );
+  }
+
   // If the agent booked an evaluation, record it and schedule anti-no-show reminders.
   if (result.scheduledAtISO) {
     const when = new Date(result.scheduledAtISO);
@@ -324,6 +343,7 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
         conversation.lead?.firstName ?? null,
         resolvedSede ?? conversation.sede,
       );
+      if (conversation.leadId) await closePostponeTasks(conversation.leadId, "Agendó su primera sesión por WhatsApp con el agente.");
     }
   }
 
@@ -348,6 +368,7 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     await followUpIfSilent(conversation, {
       handoff: forceHandoff,
       booked: result.scheduledAtISO != null,
+      postponed: postponeUntil != null,
       stage: stage ?? conversation.lead?.stage ?? null,
     });
     return forceHandoff ? { status: "handoff", sent: true } : { status: "sent" };
@@ -379,9 +400,11 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
  */
 async function followUpIfSilent(
   conversation: { id: string; lastInboundAt: Date | null; lead: { firstName: string | null; lastName: string | null } | null },
-  outcome: { handoff: boolean; booked: boolean; stage: LeadStage | null },
+  outcome: { handoff: boolean; booked: boolean; postponed: boolean; stage: LeadStage | null },
 ): Promise<void> {
   try {
+    // Postponed: the cadence was already canceled and the task for that day is the only follow-up.
+    if (outcome.postponed) return;
     const open = outcome.stage === "NEW" || outcome.stage === "CONTACTED" || outcome.stage === "NEGOTIATING";
     if (!conversation.lead || outcome.handoff || outcome.booked || !open) {
       await cancelNoReplyCadence(conversation.id, outcome.handoff ? "pasó a una persona" : `etapa ${outcome.stage ?? "?"}`);

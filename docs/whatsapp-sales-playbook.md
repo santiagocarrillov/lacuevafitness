@@ -40,7 +40,7 @@ Está resuelto en dos capas: una regla en el system prompt y `neutralizeVoseo()`
 
 ## Posicionamiento SRXFIT (qué somos / vs CrossFit) — copy aprobado ✅
 > *"En La Cueva entrenamos con nuestro propio método, el SRXFIT: entrenamiento funcional y de fuerza, guiado y basado en ciencia, enfocado en tu salud, longevidad y figura. Si lo comparas con CrossFit, tiene algunas similitudes, pero el SRXFIT es mucho más planificado, adaptado a ti, y sin competitividad con riesgo de lesiones peligrosas. No es 'llegar y sufrir': es entrenar con datos y con seguimiento."*
-> *"De hecho contamos con una health app donde cada atleta ve su progreso, sus rutinas, su plan nutricional (tenemos nutricionista de planta), sus asistencias y muchos datos más."*
+> *"De hecho contamos con una app donde cada atleta ve su progreso, sus rutinas, su plan nutricional (tenemos nutricionista de planta), sus asistencias y muchos datos más."*
 
 **Nota:** ya NO se diferencia por levantamientos olímpicos entre sedes. El método es el mismo en ambas; **la sede se elige por ubicación/horario que le convenga al lead**, no por estilo de entrenamiento.
 
@@ -62,12 +62,24 @@ La Fitness se cuenta en positivo: **espaciosa, bonita y muy bien equipada**. No 
    - ¿Cómo está tu tiempo hoy? ¿Qué horarios te vienen mejor? (→ preferredHour)
    - ¿Qué te motivó a empezar ahora? (→ objetivo)
    - ¿Qué tendría que pasar para que sientas que este es el lugar correcto para ti?
-   - Sede que le conviene (Fitness/Xtreme) — por **ubicación/horario**, no por estilo. Enviar ambos maps si no sabe cuál le queda mejor.
+   - Sede que le conviene — la **elige el agente** por ubicación/horario, no por estilo. Se pregunta **por qué sector vive o se mueve**, nunca "¿Fitness o Xtreme?" (la mayoría no conoce las sedes por nombre). Ver "Elegir la sede" abajo.
 3. **Agendar su primera sesión** ("arrancas tus dos semanas") en slots fijos (ver abajo), **solo hoy / mañana / máx. pasado mañana**. Si pide más de 2 días → no agendar aún, mantener en seguimiento.
 4. **Confirmar cita** → enviar ubicación (maps de la sede) + video bienvenida coach. "Llega 15 min antes."
 5. **Recordatorios** (motor de secuencias): día anterior (24h), 1h/2h antes de la primera sesión.
 6. **Durante / al cierre de las 2 semanas** → entrega de resultados de la evaluación + seguimiento de cierre a membresía ($50, escalera si duda).
 7. **No-show a la primera sesión** → secuencia de recuperación (reofertar arrancar las dos semanas).
+
+## Elegir la sede ✅ (19 oct 2026)
+En el corte del 19 oct, ~9 de 21 toques de +3 h preguntaban "¿Fitness o Xtreme?" a gente que no conoce las sedes. Ahora se pregunta **por dónde vive, trabaja o se mueve** y **el agente recomienda una**. Sectores (Santiago, 19 oct 2026):
+
+| La Cueva Fitness (sector Bomberos) | La Cueva Xtreme (La Casona del Colibrí) |
+|---|---|
+| Amaguaña, Santa Rosa, Inchalillo, Fajardo, centro de Sangolquí, San Pedro, Monumento a Rumiñahui, Capelo | San Rafael, Selva Alegre, Club Los Chillos, ESPE, Alangasí, El Triángulo |
+
+- **Conocoto:** depende de la parte (hacia San Rafael → Xtreme; hacia Fajardo → Fitness). Casi nunca es cliente ideal salvo que trabaje o se mueva por Sangolquí: el agente lo pregunta y no presiona.
+- Sector fuera de la lista o dudoso → el más cercano de la lista, o por horario (Fitness a la media hora, Xtreme en punto). Nunca inventa distancias ni tiempos.
+- **La Armenia:** sede cerrada hace ~6 años; todavía hay una pared con el logo y llegan preguntas. El agente dice que ya no existe y que ahora estamos en Sangolquí.
+- `nudgeIssues()` (`agent.ts`) rechaza un seguimiento que nombre las dos sedes.
 
 ## Slots para la primera sesión (L–V, cada hora, zona Ecuador)
 Es el día en que arrancan sus dos semanas y se hace la evaluación inicial.
@@ -81,8 +93,10 @@ Principios con evidencia (Voss, SPIN, entrevista motivacional, Cialdini, intenci
 Se programa sola cada vez que el agente responde (`scheduleNoReplyCadence` en `sequences.ts`) y se corta si el lead contesta, agenda, pasa a una persona o sale del embudo:
 - **+3 h** y **antes de que cierre la ventana de 24 h** (~22 h; si cae de noche, 20:30): texto libre que redacta el agente retomando la conversación. Gratis.
 - **Día 3:** plantilla `reengagement_no_reply`. **Día 7:** `lead_dia7` ("¿qué te frena?"). **Día 14:** `lead_dia14` (despedida estilo Voss: "¿Ya descartaste la idea de empezar a entrenar?"). Las dos últimas se cancelan solas hasta que Meta las apruebe.
+- **El de ~22 h rota el motivo** por conversación (`pickNudgeAngle`): horario concreto, algo concreto de las dos semanas por $9, su objetivo con sus palabras, o quitarle el miedo a empezar. Si el lead dejó una duda, resolverla manda. Sin prueba social: no hay testimonios verificados. Un borrador con "¿Sería muy loco…?" o "llegar y sufrir" se reescribe una vez; si sigue igual, sale el texto fijo. "health app" se dice "app".
+- **Posponer a fecha** (19 oct 2026, caso Marizol: "tengo pagado otro gym hasta el 5 de noviembre"): el agente confirma la fecha en una línea y devuelve `contactarDesde`; la cadencia pendiente se cancela y queda **una tarea de WhatsApp** para ese día, sin asignar, en la sede del lead (`src/lib/whatsapp/postpone.ts`, autoKey `lead-posponer:<lead>:<fecha>`). Sin fecha ("más adelante") = 14 días. Si después agenda, la tarea se cierra sola.
 - Tope de plantillas: 25/día (`WHATSAPP_TEMPLATE_DAILY_LIMIT`).
-- Prueba: `npm run test:followups` (horarios) y `npm run test:seguimientos` (en seco, lo que escribiría el agente).
+- Prueba: `npm run test:followups` (horarios), `npm run test:cadencia` (posponer, variedad y sede, sin modelo) y `npm run test:seguimientos` (en seco, lo que escribiría el agente; necesita ANTHROPIC_API_KEY).
 
 ## Cadencia del proceso viejo (referencia)
 6 contactos en los primeros 3 días; luego 1/día por 2 semanas (~10 mensajes). Rotar assets: testimonio, saludo de la nutricionista, video de rutina, link de la metodología, arte motivacional, antes/después. (Fuera de ventana de 24h de Meta → template aprobada.)
@@ -114,7 +128,7 @@ Decisión abierta por asset: base de datos propia / nueva página (en construcci
 - ¿Qué debo llevar? → (video recomendaciones).
 - Diferencia entre sedes → guion textual arriba.
 - **"Información" (info fría, sin nombre/sede)** ✅ validado — no pedir datos de entrada; abrir con gancho (dos semanas de evaluación por $9) + 2 preguntas de descubrimiento (¿entrenado antes? + ¿qué te motiva ahora?). La sede se resuelve después, no al inicio.
-- **"¿Qué ofrecen? / ¿es CrossFit o Funcional?"** ✅ validado — usar el copy SRXFIT de arriba: funcional + fuerza, planificado, adaptado, sin competitividad riesgosa, "con datos y seguimiento" + mención de la health app. Cerrar con el gancho: dos semanas de entrenamiento por $9 con todo un proceso de evaluación física y de salud (no una clase ni una sesión suelta). NO usar diferenciación de olímpicos.
+- **"¿Qué ofrecen? / ¿es CrossFit o Funcional?"** ✅ validado — usar el copy SRXFIT de arriba: funcional + fuerza, planificado, adaptado, sin competitividad riesgosa, "con datos y seguimiento" + mención de la app. Cerrar con el gancho: dos semanas de entrenamiento por $9 con todo un proceso de evaluación física y de salud (no una clase ni una sesión suelta). NO usar diferenciación de olímpicos.
 - _(se completa con las simulaciones)_
 
 ## Arquitectura del canal (contexto, no visible al lead)
