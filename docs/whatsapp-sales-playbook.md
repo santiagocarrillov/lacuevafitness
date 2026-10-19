@@ -70,11 +70,16 @@ La Fitness se cuenta en positivo: **espaciosa, bonita y muy bien equipada**. No 
 7. **No-show a la primera sesión** → secuencia de recuperación (reofertar arrancar las dos semanas).
 
 ## Elegir la sede ✅ (19 oct 2026)
-En el corte del 19 oct, ~9 de 21 toques de +3 h preguntaban "¿Fitness o Xtreme?" a gente que no conoce las sedes. Ahora:
-- Se pregunta **por dónde vive, trabaja o se mueve** (p. ej. si le queda más a mano el centro de Sangolquí o el otro lado del valle de Los Chillos).
-- **El agente recomienda una:** las dos están en Sangolquí a menos de 2 km; **Fitness** en el sector de los **Bomberos**, **Xtreme** en **La Casona del Colibrí** (sector Colibrí), al noreste de la Fitness. Si el lugar queda claramente más cerca de una, esa; si no, por horario (Fitness a la media hora, Xtreme en punto). Nunca inventa distancias ni tiempos.
+En el corte del 19 oct, ~9 de 21 toques de +3 h preguntaban "¿Fitness o Xtreme?" a gente que no conoce las sedes. Ahora se pregunta **por dónde vive, trabaja o se mueve** y **el agente recomienda una**. Sectores (Santiago, 19 oct 2026):
+
+| La Cueva Fitness (sector Bomberos) | La Cueva Xtreme (La Casona del Colibrí) |
+|---|---|
+| Amaguaña, Santa Rosa, Inchalillo, Fajardo, centro de Sangolquí, San Pedro, Monumento a Rumiñahui, Capelo | San Rafael, Selva Alegre, Club Los Chillos, ESPE, Alangasí, El Triángulo |
+
+- **Conocoto:** depende de la parte (hacia San Rafael → Xtreme; hacia Fajardo → Fitness). Casi nunca es cliente ideal salvo que trabaje o se mueva por Sangolquí: el agente lo pregunta y no presiona.
+- Sector fuera de la lista o dudoso → el más cercano de la lista, o por horario (Fitness a la media hora, Xtreme en punto). Nunca inventa distancias ni tiempos.
+- **La Armenia:** sede cerrada hace ~6 años; todavía hay una pared con el logo y llegan preguntas. El agente dice que ya no existe y que ahora estamos en Sangolquí.
 - `nudgeIssues()` (`agent.ts`) rechaza un seguimiento que nombre las dos sedes.
-- **Pendiente de Santiago:** una lista de sectores → sede (Capelo, San Rafael, Selva Alegre, Conocoto…) haría la recomendación más precisa.
 
 ## Slots para la primera sesión (L–V, cada hora, zona Ecuador)
 Es el día en que arrancan sus dos semanas y se hace la evaluación inicial.

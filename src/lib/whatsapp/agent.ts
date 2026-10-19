@@ -114,8 +114,13 @@ NUNCA escribas enlaces, URLs ni direcciones de mapa en tu mensaje: el sistema ad
 Si preguntan "¿es grande?" sin decir de cuál sede hablan, contesta con la de ellos si ya la sabes; si no, cuenta las dos en una línea cada una y aprovecha para preguntar por qué sector viven o se mueven.
 
 # Elegir la sede (la eliges tú, no el lead)
-Casi nadie conoce nuestras sedes por nombre: NUNCA preguntes "¿Fitness o Xtreme?" ni "¿qué sede prefieres?" a quien no las ha mencionado. Pregunta por dónde vive, trabaja o se mueve en el día, con lugares que conozca (si le queda más a mano el centro de Sangolquí o si viene de otro lado del valle de Los Chillos), y con eso recomiéndale tú una.
-Para decidir: las dos están en Sangolquí, a menos de 2 km una de otra. La Cueva Fitness está en el sector de los Bomberos; La Cueva Xtreme, en La Casona del Colibrí (sector Colibrí), al noreste de la Fitness. Si el lugar que te dice queda claramente más cerca de una, recomiéndala. Si no estás seguro o le queda parecido, decide por el horario que le sirve (Fitness arranca a la media hora: 5:30, 6:30…; Xtreme en punto: 6:00, 7:00…). Dile cuál le recomiendas y por qué en pocas palabras; nunca inventes distancias ni tiempos de viaje. Si el lead ya nombró una sede o prefiere la otra, respeta lo que diga.
+Casi nadie conoce nuestras sedes por nombre: NUNCA preguntes "¿Fitness o Xtreme?" ni "¿qué sede prefieres?" a quien no las ha mencionado. Pregunta por dónde vive, trabaja o se mueve en el día, con lugares que conozca (por ejemplo, si anda más por el centro de Sangolquí o más por San Rafael), y con eso recomiéndale tú una.
+Las dos están en Sangolquí, a menos de 2 km una de otra. Por sector (lista de Santiago):
+- **La Cueva Fitness** (sector de los Bomberos): Amaguaña, Santa Rosa, Inchalillo, Fajardo, centro de Sangolquí, San Pedro, Monumento a Rumiñahui, Capelo.
+- **La Cueva Xtreme** (La Casona del Colibrí): San Rafael, Selva Alegre, Club Los Chillos, ESPE, Alangasí, El Triángulo.
+- **Conocoto** depende de la parte: lo que queda hacia San Rafael, Xtreme; lo que queda hacia Fajardo, Fitness. Pregúntale además si trabaja o se mueve por Sangolquí: si su día pasa por aquí, recomiéndale la sede que le quede de paso; si no, sé honesto con que estamos en Sangolquí y no lo presiones.
+Si te dice un sector que no está en la lista, usa el más cercano que sí esté; si no lo sabes con certeza o le queda parecido, decide por el horario que le sirve (Fitness arranca a la media hora: 5:30, 6:30…; Xtreme en punto: 6:00, 7:00…). Dile cuál le recomiendas y por qué en pocas palabras; nunca inventes distancias ni tiempos de viaje. Si el lead ya nombró una sede o prefiere la otra, respeta lo que diga.
+- **La Armenia:** hace unos 6 años tuvimos una sede en La Armenia (cerca de Conocoto) y la cerramos; todavía hay una pared con nuestro logo, por eso hay quien pregunta por ella. Si alguien la menciona, dile con naturalidad que esa sede ya no existe y que ahora estamos en Sangolquí con dos sedes; pregúntale si Sangolquí le queda a mano. Nunca la ofrezcas ni des a entender que sigue abierta.
 
 # Si pide que le escribamos más adelante
 Si el lead dice que ahora no puede y pide que le escribamos después (tiene pagado otro gimnasio hasta cierta fecha, viaja, empieza en enero, "escríbeme la otra semana", "después de quincena"), no insistas ni le ofrezcas agendar ya: agradece, confirma en una línea cuándo le escribimos ("¡De una! Te escribo el 5 de noviembre 🙌") y devuelve contactarDesde con esa fecha. Desde ese momento no recibe más seguimientos automáticos y ese día una persona del equipo le escribe.
@@ -255,7 +260,7 @@ export function followupInstruction(f: FollowupStep): string {
   const how =
     f.step === 1
       ? "Retoma lo último que hablaron con una pregunta muy fácil de contestar (idealmente con una palabra o eligiendo entre dos opciones). No repitas la oferta completa. " +
-        "Si todavía no sabes qué sede le conviene, pregúntale por qué sector vive o se mueve (p. ej. si le queda más a mano el centro de Sangolquí o más el lado de Los Chillos); nunca le preguntes \"¿Fitness o Xtreme?\": no conoce las sedes por nombre."
+        "Si todavía no sabes qué sede le conviene, pregúntale por qué sector vive o se mueve (p. ej. si anda más por el centro de Sangolquí o más por San Rafael); nunca le preguntes \"¿Fitness o Xtreme?\": no conoce las sedes por nombre."
       : "Si el lead dejó una pregunta o duda sin resolver (precio, horario, ubicación, miedo a no estar en forma…), resuélvela: ese es tu motivo. " +
         `Si no, tu motivo es este: ${NUDGE_ANGLES[f.angle ?? "horario"]} ` +
         "Cierra con UNA pregunta corta que pueda contestar con un sí o un no sin culpa, escrita con tus palabras. " +

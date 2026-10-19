@@ -111,6 +111,15 @@ check(/sector/.test(ins1) && /nunca le preguntes/.test(ins1), "la instrucción d
 check(/NUNCA preguntes "¿Fitness o Xtreme\?"/.test(SYSTEM_PROMPT), "el prompt general tampoco lo pregunta");
 check(/Elegir la sede \(la eliges tú/.test(SYSTEM_PROMPT), "el prompt explica cómo elige la sede el agente");
 check(/contactarDesde/.test(SYSTEM_PROMPT), "el prompt explica cuándo devolver contactarDesde");
+for (const [sector, sede] of [
+  ["Amaguaña", "Fitness"], ["Inchalillo", "Fitness"], ["Fajardo", "Fitness"], ["Capelo", "Fitness"],
+  ["San Rafael", "Xtreme"], ["Selva Alegre", "Xtreme"], ["ESPE", "Xtreme"], ["Alangasí", "Xtreme"], ["Triángulo", "Xtreme"],
+] as const) {
+  const line = SYSTEM_PROMPT.split("\n").find((l) => l.startsWith(`- **La Cueva ${sede}** (`)) ?? "";
+  check(line.includes(sector), `${sector} → ${sede} (lista de sectores de Santiago)`);
+}
+check(/\*\*Conocoto\*\* depende de la parte/.test(SYSTEM_PROMPT), "Conocoto: depende de la parte y no se presiona");
+check(/La Armenia:.*ya no existe/.test(SYSTEM_PROMPT), "La Armenia: el agente sabe que la sede cerró");
 check(!/una health app/i.test(SYSTEM_PROMPT), "el prompt ya no vende la «health app»");
 
 console.log(fallos === 0 ? "\n✅ Todo correcto (posponer, variedad y sede)" : `\n❌ ${fallos} fallo(s)`);
