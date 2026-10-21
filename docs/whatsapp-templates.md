@@ -164,3 +164,16 @@ En `src/lib/whatsapp/template-catalog.ts`; se envían a Meta desde WhatsApp › 
 
 - `lead_dia7` (día 7 sin respuesta): "¡Hola {{1}}! 👋 Hace unos días hablamos de tus dos semanas de evaluación en La Cueva por $9. ¿Qué es lo que más te frena para empezar: el horario, el precio u otra cosa? Respóndeme y lo resolvemos juntos. 💪"
 - `lead_dia14` (día 14, despedida): "¡Hola {{1}}! ¿Ya descartaste la idea de empezar a entrenar? 🙂 Si es así, no hay problema y no te escribo más por ahora. Y si solo ha sido falta de tiempo, respóndeme y te ayudo a encontrar un horario que te quede."
+
+## Prueba de $9 (20 oct 2026): BORRADORES, falta el visto bueno de Santiago
+
+Se mandan a Meta desde WhatsApp › Plantillas, igual que las de socios. El texto exacto vive en
+`src/lib/whatsapp/template-catalog.ts`. Una vez aprobado no se puede cambiar.
+
+- `prueba_checkin` (Utility, día 3): "¡Hola {{1}}! 👋 ¿Cómo te has sentido en tus primeros días de evaluación en La Cueva? Cuéntanos si algo te molestó o si te está costando cuadrar el horario, y lo resolvemos con tu coach. 💪"
+- `prueba_mitad` (Utility, día 7): "¡Hola {{1}}! Ya vas por la mitad de tus dos semanas de evaluación en La Cueva. Entrenamientos registrados hasta hoy: {{2}}. Para que tu evaluación salga completa, lo ideal es venir al menos 3 veces por semana. ¿Qué días te quedan mejor esta semana?"
+- `prueba_cierre` (Marketing, 3 días antes del final): "¡Hola {{1}}! 🎯 Tus dos semanas de evaluación en La Cueva terminan el {{2}}. Antes de esa fecha, siéntate 10 minutos con tu coach: te mostramos tus resultados y eliges cómo seguir. Si te inscribes al terminar tu prueba, tu mensualidad queda en $50 (o desde $40 con débito automático y prepago) en vez de $60. ¿Qué día te queda mejor?"
+
+Salen como avisos `PRUEBA_DIA3`, `PRUEBA_DIA7` y `PRUEBA_CIERRE`, que nacen apagados. Las respuestas las contesta
+el agente de ventas con el contexto de la prueba (`trialAgentContext`), no el modo socio.
+

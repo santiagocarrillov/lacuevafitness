@@ -44,6 +44,35 @@ export const TEMPLATE_CATALOG: CatalogTemplate[] = [
     variables: ["nombre"],
     example: ["Andrea"],
   },
+  // The $9 trial, first session to close (plan Fase 2, 20 oct 2026; trial-touches.ts).
+  // Drafts for Santiago to approve before submitting: once Meta approves, the text is frozen.
+  {
+    name: "prueba_checkin",
+    category: "UTILITY",
+    label: "Prueba: ¿cómo te has sentido?",
+    when: "Día 3 de las dos semanas de evaluación ($9): check-in (aviso PRUEBA_DIA3).",
+    body: "¡Hola {{1}}! 👋 ¿Cómo te has sentido en tus primeros días de evaluación en La Cueva? Cuéntanos si algo te molestó o si te está costando cuadrar el horario, y lo resolvemos con tu coach. 💪",
+    variables: ["nombre"],
+    example: ["Andrea"],
+  },
+  {
+    name: "prueba_mitad",
+    category: "UTILITY",
+    label: "Prueba: vas por la mitad",
+    when: "Día 7 de las dos semanas de evaluación: entrenamientos hasta hoy y meta de 3 por semana (aviso PRUEBA_DIA7).",
+    body: "¡Hola {{1}}! Ya vas por la mitad de tus dos semanas de evaluación en La Cueva. Entrenamientos registrados hasta hoy: {{2}}. Para que tu evaluación salga completa, lo ideal es venir al menos 3 veces por semana. ¿Qué días te quedan mejor esta semana?",
+    variables: ["nombre", "entrenamientos registrados"],
+    example: ["Andrea", "3"],
+  },
+  {
+    name: "prueba_cierre",
+    category: "MARKETING",
+    label: "Prueba: cierre a la mensualidad",
+    when: "3 días antes de que terminen las dos semanas de evaluación: ver resultados con el coach y elegir plan (aviso PRUEBA_CIERRE).",
+    body: "¡Hola {{1}}! 🎯 Tus dos semanas de evaluación en La Cueva terminan el {{2}}. Antes de esa fecha, siéntate 10 minutos con tu coach: te mostramos tus resultados y eliges cómo seguir. Si te inscribes al terminar tu prueba, tu mensualidad queda en $50 (o desde $40 con débito automático y prepago) en vez de $60. ¿Qué día te queda mejor?",
+    variables: ["nombre", "último día de la prueba"],
+    example: ["Andrea", "jueves 23 de octubre"],
+  },
   {
     name: "socio_ausencia",
     category: "UTILITY",

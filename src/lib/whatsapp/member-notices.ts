@@ -19,8 +19,9 @@ import { renderTemplate, templateName } from "@/lib/whatsapp/templates";
 import { approvedTemplateNames } from "@/lib/whatsapp/graph";
 import { absenceDecision } from "@/lib/whatsapp/absence-rhythm";
 import { memberModeEnabled } from "@/lib/whatsapp/member-mode";
+import { longDay, trialTouch, type TrialTouchKind } from "@/lib/whatsapp/trial-touches";
 
-export type NoticeKind = "AUSENCIA" | "FRECUENCIA" | "CUMPLEANOS" | "NUTRI_TRIAL" | "NUTRI_MEDICION" | "NUTRI_RECORDATORIO" | "TESTS";
+export type NoticeKind = "AUSENCIA" | "FRECUENCIA" | "CUMPLEANOS" | "NUTRI_TRIAL" | "NUTRI_MEDICION" | "NUTRI_RECORDATORIO" | "TESTS" | TrialTouchKind;
 
 export const NOTICE_KINDS: { kind: NoticeKind; template: string; label: string; rule: string; automatic: boolean }[] = [
   { kind: "AUSENCIA", template: "socio_ausencia", label: "Días sin venir", rule: "Socio que paga y venía seguido, cuando pierde 2 de sus sesiones habituales según su ritmo de las últimas 4 semanas (a diario: 2 días hábiles seguidos; L-M-V: 2 de esos días). Socios nuevos: como si vinieran 3 veces por semana. Una vez por ausencia.", automatic: true },
@@ -29,6 +30,9 @@ export const NOTICE_KINDS: { kind: NoticeKind; template: string; label: string; 
   { kind: "NUTRI_TRIAL", template: "nutricion_evaluacion_trial", label: "Cita nutricional del trial", rule: "Quien pagó los $9 y aún no tiene cita, con su fecha límite y el enlace para agendar.", automatic: true },
   { kind: "NUTRI_MEDICION", template: "socio_medicion_pendiente", label: "Medición pendiente", rule: "Socio que paga sin medición en 18 semanas, con el enlace para agendar. Una vez por ciclo.", automatic: true },
   { kind: "NUTRI_RECORDATORIO", template: "nutricion_recordatorio_cita", label: "Recordatorio de cita nutricional", rule: "El día anterior a la cita (además de la notificación de la app).", automatic: true },
+  { kind: "PRUEBA_DIA3", template: "prueba_checkin", label: "Prueba de $9: día 3", rule: "Quien está en sus dos semanas de evaluación, al tercer día: cómo se ha sentido y qué le impide venir. Una vez por prueba; no sale en domingo (el lunes se pone al día).", automatic: true },
+  { kind: "PRUEBA_DIA7", template: "prueba_mitad", label: "Prueba de $9: día 7", rule: "Al séptimo día de la prueba: entrenamientos registrados hasta hoy y la meta de 3 por semana. Una vez por prueba.", automatic: true },
+  { kind: "PRUEBA_CIERRE", template: "prueba_cierre", label: "Prueba de $9: cierre", rule: "3 días antes de que termine la prueba: sentarse con su coach a ver resultados y elegir plan ($50, desde $40 con débito y prepago). No sale a quien ya paga mensualidad. Las respuestas las contesta el agente de ventas, que sabe que está en su prueba.", automatic: true },
   { kind: "TESTS", template: "socio_tests_pendientes", label: "Faltan tus tests SRXFIT", rule: "Solo a mano: el admin lo manda desde SRXFIT › Evaluaciones cuando intentó evaluarlo y no pudo.", automatic: false },
 ];
 
@@ -151,6 +155,41 @@ export async function planNotices(now = new Date()): Promise<NoticeCandidate[]> 
     ]));
   }
 
+  // ── The $9 trial: check-ins on days 3 and 7, close before it ends ──
+  const trials = await prisma.membership.findMany({
+    where: {
+      state: "ACTIVE",
+      plan: { billingCycle: "TRIAL" },
+      endsAt: { gte: new Date(now.getTime() - DAY) },
+      startsAt: { lte: now },
+      member: { status: "TRIAL", ...notStaff, memberships: { none: { state: "ACTIVE", endsAt: { gte: now }, plan: { billingCycle: { notIn: ["TRIAL", "ONE_TIME"] } } } } },
+    },
+    select: {
+      id: true, startsAt: true, endsAt: true,
+      member: { select: { id: true, firstName: true, lastName: true, sede: true, phone: true, attendance: { where: { recordedAt: { gte: new Date(now.getTime() - 30 * DAY) } }, select: { recordedAt: true } } } },
+    },
+  });
+  for (const t of trials) {
+    const m = t.member;
+    if (isStaffFreeTraining(m.firstName, m.lastName)) continue;
+    const startDay = ecuadorDateString(t.startsAt);
+    const endDay = ecuadorDateString(t.endsAt);
+    const kind = trialTouch(startDay, endDay, today);
+    if (!kind) continue;
+    const first = templateName(m.firstName, m.lastName);
+    // Keyed by membership: one of each per trial, even if they buy a second one.
+    const key = `${kind}:${t.id}`;
+    if (kind === "PRUEBA_DIA7") {
+      // By day: the membership is often loaded after the first check-in of that same day.
+      const visits = new Set(m.attendance.map((a) => ecuadorDateString(a.recordedAt)).filter((d) => d >= startDay)).size;
+      out.push({ ...candidate(kind, key, m, [first, String(visits)]), why: `Día 7 · ${visits} entrenamientos desde ${startDay}` });
+    } else if (kind === "PRUEBA_CIERRE") {
+      out.push({ ...candidate(kind, key, m, [first, longDay(endDay)]), why: `Termina ${endDay}` });
+    } else {
+      out.push({ ...candidate(kind, key, m, [first]), why: `Empezó ${startDay}` });
+    }
+  }
+
   // Drop what was already sent (or attempted) under the same key.
   const done = new Set((await prisma.memberNotice.findMany({ where: { key: { in: out.map((c) => c.key) } }, select: { key: true } })).map((n) => n.key));
   return out.filter((c) => !done.has(c.key));
@@ -180,12 +219,15 @@ export async function sendNotice(c: NoticeCandidate, createdById: string | null 
       button = inv.code;
     }
     const sent = await sendTemplate(externalId, template, "es", c.variables, [], button);
+    const botAnswers = c.kind.startsWith("PRUEBA_") || memberModeEnabled();
     const conv =
       (await prisma.conversation.findUnique({ where: { channel_externalId: { channel: "WHATSAPP", externalId } }, select: { id: true } })) ??
       (await prisma.conversation.findUnique({ where: { memberId: c.memberId }, select: { id: true } })) ??
-      (await prisma.conversation.create({ data: { memberId: c.memberId, sede: c.sede, channel: "WHATSAPP", externalId, botPaused: !memberModeEnabled() }, select: { id: true } }));
+      (await prisma.conversation.create({ data: { memberId: c.memberId, sede: c.sede, channel: "WHATSAPP", externalId, botPaused: !botAnswers }, select: { id: true } }));
     // A socio's reply goes to the agent in socio mode; with it off, to the staff.
-    const pause = memberModeEnabled() ? {} : { botPaused: true, botResumeAt: null };
+    // Someone in their trial is the sales agent's (it gets the trial context), so
+    // their conversation is left as it is: a human who took it keeps it.
+    const pause = botAnswers ? {} : { botPaused: true, botResumeAt: null };
     await prisma.$transaction([
       prisma.message.create({
         data: {

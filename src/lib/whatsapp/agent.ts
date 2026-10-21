@@ -308,6 +308,8 @@ export async function runAgent(
     knownSede?: Sede | null;
     leadName?: string | null;
     adContext?: string | null;
+    /** Who is already inside their $9 trial (trial-touches.ts): no $9 pitch, help them through it and close. */
+    trialContext?: string | null;
     /** Write a no-reply nudge instead of answering (see followupInstruction). */
     followup?: FollowupStep | null;
   } = {},
@@ -336,7 +338,8 @@ export async function runAgent(
     `Son HORAS DE INICIO: la clase dura una hora. La última de la tarde empieza a la hora que dice y termina una hora después — no ofrezcas nada más tarde.\n` +
     `Sábados SÍ hay clases para socios, pero NO se agendan evaluaciones ni primeras sesiones: suele haber un solo coach y no se abastece. Si preguntan por sábado, dilo así — no digas que cerramos el fin de semana.` +
     (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "") +
-    (opts.adContext ? `\n\n${opts.adContext}` : "");
+    (opts.adContext ? `\n\n${opts.adContext}` : "") +
+    (opts.trialContext ? `\n\n${opts.trialContext}` : "");
 
   const messages = [
     { role: "user", content: contextBlock },

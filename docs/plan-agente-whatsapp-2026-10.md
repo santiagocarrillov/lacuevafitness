@@ -50,6 +50,18 @@ Diagnóstico del 16-oct-2026 (solo lectura, datos de la app). Meta: 110 socios p
 - **Durante la prueba:** check-in el día 3 ("¿cómo te fue en tus primeras clases?") y el día 7 (progreso y horario).
 - **Cierre a los días 12–14:** oferta de plan con fecha límite y link de pago. Si no compra, el lead pasa a la cadencia del día 14.
 - **Personal:** la tarea automática "trialclose" que hoy va al equipo se queda como respaldo cuando el lead pide hablar con alguien.
+- **Hecho (20 oct 2026, `src/lib/whatsapp/trial-touches.ts`):**
+  - Tres avisos nuevos en WhatsApp › Avisos, **apagados** hasta que Santiago los prenda:
+    - `PRUEBA_DIA3`, plantilla `prueba_checkin`: cómo se ha sentido y qué le impide venir.
+    - `PRUEBA_DIA7`, plantilla `prueba_mitad`: entrenamientos registrados y la meta de 3 por semana.
+    - `PRUEBA_CIERRE`, plantilla `prueba_cierre`: 3 días antes del final. Sentarse con su coach, ver resultados y elegir plan ($50, o desde $40 con débito y prepago).
+  - Uno por prueba, a las 10:00, nunca en domingo. No le llega a quien ya paga mensualidad.
+  - El agente de ventas sabe quién está en su prueba: en qué día va, cuándo termina y cuántos entrenamientos lleva. No le vuelve a ofrecer los $9, no agenda «primera sesión», no le cambia la etapa del embudo y no le arranca la cadencia de leads. En los últimos días cierra con la escalera de precio.
+  - Cambios frente al plan:
+    - No hay link de pago. La inscripción es en recepción, y si la persona quiere pagar por transferencia pasa a una persona.
+    - El cierre ya no sale a 2 días o menos del final: ahí manda la tarea «Cierre de trial» del staff.
+    - Quien no compra NO entra a la cadencia de leads (esa cadencia ofrece los $9).
+  - Prueba: `npm run test:prueba`.
 
 ### Fase 3 · Renovaciones (después de la Fase 0)
 - **Recordatorio de renovación:** 7 días antes, 3 días antes y el día del vencimiento, con el link de pago o el pago en recepción.

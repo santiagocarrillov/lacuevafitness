@@ -27,6 +27,8 @@ import { templateName } from "./templates";
 import { memberModeEnabled, socioOf, SOCIO_SELECT } from "./member-mode";
 import { runMemberTurn } from "./member-agent-runner";
 import { closePostponeTasks, createPostponeTask, parsePostponeDate } from "./postpone";
+import { trialAgentContext } from "./trial-touches";
+import { ecuadorDateString } from "@/lib/timezone";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -208,16 +210,22 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     adContext = adContextLine(conversation.lead, typeof refBody === "string" ? refBody : null);
   }
 
+  // Someone inside their $9 trial: the agent helps them through it and closes,
+  // never pitches the $9 again nor books a "first session".
+  const trialContext = await trialContextFor(conversation.member ?? conversation.lead?.member ?? null);
+
   let result;
   try {
-    result = await runAgent(history, { knownSede: null, leadName, adContext });
+    result = await runAgent(history, { knownSede: null, leadName, adContext, trialContext });
   } catch (err) {
     console.error("[whatsapp-agent] runAgent failed", err);
     return { status: "error", error: err instanceof Error ? err.message : "agent error" };
   }
 
   const resolvedSede: Sede | null = result.sede === "UNKNOWN" ? null : (result.sede as Sede);
-  const stage: LeadStage | undefined = VALID_STAGES.includes(result.suggestedStage as LeadStage)
+  // In the trial the funnel follows the gym (attendance, the plan they buy), not the chat:
+  // a "NEGOTIATING" here would restart the no-reply cadence that pitches the $9.
+  const stage: LeadStage | undefined = !trialContext && VALID_STAGES.includes(result.suggestedStage as LeadStage)
     ? (result.suggestedStage as LeadStage)
     : undefined;
 
@@ -313,7 +321,7 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
   // that day instead (postpone.ts). Done before sending — the request stands even
   // if our reply doesn't go out.
   const postponeUntil =
-    conversation.lead && !result.scheduledAtISO && stage !== "LOST" && stage !== "CONVERTED"
+    conversation.lead && !trialContext && !result.scheduledAtISO && stage !== "LOST" && stage !== "CONVERTED"
       ? parsePostponeDate(result.contactarDesde)
       : null;
   if (postponeUntil && conversation.lead) {
@@ -328,7 +336,7 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
   }
 
   // If the agent booked an evaluation, record it and schedule anti-no-show reminders.
-  if (result.scheduledAtISO) {
+  if (result.scheduledAtISO && !trialContext) {
     const when = new Date(result.scheduledAtISO);
     if (!isNaN(when.getTime()) && when.getTime() > Date.now()) {
       if (conversation.leadId) {
@@ -367,7 +375,7 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     ]);
     await followUpIfSilent(conversation, {
       handoff: forceHandoff,
-      booked: result.scheduledAtISO != null,
+      booked: result.scheduledAtISO != null && !trialContext,
       postponed: postponeUntil != null,
       stage: stage ?? conversation.lead?.stage ?? null,
     });
@@ -418,5 +426,32 @@ async function followUpIfSilent(
     });
   } catch (err) {
     console.error("[whatsapp-agent] no se pudo programar el seguimiento", { conversationId: conversation.id, err });
+  }
+}
+
+/**
+ * The trial context for the agent, or null if this person is not inside an
+ * active $9 trial. Never throws: without it the agent still answers.
+ */
+async function trialContextFor(member: { id: string; status: string } | null): Promise<string | null> {
+  if (!member || member.status !== "TRIAL") return null;
+  try {
+    const now = new Date();
+    const trial = await prisma.membership.findFirst({
+      where: { memberId: member.id, state: "ACTIVE", plan: { billingCycle: "TRIAL" }, startsAt: { lte: now }, endsAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
+      orderBy: { startsAt: "desc" },
+      select: { startsAt: true, endsAt: true },
+    });
+    if (!trial) return null;
+    const startDay = ecuadorDateString(trial.startsAt);
+    const visits = await prisma.attendance.findMany({
+      where: { memberId: member.id, recordedAt: { gte: new Date(trial.startsAt.getTime() - 24 * 60 * 60 * 1000) } },
+      select: { recordedAt: true },
+    });
+    const days = new Set(visits.map((v) => ecuadorDateString(v.recordedAt)).filter((d) => d >= startDay));
+    return trialAgentContext({ startDay, endDay: ecuadorDateString(trial.endsAt), today: ecuadorDateString(now), visits: days.size });
+  } catch (err) {
+    console.error("[whatsapp-agent] no se pudo leer la prueba del socio", member.id, err);
+    return null;
   }
 }
