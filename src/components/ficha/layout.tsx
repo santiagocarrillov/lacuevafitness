@@ -218,7 +218,10 @@ export function waLink(phone: string | null | undefined): string | undefined {
   if (!phone) return undefined;
   const digits = phone.replace(/\D/g, "");
   if (digits.length < 9) return undefined;
-  const intl = digits.startsWith("593") ? digits : digits.startsWith("0") ? `593${digits.slice(1)}` : digits;
+  // "+5930994305822" (593 plus the local 0) is a typo wa.me can't open.
+  const intl = digits.startsWith("593")
+    ? `593${digits.slice(3).replace(/^0/, "")}`
+    : digits.startsWith("0") ? `593${digits.slice(1)}` : digits;
   return `https://wa.me/${intl}`;
 }
 
