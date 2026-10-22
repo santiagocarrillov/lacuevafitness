@@ -485,7 +485,9 @@ export async function recordAttendance(
   // their evaluation too, so the embudo doesn't depend on which box staff used.
   for (const member of members) {
     const lead = member.lead;
-    if (!lead || lead.trialAttended === true) continue;
+    // trialAttended alone isn't enough: a lead can have it true and the stage
+    // still behind (markLeadAttended fixes the stage and is idempotent).
+    if (!lead) continue;
     if (lead.stage !== "SCHEDULED_TRIAL" && lead.stage !== "TRIAL_NO_SHOW") continue;
     await prisma
       .$transaction((tx) => markLeadAttended(tx, lead.id, { userId: user.id }))

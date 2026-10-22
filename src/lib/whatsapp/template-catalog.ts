@@ -44,6 +44,27 @@ export const TEMPLATE_CATALOG: CatalogTemplate[] = [
     variables: ["nombre"],
     example: ["Andrea"],
   },
+  // No-show rescue, touches 2 and 3 (22 oct 2026; trial-attendance.ts). The first
+  // one is noshow_recuperacion (approved 21 sep). Until Meta approves these, the
+  // day-3 and day-7 touches wait PENDING instead of being canceled (sequences.ts).
+  {
+    name: "noshow_dia3",
+    category: "MARKETING",
+    label: "No-show: ¿fue el horario?",
+    when: "3 días después de faltar a su primera sesión, si no contestó el primer mensaje (se corta si contesta o reagenda).",
+    body: "¡Hola {{1}}! 👋 Te escribo de La Cueva. A veces el día se complica y no se llega a la primera sesión. ¿Fue por el horario? Dime qué día y a qué hora te queda mejor y te aparto un cupo; tus dos semanas por $9 siguen en pie. 💪",
+    variables: ["nombre"],
+    example: ["Andrea"],
+  },
+  {
+    name: "noshow_dia7",
+    category: "MARKETING",
+    label: "No-show: ¿lo dejamos para después?",
+    when: "7 días después de faltar a su primera sesión: último mensaje; ese día recepción recibe una tarea para llamarle.",
+    body: "¡Hola {{1}}! ¿Prefieres dejar tus dos semanas de evaluación en La Cueva para más adelante? 🙂 Si es así, no hay problema: respóndeme con la fecha y te escribo ese día. Y si quieres arrancar esta semana, dime qué horario te queda y te agendo.",
+    variables: ["nombre"],
+    example: ["Andrea"],
+  },
   // The $9 trial, first session to close (plan Fase 2, 20 oct 2026; trial-touches.ts).
   // Drafts for Santiago to approve before submitting: once Meta approves, the text is frozen.
   {

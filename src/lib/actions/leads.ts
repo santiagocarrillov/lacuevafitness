@@ -8,6 +8,8 @@ import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { Prisma, Sede, LeadSource, LeadStage, type User } from "@/generated/prisma/client";
 import { presetStart } from "@/lib/list-filters";
 import { STAGE_LABEL } from "@/lib/leads/stages";
+import { closeNoShowTasks } from "@/lib/leads/noshow-task";
+import { cancelNoShowTouches } from "@/lib/whatsapp/sequences";
 
 // ── Guards ──────────────────────────────────────────────────────────
 // Server actions are public POST endpoints: every export checks its caller.
@@ -269,6 +271,15 @@ export async function updateLead(
 
   // Un campo vaciado en el formulario se guarda como null, no como "".
   const blank = (v: string | undefined) => (v === undefined ? undefined : v.trim() || null);
+  const newTrialAt = data.trialScheduledAt ? new Date(data.trialScheduledAt) : null;
+  const before = newTrialAt
+    ? await prisma.lead.findUnique({ where: { id }, select: { trialScheduledAt: true, stage: true } })
+    : null;
+  // A new appointment starts clean: a previous no-show left trialAttended=false,
+  // and the cron only marks appointments whose attendance isn't recorded.
+  // Only a future date with no attendance being recorded in the same save.
+  const rebooked = newTrialAt != null && newTrialAt.getTime() > Date.now() && data.trialAttended !== true
+    && newTrialAt.getTime() !== before?.trialScheduledAt?.getTime();
   const lead = await prisma.lead.update({
     where: { id },
     data: {
@@ -282,8 +293,16 @@ export async function updateLead(
       // "" borra la cita; ausente la deja como está.
       trialScheduledAt:
         data.trialScheduledAt === undefined ? undefined : data.trialScheduledAt ? new Date(data.trialScheduledAt) : null,
+      ...(rebooked ? { trialAttended: null } : {}),
+      // A no-show with a new date is booked again (the cron only watches SCHEDULED_TRIAL).
+      ...(rebooked && (data.stage ?? before?.stage) === "TRIAL_NO_SHOW" ? { stage: "SCHEDULED_TRIAL" as const } : {}),
     },
   });
+  if (rebooked) {
+    const conv = await prisma.conversation.findUnique({ where: { leadId: id }, select: { id: true } });
+    if (conv) await cancelNoShowTouches(conv.id, "reagendado a mano");
+    await closeNoShowTasks(id, "Reagendado a mano desde la ficha.");
+  }
 
   revalidatePath("/dashboard/leads");
   revalidatePath(`/dashboard/leads/${id}`);

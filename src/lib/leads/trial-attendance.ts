@@ -16,7 +16,13 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { nextSendableAt, scheduleFollowup } from "@/lib/whatsapp/sequences";
+import {
+  cancelNoReplyCadence,
+  NOSHOW_KINDS,
+  noShowTimes,
+  scheduleNoShowTouches,
+} from "@/lib/whatsapp/sequences";
+import { NOSHOW_TASK_PREFIX } from "./noshow-task";
 import { templateName } from "@/lib/whatsapp/templates";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -38,28 +44,44 @@ function recoveryMessage(firstName: string | null, lastName: string | null): str
 }
 
 /**
+ * Pasada esta antigüedad, una cita vencida se marca pero no recibe el rescate: un
+ * "vimos que no pudiste venir" un mes después suena a robot. Esos los recoge la
+ * reactivación (scripts/noshow-reactivar.ts).
+ */
+export const RESCUE_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
+
+/**
  * Move past-due appointments nobody registered to TRIAL_NO_SHOW, and schedule
- * the rescue message for each one.
+ * the rescue for each one.
  *
  * Marcar el no-show nunca bastó: el 21 sep cuatro personas agendaron, ninguna
  * llegó y nadie les volvió a escribir. `NOSHOW_RECOVERY_1D` y la plantilla
  * `noshow_recuperacion` existían desde el 21, pero NADA las programaba — había
  * que sembrarlas a mano. Esto cierra el circuito: quien no viene recibe la
- * invitación a reagendar sin que nadie se acuerde de hacerlo.
+ * invitación a reagendar sin que nadie se acuerde de hacerlo. Desde el 22 oct son
+ * tres toques (día que faltó, día 3 y día 7) y una llamada de recepción el día 7
+ * (sequences.ts · noshow-task.ts).
+ *
+ * El segundo plantón también cuenta. Hasta el 22 oct solo se buscaban citas con
+ * `trialAttended` en null, y el primer no-show lo deja en false: quien reagendaba
+ * y volvía a faltar se quedaba "Agendado" para siempre, sin rescate ni cadencia
+ * (9 leads así ese día). Ahora entra todo lo que no tenga la asistencia
+ * registrada (`trialAttended` distinto de true).
  *
  * Re-marcar sigue siendo seguro: registrar la visita después devuelve el lead a
- * TRIAL_ATTENDED, y el rescate ya programado se cancela solo si alguien toma la
- * conversación (el cron descarta followups con el bot en pausa).
+ * TRIAL_ATTENDED, y el rescate pendiente se cancela solo (el cron descarta los
+ * toques de quien ya no está en TRIAL_NO_SHOW o tiene el bot en pausa).
  */
 export async function markMissedTrials(
   now: Date = new Date(),
-): Promise<{ marked: number; recoveries: number }> {
+): Promise<{ marked: number; recoveries: number; stale: number }> {
   const cutoff = new Date(now.getTime() - NO_SHOW_GRACE_MS);
   const missed = await prisma.lead.findMany({
     where: {
       stage: "SCHEDULED_TRIAL",
       trialScheduledAt: { not: null, lt: cutoff },
-      trialAttended: null,
+      // `not: true` dejaría fuera los null (en SQL, null <> true no es verdadero).
+      OR: [{ trialAttended: null }, { trialAttended: false }],
     },
     select: {
       id: true,
@@ -69,7 +91,7 @@ export async function markMissedTrials(
       conversation: { select: { id: true } },
     },
   });
-  if (missed.length === 0) return { marked: 0, recoveries: 0 };
+  if (missed.length === 0) return { marked: 0, recoveries: 0, stale: 0 };
 
   await prisma.lead.updateMany({
     where: { id: { in: missed.map((l) => l.id) } },
@@ -77,33 +99,41 @@ export async function markMissedTrials(
   });
 
   let recoveries = 0;
+  let stale = 0;
   for (const lead of missed) {
     // Sin conversación de WhatsApp no hay a dónde escribir (leads del formulario
     // web, altas a mano). El lead igual queda marcado como no-show.
     if (!lead.conversation) continue;
+    if (now.getTime() - lead.trialScheduledAt!.getTime() > RESCUE_MAX_AGE_MS) {
+      stale += 1;
+      continue;
+    }
 
-    // Una sola invitación por cita: si reagenda y vuelve a faltar, la nueva cita
-    // es posterior y sí genera otra. Así no se acumulan rescates del mismo plantón.
+    // Un solo rescate por cita: si reagenda y vuelve a faltar, la nueva cita es
+    // posterior y sí genera otro. Así no se acumulan rescates del mismo plantón.
     const yaTiene = await prisma.scheduledFollowup.findFirst({
       where: {
         conversationId: lead.conversation.id,
-        kind: { in: ["NOSHOW_RECOVERY_1D", "NOSHOW_RECOVERY_3D"] },
+        kind: { in: NOSHOW_KINDS },
         createdAt: { gte: lead.trialScheduledAt! },
       },
       select: { id: true },
     });
     if (yaTiene) continue;
 
-    await scheduleFollowup(
+    // Lo que quedara de la cadencia de no respuesta (p. ej. de antes de agendar a
+    // mano) no puede salir encima del rescate.
+    await cancelNoReplyCadence(lead.conversation.id, "faltó a su primera sesión: va el rescate de no-show");
+    await scheduleNoShowTouches(
       lead.conversation.id,
-      "NOSHOW_RECOVERY_1D",
-      nextSendableAt(new Date(now.getTime() + 60_000)),
+      lead,
+      noShowTimes(now),
       recoveryMessage(lead.firstName, lead.lastName),
     );
     recoveries += 1;
   }
 
-  return { marked: missed.length, recoveries };
+  return { marked: missed.length, recoveries, stale };
 }
 
 /**
@@ -119,15 +149,17 @@ export async function markLeadAttended(
 ): Promise<{ changed: boolean }> {
   const lead = await tx.lead.findUnique({
     where: { id: leadId },
-    select: { stage: true, trialAttended: true },
+    select: { stage: true, trialAttended: true, conversation: { select: { id: true } } },
   });
   if (!lead) return { changed: false };
-  if (lead.trialAttended === true) return { changed: false }; // already recorded today
 
   // TRIAL_ATTENDED is a milestone, not a terminal state: a lead who is already
   // negotiating or closed must not be walked backwards in the funnel.
   const advances = lead.stage === "NEW" || lead.stage === "CONTACTED"
     || lead.stage === "SCHEDULED_TRIAL" || lead.stage === "TRIAL_NO_SHOW";
+  // Already recorded. Unless the stage stayed behind (it happened: attended, a
+  // socio already, and still "Agendado"), there is nothing to do.
+  if (lead.trialAttended === true && !advances) return { changed: false };
 
   await tx.lead.update({
     where: { id: leadId },
@@ -140,6 +172,17 @@ export async function markLeadAttended(
       channel: "WALK_IN",
       summary: opts.note ?? "Asistió a su evaluación (registrado en asistencia).",
     },
+  });
+  // Came in after all: no more "¿reagendamos?" nor the call from the front desk.
+  if (lead.conversation) {
+    await tx.scheduledFollowup.updateMany({
+      where: { conversationId: lead.conversation.id, kind: { in: NOSHOW_KINDS }, status: "PENDING" },
+      data: { status: "CANCELED", errorMessage: "vino a entrenar" },
+    });
+  }
+  await tx.staffTask.updateMany({
+    where: { leadId, autoKey: { startsWith: NOSHOW_TASK_PREFIX }, status: { in: ["TODO", "IN_PROGRESS", "WAITING"] } },
+    data: { status: "DONE", doneAt: new Date(), outcome: "Vino a entrenar (registrado en asistencia)." },
   });
   return { changed: true };
 }

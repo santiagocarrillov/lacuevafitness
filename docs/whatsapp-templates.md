@@ -60,6 +60,22 @@ Se envía cuando el lead no asistió a su primera sesión (reofertar).
 **Variables:** `{{1}}` = nombre
 **Ejemplo:** Andrea
 
+### Rescate de no-show en tres toques (22 oct 2026)
+Hasta el 22 oct el no-show recibía solo `noshow_recuperacion`; 30 de 49 nunca contestaron y nadie
+les volvió a escribir. Ahora (`src/lib/leads/trial-attendance.ts`, `src/lib/whatsapp/sequences.ts`):
+1. **El día que faltó** (3 h después de la hora agendada): texto si la ventana de 24 h sigue abierta,
+   si no `noshow_recuperacion`.
+2. **Día 3:** `noshow_dia3` («¿fue por el horario?»).
+3. **Día 7:** `noshow_dia7` («¿lo dejamos para más adelante?») y, ese mismo día, una **tarea de
+   llamada** sin asignar en la sede del lead (`src/lib/leads/noshow-task.ts`, autoKey `noshow:<leadId>:<día de la cita>`).
+
+Todo se corta si contesta, reagenda (con el agente o a mano en la ficha) o viene a entrenar. Si contesta y
+vuelve a quedarse callado, entra a la cadencia normal de no respuesta. `noshow_dia3` y `noshow_dia7` viven en
+el catálogo (`template-catalog.ts`) y se suben desde WhatsApp › Plantillas; mientras Meta no las apruebe, esos
+toques **esperan** en PENDING (hasta 7 días) en vez de cancelarse, y el del día 7 nunca sale a menos de 4 días
+del día 3. Citas vencidas hace más de 2 días se marcan sin rescate; para esas está
+`scripts/noshow-reactivar.ts`. Pruebas: `npm run test:noshow`.
+
 ---
 
 ## 4. `reengagement_no_reply` — Categoría: **Marketing**
@@ -95,7 +111,8 @@ Marketing, reintentar como **Utility** (mensaje sobre su membresía/servicio vig
 - **Sin botones por ahora:** el cliente (`sendTemplate`) hoy solo mete variables en el body. Si más adelante queremos botones "Sí, confirmo / Reagendar", se amplía el cliente y se re-somete la template.
 - **Números de teléfono / links** en el body pueden ralentizar la aprobación; por eso los mantengo fuera.
 - **Mapeo `FollowupKind` → plantilla** (en `src/lib/whatsapp/templates.ts`):
-  `NO_REPLY_*` → `reengagement_no_reply` · `NOSHOW_RECOVERY_*` → `noshow_recuperacion` ·
+  `NO_REPLY_3D` → `reengagement_no_reply` (7D/14D → `lead_dia7`/`lead_dia14`) ·
+  `NOSHOW_RECOVERY_1D` → `noshow_recuperacion` · `NOSHOW_RECOVERY_3D`/`7D` → `noshow_dia3`/`noshow_dia7` ·
   `TRIAL_REMINDER_24H` → `recordatorio_eval_24h` · `TRIAL_REMINDER_1H` (y el legado `2H`) →
   `recordatorio_eval_1h`. `ADMIN_ATTENDANCE_PING` y `TRIAL_CONFIRM` no tienen plantilla a
   propósito: siempre salen dentro de la ventana.
