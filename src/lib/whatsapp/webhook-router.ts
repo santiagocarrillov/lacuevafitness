@@ -245,9 +245,10 @@ async function ingestInbound(
   if (existing) return null;
 
   // Find conversation by (channel, externalId). Create lead+conversation if first contact.
-  let conversation = await prisma.conversation.findUnique({
-    where: { channel_externalId: { channel: "WHATSAPP", externalId: waUserId } },
-  });
+  let conversation =
+    (await prisma.conversation.findUnique({
+      where: { channel_externalId: { channel: "WHATSAPP", externalId: waUserId } },
+    })) ?? (await adoptConversationByPhone(waUserId));
 
   if (!conversation) {
     // ¿Es un socio que ya conocemos? Antes de inventarle ficha de lead a alguien
@@ -351,6 +352,31 @@ async function ingestInbound(
  * conversación. El match es por los últimos 9 dígitos porque los formatos
  * guardados son un zoo ("0986615931", "+593986615931", "+5930999033400").
  */
+/**
+ * A conversation we opened ourselves under a malformed number. A ficha saved as
+ * "+5930994305822" produced the externalId "5930994305822"; Meta still delivered
+ * the template, but the reply arrives as "593994305822" and never matched, so a
+ * socio answering an AUSENCIA notice was born again as a lead and got the sales
+ * cadence. Same last 9 digits = same person: take that conversation and fix its
+ * externalId so the next message matches directly.
+ */
+async function adoptConversationByPhone(waUserId: string) {
+  const key = phoneKey(waUserId);
+  if (!key) return null;
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT c.id
+    FROM "Conversation" c
+    WHERE c.channel = 'WHATSAPP'
+      AND c."externalId" <> ${waUserId}
+      AND length(regexp_replace(c."externalId", '[^0-9]', '', 'g')) >= 9
+      AND right(regexp_replace(c."externalId", '[^0-9]', '', 'g'), 9) = ${key}
+    ORDER BY c."updatedAt" DESC
+    LIMIT 1
+  `;
+  if (!rows[0]) return null;
+  return prisma.conversation.update({ where: { id: rows[0].id }, data: { externalId: waUserId } });
+}
+
 async function findMemberWithoutConversation(
   waUserId: string,
 ): Promise<{ id: string; sede: Sede } | null> {

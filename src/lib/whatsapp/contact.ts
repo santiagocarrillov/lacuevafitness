@@ -97,3 +97,16 @@ export function phoneKey(phone: string | null | undefined): string | null {
   const digits = (phone ?? "").replace(/\D/g, "");
   return digits.length >= 9 ? digits.slice(-9) : null;
 }
+
+/**
+ * El wa_id de un celular ecuatoriano: 593 + los 9 dígitos finales. Es la forma
+ * en que Meta nos manda el número cuando la persona contesta, así que la
+ * conversación tiene que guardarse así para que la respuesta la encuentre.
+ * Fichas como "+5930994305822" (593 y el 0 local) daban "5930994305822":
+ * Meta igual entregaba la plantilla, pero la respuesta llegaba como
+ * "593994305822", no encontraba la conversación y nacía un lead nuevo.
+ */
+export function waIdFromPhone(phone: string | null | undefined): string | null {
+  const key = phoneKey(phone);
+  return key ? `593${key}` : null;
+}

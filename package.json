@@ -22,6 +22,7 @@
     "test:alta": "tsx scripts/test-alta-socio.ts",
     "test:horarios": "tsx scripts/test-horarios.ts",
     "test:reacciones": "tsx scripts/test-reacciones.ts",
+    "test:wa-id": "tsx scripts/test-wa-id.ts",
     "test:guardas": "tsx scripts/test-guardas.ts",
     "test:owner-notas": "tsx scripts/test-owner-notas.ts",
     "test:tareas-auto": "tsx scripts/test-tareas-auto.ts",

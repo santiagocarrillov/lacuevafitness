@@ -14,7 +14,7 @@ import { weekdayOf } from "@/lib/nutrition/slots";
 import { toSchedule } from "@/lib/nutrition/to-schedule";
 import { ensureInvite } from "@/lib/nutrition/booking-core";
 import { sendTemplate } from "@/lib/whatsapp/client";
-import { phoneKey } from "@/lib/whatsapp/contact";
+import { waIdFromPhone } from "@/lib/whatsapp/contact";
 import { renderTemplate, templateName } from "@/lib/whatsapp/templates";
 import { approvedTemplateNames } from "@/lib/whatsapp/graph";
 import { absenceDecision } from "@/lib/whatsapp/absence-rhythm";
@@ -200,10 +200,8 @@ export type SendOutcome = { key: string; status: "SENT" | "FAILED" | "SKIPPED"; 
 /** Sends one notice: conversation + template + message in the thread + MemberNotice row. */
 export async function sendNotice(c: NoticeCandidate, createdById: string | null = null): Promise<SendOutcome> {
   const template = NOTICE_KINDS.find((k) => k.kind === c.kind)!.template;
-  const key = phoneKey(c.phone);
-  if (!key) return { key: c.key, status: "SKIPPED", detail: "Sin celular válido" };
-  const digits = c.phone!.replace(/\D/g, "");
-  const externalId = digits.startsWith("593") ? digits : `593${key}`;
+  const externalId = waIdFromPhone(c.phone);
+  if (!externalId) return { key: c.key, status: "SKIPPED", detail: "Sin celular válido" };
 
   // Claim the key first, so two runs never send it twice.
   try {

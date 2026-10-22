@@ -18,7 +18,7 @@ import { sendTemplate, sendText } from "@/lib/whatsapp/client";
 import { FICHA_TEMPLATES, TEMPLATE_LANGUAGE, fichaTemplatePreviews, renderTemplate, templateName } from "@/lib/whatsapp/templates";
 import { resolveResumeAt, type ResumePreset } from "@/lib/whatsapp/bot-handoff";
 import { MEMBER_OWNED_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
-import { contactOf, phoneKey } from "@/lib/whatsapp/contact";
+import { contactOf, waIdFromPhone } from "@/lib/whatsapp/contact";
 import {
   MIN_QUERY_LENGTH,
   SQL_ACCENTS_FROM,
@@ -381,15 +381,12 @@ export async function openMemberConversation(
   if (!member) return { ok: false, error: "Socio no encontrado." };
   if (member.conversation) return { ok: true, conversationId: member.conversation.id };
 
-  const key = phoneKey(member.phone);
-  if (!key) {
-    return { ok: false, error: "Este socio no tiene un teléfono válido en su ficha." };
-  }
-
   // El wa_id es el número en formato internacional sin signos. Los celulares
   // ecuatorianos guardados como "09XXXXXXXX" son 593 + los 9 dígitos finales.
-  const digits = member.phone!.replace(/\D/g, "");
-  const externalId = digits.startsWith("593") ? digits : `593${key}`;
+  const externalId = waIdFromPhone(member.phone);
+  if (!externalId) {
+    return { ok: false, error: "Este socio no tiene un teléfono válido en su ficha." };
+  }
 
   // Puede existir ya una conversación con ese número atada a un LEAD (la persona
   // escribió antes de ser socia). En ese caso se usa esa, no se crea otra.
@@ -431,10 +428,8 @@ export async function openLeadConversation(
   if (scope && lead.sede !== scope) return { ok: false, error: "No autorizado." };
   if (lead.conversation) return { ok: true, conversationId: lead.conversation.id };
 
-  const key = phoneKey(lead.phone);
-  if (!key) return { ok: false, error: "Este lead no tiene un teléfono válido." };
-  const digits = lead.phone!.replace(/\D/g, "");
-  const externalId = digits.startsWith("593") ? digits : `593${key}`;
+  const externalId = waIdFromPhone(lead.phone);
+  if (!externalId) return { ok: false, error: "Este lead no tiene un teléfono válido." };
 
   const existing = await prisma.conversation.findUnique({
     where: { channel_externalId: { channel: "WHATSAPP", externalId } },
