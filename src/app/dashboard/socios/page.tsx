@@ -10,7 +10,7 @@ import { MemberTable } from "./member-table";
 
 export const dynamic = "force-dynamic";
 
-type Params = { sede?: string; status?: string; q?: string; page?: string; membresia?: string; frecuencia?: string; ingreso?: string };
+type Params = { sede?: string; status?: string; q?: string; page?: string; membresia?: string; pago?: string; frecuencia?: string; ingreso?: string };
 
 export default async function SociosPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireAuth();
@@ -25,6 +25,7 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
       status: params.status,
       search: params.q,
       membership: params.membresia,
+      payment: params.pago,
       frequency: params.frecuencia,
       joined: params.ingreso,
       page: parseInt(params.page ?? "1", 10) || 1,
@@ -33,7 +34,7 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
     getMemberStats(Sede.XTREME),
   ]);
 
-  const keys: (keyof Params)[] = ["status", "q", "membresia", "frecuencia", "ingreso"];
+  const keys: (keyof Params)[] = ["status", "q", "membresia", "pago", "frecuencia", "ingreso"];
   const current = Object.fromEntries(keys.filter((k) => params[k]).map((k) => [k, params[k]!]));
   const keepSede: Record<string, string> = params.sede && !scopedSede ? { sede: params.sede } : {};
   const view = (label: string, p: Record<string, string>) => {
@@ -54,10 +55,21 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
       name: "membresia",
       title: "Membresía",
       options: [
-        { value: "al_dia", label: "Al día" },
+        { value: "al_dia", label: "Vigente" },
         { value: "por_vencer", label: "Por vencer (7 días)" },
         { value: "vencida", label: "Vencida" },
         { value: "sin_plan", label: "Nunca ha tenido plan" },
+      ],
+    },
+    {
+      name: "pago",
+      title: "Pago",
+      multi: true,
+      options: [
+        { value: "al_dia", label: "Al día" },
+        { value: "por_verificar", label: "Pendiente de verificar" },
+        { value: "atrasado", label: "Atrasado" },
+        { value: "vencido", label: "Vencido" },
       ],
     },
     {
@@ -103,6 +115,7 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
           view("En evaluación", { status: "TRIAL" }),
           view("Por vencer", { membresia: "por_vencer" }),
           view("Vencidos", { status: "ACTIVE,TRIAL", membresia: "vencida" }),
+          view("Deben", { status: "ACTIVE", pago: "atrasado,vencido" }),
           view("Sin venir 30 días", { status: "ACTIVE,TRIAL", frecuencia: "0" }),
           view("Bajas", { status: "CHURNED" }),
         ]}
@@ -134,7 +147,7 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
 
       <div className="border-t border-border bg-card">
         <FilterBar filters={filters} searchPlaceholder="Buscar nombre, correo, teléfono" />
-        <MemberTable members={result.members} />
+        <MemberTable members={result.members} standings={result.standings} />
         <Pager page={result.page} totalPages={result.totalPages} total={result.total} noun="socios" />
       </div>
     </div>

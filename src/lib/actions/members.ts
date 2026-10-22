@@ -10,8 +10,17 @@ import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import type { Prisma, Sex, TaxIdType, User } from "@/generated/prisma/client";
 import { guessTaxIdType, taxIdError } from "@/lib/invoicing/core";
 import { presetStart } from "@/lib/list-filters";
+import { getPaymentStandings, type PaymentStanding } from "@/lib/payments/standing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createPasswordRecovery, sendPortalInviteEmail } from "@/lib/account/recovery";
+
+const PAYMENT_FILTER: Record<string, PaymentStanding> = {
+  al_dia: "AL_DIA",
+  por_verificar: "POR_VERIFICAR",
+  atrasado: "ATRASADO",
+  vencido: "VENCIDO",
+  sin_plan: "SIN_PLAN",
+};
 
 // ── Guards ──────────────────────────────────────────────────────────
 // Server actions are public POST endpoints: every export checks its caller.
@@ -52,6 +61,7 @@ export async function getMembers({
   status,
   search,
   membership,
+  payment,
   frequency,
   joined,
   page = 1,
@@ -63,6 +73,8 @@ export async function getMembers({
   search?: string;
   /** al_dia | por_vencer (≤7 días) | vencida | sin_plan */
   membership?: string;
+  /** Payment standing, comma separated: al_dia | por_verificar | atrasado | vencido | sin_plan */
+  payment?: string;
   /** Visits in the last 30 days: 0 | 1-4 | 5-11 | 12+ */
   frequency?: string;
   /** Joined since (list-filters preset). */
@@ -124,6 +136,13 @@ export async function getMembers({
     const ids = await idsMatching(SEARCH_SOURCES.member, search);
     if (ids) where.id = { in: ids };
   }
+  if (payment) {
+    // The standing is computed in JS (cuotas + loose payments), so filter by id.
+    const wanted = new Set(payment.split(",").map((v) => PAYMENT_FILTER[v]).filter(Boolean));
+    const all = await getPaymentStandings(where);
+    const ids = [...all].filter(([, d]) => wanted.has(d.standing)).map(([id]) => id);
+    where.AND = [...and, { id: { in: ids } }];
+  }
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -148,9 +167,11 @@ export async function getMembers({
     }),
     prisma.member.count({ where }),
   ]);
+  const standings = Object.fromEntries(await getPaymentStandings({ id: { in: members.map((m) => m.id) } }));
 
   return {
     members,
+    standings,
     total,
     page,
     pageSize,
