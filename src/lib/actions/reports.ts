@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, can, getSedeScope } from "@/lib/auth";
 import { ACTIVE_BASE } from "@/lib/member-status";
+import { getPaymentStandings, type PaymentStanding } from "@/lib/payments/standing";
 import { Sede } from "@/generated/prisma/client";
 
 // ── Guards ──────────────────────────────────────────────────────────
@@ -45,7 +46,6 @@ function prevMonth(year: number, month: number) {
 export async function getAttendanceReport(sede: Sede | undefined, from: string, to: string) {
   sede = await reportSede(sede);
   const { start, end } = rangeBounds(from, to);
-  const now = new Date();
   // Los socios en evaluación (TRIAL) no cuentan como base activa — ver ACTIVE_BASE.
   const activeStatus = { in: ACTIVE_BASE };
   const memberSede = sede ? { sede } : {};
@@ -58,8 +58,7 @@ export async function getAttendanceReport(sede: Sede | undefined, from: string, 
     distinctXT,
     activeTotal,
     activeAttended,
-    coverageMembers,
-    sinMembresia,
+    standings,
   ] = await Promise.all([
     // Unique members who attended (respecting sede filter on the session)
     prisma.attendance.groupBy({ by: ["memberId"], where: { classSession: sessionInRange } }),
@@ -87,46 +86,12 @@ export async function getAttendanceReport(sede: Sede | undefined, from: string, 
         attendance: { some: { classSession: { date: { gte: start, lte: end } } } },
       },
     }),
-    // Al día (estricto): fetch each active member's CURRENT valid (non-daily)
-    // membership + its SUCCEEDED payments, to check full payment coverage in JS.
-    prisma.member.findMany({
-      where: { status: activeStatus, ...memberSede },
-      select: {
-        memberships: {
-          where: { plan: { billingCycle: { not: "ONE_TIME" } }, state: "ACTIVE", endsAt: { gte: now } },
-          orderBy: { endsAt: "desc" },
-          take: 1,
-          select: {
-            customPriceCents: true,
-            plan: { select: { priceCents: true } },
-            payments: { where: { status: "SUCCEEDED" }, select: { amountCents: true } },
-          },
-        },
-      },
-    }),
-    // Sin membresía: active member with no (non-daily) membership at all
-    prisma.member.count({
-      where: {
-        status: activeStatus,
-        ...memberSede,
-        memberships: { none: { plan: { billingCycle: { not: "ONE_TIME" } } } },
-      },
-    }),
+    // Al día por cuotas, contando pagos sin vincular — ver lib/payments/standing.ts.
+    getPaymentStandings({ status: activeStatus, ...memberSede }),
   ]);
 
-  // Al día = current membership fully covered by SUCCEEDED payments (PENDING /
-  // unverified funds do NOT count). Everyone else with an active status but no
-  // fully-paid current membership falls into "debe".
-  let alDia = 0;
-  for (const m of coverageMembers) {
-    const cur = m.memberships[0];
-    if (!cur) continue;
-    const expected = cur.customPriceCents ?? cur.plan.priceCents;
-    const paid = cur.payments.reduce((s, p) => s + p.amountCents, 0);
-    if (paid >= expected) alDia++;
-  }
-
-  const debe = Math.max(0, activeTotal - alDia - sinMembresia);
+  const payment: Record<PaymentStanding, number> = { AL_DIA: 0, POR_VERIFICAR: 0, ATRASADO: 0, VENCIDO: 0, SIN_PLAN: 0, STAFF: 0 };
+  for (const d of standings.values()) payment[d.standing]++;
 
   return {
     from,
@@ -142,7 +107,7 @@ export async function getAttendanceReport(sede: Sede | undefined, from: string, 
       notAttended: Math.max(0, activeTotal - activeAttended),
       engagementPct: activeTotal > 0 ? Math.round((activeAttended / activeTotal) * 100) : 0,
     },
-    payment: { alDia, debe, sinMembresia },
+    payment,
   };
 }
 
