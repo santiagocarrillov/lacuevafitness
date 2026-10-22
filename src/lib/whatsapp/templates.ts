@@ -37,8 +37,12 @@ const TEMPLATE_BY_KIND: Partial<Record<FollowupKind, string>> = {
   NO_REPLY_3D: "reengagement_no_reply",
   NO_REPLY_7D: "lead_dia7",
   NO_REPLY_14D: "lead_dia14",
+  // Rescate de no-show en tres toques (trial-attendance.ts): el día que faltó,
+  // a los 3 días y a los 7, cada uno con su ángulo. Las de día 3 y 7 son del
+  // catálogo (template-catalog.ts) y esperan aprobación de Meta.
   NOSHOW_RECOVERY_1D: "noshow_recuperacion",
-  NOSHOW_RECOVERY_3D: "noshow_recuperacion",
+  NOSHOW_RECOVERY_3D: "noshow_dia3",
+  NOSHOW_RECOVERY_7D: "noshow_dia7",
   TRIAL_REMINDER_24H: "recordatorio_eval_24h",
   // El de 2h es legado; si quedó alguno pendiente sale con el texto de 1h, que es
   // el único recordatorio cercano que existe aprobado.

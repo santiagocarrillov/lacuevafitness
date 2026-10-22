@@ -24,6 +24,7 @@ import { renderTemplate, templateForFollowup, templateName } from "./templates";
 import { SEDE_INFO } from "./agent";
 import { writeNoReplyNudge } from "./followup-writer";
 import { createPostponeTask } from "./postpone";
+import { createNoShowTask } from "@/lib/leads/noshow-task";
 import { fetchMetaTemplates } from "./graph";
 import type { FollowupKind, LeadStage, Sede } from "@/generated/prisma/client";
 
@@ -153,6 +154,60 @@ export async function scheduleTrialReminders(
   );
 }
 
+// ── Rescate de no-show ──────────────────────────────────────────────────────
+
+/**
+ * Los tres toques a quien faltó a su primera sesión, en orden.
+ *
+ * Hasta el 22 oct 2026 era uno solo: de 49 rescates desde el 1 sep, 30 nunca
+ * contestaron y nadie les volvió a escribir. Ahora: el día que faltó (texto si la
+ * ventana sigue abierta, si no `noshow_recuperacion`), a los 3 días
+ * (`noshow_dia3`, ¿fue el horario?) y a los 7 (`noshow_dia7`, ¿lo dejamos para
+ * después?). Ese día 7 queda además una tarea de llamada para recepción
+ * (noshow-task.ts). Todo se corta si contesta, reagenda o viene.
+ */
+export const NOSHOW_KINDS: FollowupKind[] = ["NOSHOW_RECOVERY_1D", "NOSHOW_RECOVERY_3D", "NOSHOW_RECOVERY_7D"];
+
+/** Toques que esperan la aprobación de su plantilla en vez de cancelarse (ver processDueFollowups). */
+const HOLD_UNTIL_APPROVED: FollowupKind[] = ["NOSHOW_RECOVERY_3D", "NOSHOW_RECOVERY_7D"];
+
+/** Entre el toque del día 3 y el del día 7 pasan al menos estos días, aunque el 3 haya salido tarde. */
+const NOSHOW_GAP_DAYS = 4;
+
+/** Cuándo sale cada toque, contando desde que se marcó el no-show (puro: scripts/test-noshow.ts). */
+export function noShowTimes(markedAt: Date): { first: Date; day3: Date; day7: Date } {
+  const at = (ms: number) => nextSendableAt(new Date(markedAt.getTime() + ms));
+  return { first: at(60_000), day3: at(3 * DAY_MS), day7: at(7 * DAY_MS) };
+}
+
+/**
+ * Programa el rescate. `times.first` en null salta el primer toque: lo usa la
+ * reactivación de no-shows viejos, que ya recibieron `noshow_recuperacion`.
+ */
+export async function scheduleNoShowTouches(
+  conversationId: string,
+  lead: { firstName: string | null; lastName: string | null },
+  times: { first: Date | null; day3: Date; day7: Date },
+  firstMessage: string,
+): Promise<void> {
+  if (times.first) await scheduleFollowup(conversationId, "NOSHOW_RECOVERY_1D", times.first, firstMessage);
+  // El texto guardado es el de la plantilla, por si al dispararse el lead hubiera
+  // reabierto la ventana (entonces sale como texto libre).
+  const ctx = { firstName: lead.firstName, lastName: lead.lastName, sede: null, trialScheduledAt: null };
+  for (const [kind, at] of [["NOSHOW_RECOVERY_3D", times.day3], ["NOSHOW_RECOVERY_7D", times.day7]] as const) {
+    const spec = templateForFollowup(kind, ctx);
+    if (spec) await scheduleFollowup(conversationId, kind, at, renderTemplate(spec));
+  }
+}
+
+/** Cancela el rescate pendiente (reagendó, vino, pasó a una persona…). */
+export async function cancelNoShowTouches(conversationId: string, reason: string): Promise<void> {
+  await prisma.scheduledFollowup.updateMany({
+    where: { conversationId, kind: { in: NOSHOW_KINDS }, status: "PENDING" },
+    data: { status: "CANCELED", errorMessage: reason },
+  });
+}
+
 // ── Cadencia para leads que dejan de contestar ──────────────────────────────
 
 /** Toques de la cadencia de no respuesta, en orden. */
@@ -162,10 +217,12 @@ const NO_REPLY_KINDS: FollowupKind[] = ["NO_REPLY_2H", "NO_REPLY_1D", "NO_REPLY_
 const WRITTEN_STEP: Partial<Record<FollowupKind, 1 | 2>> = { NO_REPLY_2H: 1, NO_REPLY_1D: 2 };
 
 /**
- * Etapas en que un lead sigue en la cadencia. Agendado, en prueba, no-show,
- * convertido o perdido tienen su propio camino (o ninguno).
+ * Etapas en que un lead sigue en la cadencia. Agendado, en prueba, convertido o
+ * perdido tienen su propio camino (o ninguno). El no-show entra desde el 22 oct
+ * 2026: mientras no contesta lo cubre el rescate (NOSHOW_*), pero si contesta y
+ * vuelve a quedarse callado, antes nadie le escribía más.
  */
-const NO_REPLY_STAGES: LeadStage[] = ["NEW", "CONTACTED", "NEGOTIATING"];
+export const NO_REPLY_STAGES: LeadStage[] = ["NEW", "CONTACTED", "NEGOTIATING", "TRIAL_NO_SHOW"];
 
 /** Cuántos seguimientos redacta el agente por corrida (cada uno es una llamada al modelo). */
 const WRITTEN_PER_RUN = 10;
@@ -276,6 +333,8 @@ export type ProcessSummary = {
   sentAsTemplate: number;
   /** Fuera de ventana pero frenados por el techo diario: siguen PENDING. */
   templateThrottled: number;
+  /** Toques de no-show esperando que Meta apruebe su plantilla (o su turno): siguen PENDING. */
+  templateHeld: number;
   /** Conversations whose scheduled hand-back to the bot came due. */
   botResumed: number;
   /** Seguimientos de no respuesta que redactó el agente en esta corrida. */
@@ -318,6 +377,7 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     skipped: 0,
     sentAsTemplate: 0,
     templateThrottled: 0,
+    templateHeld: 0,
     botResumed,
     written: 0,
   };
@@ -374,6 +434,44 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
       }
     }
 
+    if (NOSHOW_KINDS.includes(f.kind)) {
+      const lead = conv.lead;
+      if (!lead || lead.stage !== "TRIAL_NO_SHOW") {
+        await mark(f.id, "CANCELED", `el lead pasó a ${lead?.stage ?? "?"}`);
+        summary.skipped += 1;
+        continue;
+      }
+      if (conv.lastInboundAt && conv.lastInboundAt > f.createdAt) {
+        await mark(f.id, "CANCELED", "el lead contestó");
+        summary.skipped += 1;
+        continue;
+      }
+      if (f.kind === "NOSHOW_RECOVERY_7D") {
+        // El día 7 nunca sale pegado al día 3 (si el 3 esperó la aprobación de
+        // Meta, saldrían los dos en la misma corrida).
+        const day3 = await prisma.scheduledFollowup.findFirst({
+          where: { conversationId: conv.id, kind: "NOSHOW_RECOVERY_3D", createdAt: { lte: f.createdAt } },
+          orderBy: { createdAt: "desc" },
+          select: { status: true, sentAt: true },
+        });
+        if (day3?.status === "PENDING") {
+          summary.templateHeld += 1;
+          continue;
+        }
+        const earliest = day3?.status === "SENT" && day3.sentAt
+          ? nextSendableAt(new Date(day3.sentAt.getTime() + NOSHOW_GAP_DAYS * DAY_MS))
+          : null;
+        if (earliest && earliest > now) {
+          await prisma.scheduledFollowup.update({ where: { id: f.id }, data: { fireAt: earliest } });
+          summary.templateHeld += 1;
+          continue;
+        }
+        // Tres mensajes sin respuesta: que llame una persona. Sale aunque la
+        // plantilla no esté aprobada todavía.
+        if (lead.trialScheduledAt) await createNoShowTask(lead, lead.trialScheduledAt);
+      }
+    }
+
     const writtenStep = WRITTEN_STEP[f.kind];
     if (writtenStep) {
       // Texto libre o nada: estos toques no gastan plantilla.
@@ -424,6 +522,11 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
         continue;
       }
       if (!(await isApproved(spec.name))) {
+        if (HOLD_UNTIL_APPROVED.includes(f.kind)) {
+          // Plantilla nueva en revisión: espera (hasta maxLateMs) en vez de perder el toque.
+          summary.templateHeld += 1;
+          continue;
+        }
         await mark(f.id, "CANCELED", `plantilla ${spec.name} sin aprobar en Meta`);
         summary.skipped += 1;
         continue;

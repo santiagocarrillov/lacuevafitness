@@ -18,7 +18,8 @@ import { prisma } from "@/lib/prisma";
 import type { LeadStage, Sede } from "@/generated/prisma/client";
 import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
 import { sendText, describeSendError } from "./client";
-import { cancelNoReplyCadence, scheduleNoReplyCadence, scheduleTrialReminders } from "./sequences";
+import { cancelNoReplyCadence, cancelNoShowTouches, NO_REPLY_STAGES, scheduleNoReplyCadence, scheduleTrialReminders } from "./sequences";
+import { closeNoShowTasks } from "@/lib/leads/noshow-task";
 import { notifyStaffOfBotHandoff } from "@/lib/push/notify-staff";
 import { adContextLine } from "./referral";
 import { agentHistory } from "./history";
@@ -342,7 +343,8 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
       if (conversation.leadId) {
         await prisma.lead.update({
           where: { id: conversation.leadId },
-          data: { trialScheduledAt: when, stage: "SCHEDULED_TRIAL" },
+          // A new appointment starts clean: a previous no-show left trialAttended=false.
+          data: { trialScheduledAt: when, stage: "SCHEDULED_TRIAL", trialAttended: null },
         });
       }
       await scheduleTrialReminders(
@@ -351,7 +353,11 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
         conversation.lead?.firstName ?? null,
         resolvedSede ?? conversation.sede,
       );
-      if (conversation.leadId) await closePostponeTasks(conversation.leadId, "Agendó su primera sesión por WhatsApp con el agente.");
+      await cancelNoShowTouches(conversation.id, "reagendó con el agente");
+      if (conversation.leadId) {
+        await closePostponeTasks(conversation.leadId, "Agendó su primera sesión por WhatsApp con el agente.");
+        await closeNoShowTasks(conversation.leadId, "Reagendó por WhatsApp con el agente.");
+      }
     }
   }
 
@@ -413,7 +419,7 @@ async function followUpIfSilent(
   try {
     // Postponed: the cadence was already canceled and the task for that day is the only follow-up.
     if (outcome.postponed) return;
-    const open = outcome.stage === "NEW" || outcome.stage === "CONTACTED" || outcome.stage === "NEGOTIATING";
+    const open = outcome.stage != null && NO_REPLY_STAGES.includes(outcome.stage);
     if (!conversation.lead || outcome.handoff || outcome.booked || !open) {
       await cancelNoReplyCadence(conversation.id, outcome.handoff ? "pasó a una persona" : `etapa ${outcome.stage ?? "?"}`);
       return;

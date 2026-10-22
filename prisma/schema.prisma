@@ -1307,6 +1307,7 @@ enum FollowupKind {
   ADMIN_ATTENDANCE_PING
   NOSHOW_RECOVERY_1D
   NOSHOW_RECOVERY_3D
+  NOSHOW_RECOVERY_7D // último toque al no-show; ese día queda una tarea de llamada a recepción
 }
 
 enum FollowupStatus {
