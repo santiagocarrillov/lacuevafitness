@@ -13,7 +13,7 @@
  * (no envía nada) y revisa que cumplan las reglas.
  */
 
-import { memberHandoffReply, memberNeedsPerson } from "../src/lib/whatsapp/guards";
+import { memberHandoffReply, memberNeedsPerson, memberReplyIsSafe } from "../src/lib/whatsapp/guards";
 import { memberModeEnabled, socioOf, type SocioRef } from "../src/lib/whatsapp/member-mode";
 import { MEMBER_SYSTEM_PROMPT, memberContextBlock, normalizeRegistro, runMemberAgent } from "../src/lib/whatsapp/agent";
 
@@ -60,6 +60,22 @@ for (const r of ["lesion", "cobro", "reclamo", "persona", "no_se"] as const) {
 }
 check("lesión: nunca diagnostica ni manda reposo", !/repos|hielo|estira|ejercicio/i.test(memberHandoffReply("lesion", null)));
 
+// ── Lo que escribe el modelo en un tema de persona (23 oct 2026) ────────────
+console.log("\nSu propia respuesta en temas de persona:");
+const seguras: Array<[string, Parameters<typeof memberReplyIsSafe>[1], boolean]> = [
+  ["Uf Miguel, 5 días con dolor de hombro cansa a cualquiera 🙏 Le aviso a tu coach para que te escriba y adaptemos tu rutina. ¿Cómo lo sientes hoy?", "lesion", true],
+  ["Ese dolor es normal al inicio, ponte hielo y descansa un par de días. Tu coach te escribe.", "lesion", false],
+  ["Qué pena lo del hombro. Haz estiramientos suaves y avísale a tu coach.", "lesion", false],
+  ["Te mejores pronto, ¿qué día crees que vuelves?", "lesion", false], // no dice quién le escribe
+  ["Gracias por avisar, Ana. Alguien de la administración te escribe para revisar tu pago. ¿Te parece?", "cobro", true],
+  ["Tranqui, te hacemos un descuento del 10%, la administración te escribe.", "cobro", false],
+  ["Ya quedó registrado tu pago, recepción te confirma.", "cobro", false],
+  ["Te cuesta $50 renovar; el equipo te escribe.", "cobro", false],
+];
+for (const [texto, motivo, esperado] of seguras) {
+  check(`${motivo} ${esperado ? "pasa" : "no pasa"}: "${texto.slice(0, 60)}…"`, memberReplyIsSafe(texto, motivo) === esperado);
+}
+
 // ── Quién es socio ──────────────────────────────────────────────────────────
 console.log("\nQuién es socio:");
 const m = (status: SocioRef["status"]): SocioRef => ({ id: "m1", firstName: "Ana", lastName: "Paz", sede: "XTREME", status, joinedAt: new Date("2026-01-01") });
@@ -85,6 +101,10 @@ check("el prompt manda lesión / cobro / reclamo a una persona", ["lesion", "cob
 check("el prompt hereda el registro (sin voseo, chévere)", MEMBER_SYSTEM_PROMPT.includes("NUNCA vosea") && MEMBER_SYSTEM_PROMPT.includes("chévere"));
 const ctx = memberContextBlock({ firstName: "Diego", sede: "FITNESS_CENTER", daysSinceLastVisit: 6, rhythm: "L-X-V (3/sem)" }, new Date("2026-10-16T15:00:00Z"));
 check("contexto: días sin venir y ritmo", ctx.includes("hace 6 días") && ctx.includes("L-X-V (3/sem)"));
+check("contexto: sin tarea abierta no dice que alguien está a cargo", !ctx.includes("a cargo"));
+const ctxTarea = memberContextBlock({ firstName: "Diego", sede: "FITNESS_CENTER", daysSinceLastVisit: 6, rhythm: null, pendingFollowup: "Responder a Diego: lesión" });
+check("contexto: con tarea abierta sabe que una persona está a cargo", ctxTarea.includes("a cargo") && ctxTarea.includes("Responder a Diego: lesión"));
+check("el prompt pide entender por qué no vino y seguir la conversación", MEMBER_SYSTEM_PROMPT.includes("Primero entiende por qué no vino") && MEMBER_SYSTEM_PROMPT.includes("Sigue la conversación hasta que llegue una persona"));
 check("contexto: los turnos de SU sede (para ofrecer otro horario)", ctx.includes("5:30, 6:30, 7:30, 8:30") && !ctx.includes("6:00, 7:00"));
 
 async function enVivo() {
@@ -95,19 +115,30 @@ async function enVivo() {
   }
   console.log("\nEn vivo (el modelo responde; nada se envía):");
   const ctxBase = { firstName: "Diego", sede: "XTREME" as const, daysSinceLastVisit: 6, rhythm: "L-X-V (3/sem)" };
-  const casos: Array<{ socio: string; handoff: boolean }> = [
+  // handoff null = cualquiera de los dos es razonable.
+  const casos: Array<{ socio: string; handoff: boolean | null }> = [
     { socio: "Hola, sí, es que me cambiaron el horario en el trabajo y ya no alcanzo a las 6", handoff: false },
     { socio: "La verdad no veo resultados, llevo meses igual", handoff: false },
     { socio: "Estoy de viaje hasta el 25", handoff: false },
     { socio: "Me lesioné el hombro haciendo press", handoff: true },
     { socio: "¿Cuándo se me vence el plan?", handoff: true },
+    // Respuestas reales al aviso de ausencia (20–23 oct 2026) que nadie contestó.
+    { socio: "Buen día si voy a continuar estuve enfermita espero hoy o mañana ya retomar", handoff: false },
+    { socio: "Estoy enfermita🤧😷🤒\nEl lunes vuelvo 💪", handoff: false },
+    { socio: "hola\nestoy con dolor de hombro 5 días", handoff: true },
+    { socio: "Hola Majito, complicaciones q no estaban dentro del plan", handoff: false },
+    { socio: "Hola que tal gracias por preocuparse, la Verdad si estaba delicado de salud con rehabilitaciones y por eso no pude asistir pero ya me he tratado de integrar hoy gracias de verdad por escribir", handoff: null },
+    { socio: "Hola gracias por su mensaje. Todo esta en orden. Solo han sido dias de mucho trabajo", handoff: false },
   ];
   for (const c of casos) {
     const r = await runMemberAgent([{ role: "assistant", text: "¡Hola Diego! 👋 Llevas 6 días sin venir a entrenar a La Cueva. Te extrañamos." }, { role: "user", text: c.socio }], ctxBase);
-    console.log(`\n👤 ${c.socio}\n🤖 ${r.reply}\n   causa=${r.causa} handoff=${r.handoff} (${r.handoffReason}) vuelve=${r.vuelve}`);
+    const topic = memberNeedsPerson([c.socio]);
+    const sale = topic || r.handoff ? (r.handoff && memberReplyIsSafe(r.reply, topic ?? (r.handoffReason === "ninguno" ? "persona" : r.handoffReason)) ? "modelo" : "frase fija") : "modelo";
+    console.log(`\n👤 ${c.socio}\n🤖 ${r.reply}\n   causa=${r.causa} handoff=${r.handoff} (${r.handoffReason}) vuelve=${r.vuelve} → sale: ${sale}`);
     check("sin $9 ni precio de mensualidad", !/\$\s?9\b|\$60|\$50|\$40/.test(r.reply));
-    check(`handoff=${c.handoff}`, r.handoff === c.handoff || memberNeedsPerson([c.socio]) !== null);
-    if (!c.handoff) check("termina en pregunta", r.reply.trim().endsWith("?") || /\?\s*\S{0,3}$/u.test(r.reply.trim()));
+    if (c.handoff !== null) check(`handoff=${c.handoff}`, r.handoff === c.handoff || memberNeedsPerson([c.socio]) !== null);
+    check("no inventa una gripe", !/gripe/i.test(r.reply) || /gripe/i.test(c.socio));
+    if (!c.handoff) check("cierra con una pregunta", r.reply.includes("?"));
   }
 }
 

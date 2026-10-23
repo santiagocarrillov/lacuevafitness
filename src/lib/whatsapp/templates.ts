@@ -50,6 +50,15 @@ const TEMPLATE_BY_KIND: Partial<Record<FollowupKind, string>> = {
   TRIAL_REMINDER_1H: "recordatorio_eval_1h",
 };
 
+/**
+ * Respaldo mientras Meta revisa una plantilla: si la principal no está aprobada
+ * y la de respaldo sí, sale la de respaldo (mismas variables: solo el nombre).
+ * Solo el día 3: el día 7 tiene otro ángulo y repetir el mismo texto sobra.
+ */
+export const TEMPLATE_FALLBACK: Record<string, string> = {
+  noshow_dia3: "noshow_reagendar",
+};
+
 /** Plantillas que necesitan sede y hora además del nombre. */
 const NEEDS_SEDE_Y_HORA = new Set(["recordatorio_eval_24h", "recordatorio_eval_1h"]);
 
@@ -97,8 +106,11 @@ export function templateName(firstName: string | null, lastName?: string | null)
     // 0995513631 se llama "Te" / "Amo Mi Pichuris🥰💋": seguir buscando producía
     // "¡Hola Amo!". Si la primera palabra con letras no es un nombre, es que el
     // perfil no tiene nombre — es un estado de WhatsApp, no una persona.
+    const lower = clean.toLocaleLowerCase("es-EC");
+    // "Ing. Elianita Pabon": el título no es el nombre, el que sigue sí.
+    if (TITLE_TOKENS.has(lower)) continue;
     if (clean.length < 3) break;
-    if (PLACEHOLDER_TOKENS.has(clean.toLocaleLowerCase("es-EC"))) break;
+    if (PLACEHOLDER_TOKENS.has(lower) || NOT_A_NAME_TOKENS.has(lower)) break;
 
     return clean.charAt(0).toLocaleUpperCase("es-EC") + clean.slice(1);
   }
@@ -111,6 +123,26 @@ export function templateName(firstName: string | null, lastName?: string | null)
  */
 const PLACEHOLDER_TOKENS = new Set([
   "sin", "nombre", "contacto", "lead", "cliente", "usuario", "desconocido", "null", "undefined",
+]);
+
+/**
+ * Títulos que van antes del nombre: se saltan y se saluda con lo que sigue.
+ * Se comparan sin el punto ("Ing." → "ing").
+ */
+const TITLE_TOKENS = new Set([
+  "ing", "lic", "licda", "dr", "dra", "arq", "abg", "ab", "sr", "sra", "srta", "msc", "mgs", "mg", "tlgo", "prof", "don", "doña",
+]);
+
+/**
+ * Primeras palabras de perfiles que son una frase o un estado, no un nombre:
+ * "Dios Conmigo", "Todo proceso tiene un propósito", "Bendecida 🙏". Con ellas
+ * la reactivación de no-shows del 21 oct 2026 iba a saludar "¡Hola Dios!" y
+ * "¡Hola Todo!". Igual que con "Te Amo…", se para y va el saludo neutro.
+ */
+const NOT_A_NAME_TOKENS = new Set([
+  "dios", "todo", "toda", "todos", "bendecido", "bendecida", "bendiciones", "bendecidos", "amor", "vida", "feliz",
+  "familia", "hola", "gracias", "siempre", "solo", "sólo", "paz", "fuerza", "fe", "mamá", "mama", "papá", "papa",
+  "señor", "señora", "the", "love", "happy", "life", "god", "una", "uno", "los", "las", "mis", "tus", "por", "para",
 ]);
 
 const hhmm = (d: Date) =>
@@ -195,10 +227,14 @@ export function renderTemplate(spec: TemplateSpec): string {
  * de retención; al lead, las del embudo.
  */
 export const FICHA_TEMPLATES: Record<"lead" | "member", { name: string; label: string }[]> = {
-  member: [{ name: "miembro_inasistencia", label: "Te extrañamos (retomar rutina)" }],
+  member: [
+    { name: "socio_seguimiento", label: "Seguimiento a tu mensaje (no le respondimos)" },
+    { name: "miembro_inasistencia", label: "Te extrañamos (retomar rutina)" },
+  ],
   lead: [
     { name: "reengagement_no_reply", label: "¿Arrancamos tus dos semanas?" },
     { name: "noshow_recuperacion", label: "No pudiste venir: ¿reagendamos?" },
+    { name: "noshow_reagendar", label: "Reprogramar su primera sesión (sin precio)" },
   ],
 };
 

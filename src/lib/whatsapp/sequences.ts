@@ -20,7 +20,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { sendText, sendTemplate, describeSendError } from "./client";
-import { renderTemplate, templateForFollowup, templateName } from "./templates";
+import { renderTemplate, TEMPLATE_FALLBACK, templateForFollowup, templateName } from "./templates";
 import { SEDE_INFO } from "./agent";
 import { writeNoReplyNudge } from "./followup-writer";
 import { createPostponeTask } from "./postpone";
@@ -515,7 +515,11 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     if (!withinWindow) {
       // Las plantillas se arman con datos del lead. Una conversación de socio no
       // tiene lead: sus recordatorios son otra cadena y todavía no existen.
-      const spec = conv.lead ? templateForFollowup(f.kind, conv.lead) : null;
+      let spec = conv.lead ? templateForFollowup(f.kind, conv.lead) : null;
+      const backup = spec ? TEMPLATE_FALLBACK[spec.name] : undefined;
+      if (spec && backup && !(await isApproved(spec.name)) && (await isApproved(backup))) {
+        spec = { ...spec, name: backup };
+      }
       if (!spec) {
         await mark(f.id, "FAILED", `fuera de ventana 24h y ${f.kind} no tiene plantilla aplicable`);
         summary.failed += 1;

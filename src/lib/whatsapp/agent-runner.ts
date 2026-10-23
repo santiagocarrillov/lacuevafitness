@@ -167,10 +167,14 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     include: {
       lead: { include: { member: { select: SOCIO_SELECT } } },
       member: { select: SOCIO_SELECT },
-      messages: { orderBy: { createdAt: "asc" }, take: 30 },
+      // The LAST 30, newest first, flipped below. With "asc" + take this read the
+      // first 30: any conversation past 30 messages looked like it ended on our
+      // own message and the agent never answered (María G., trial, 21 oct 2026).
+      messages: { orderBy: { createdAt: "desc" }, take: 30 },
     },
   });
   if (!conversation) return { status: "skipped", reason: "conversation not found" };
+  conversation.messages.reverse();
 
   // A human may have handed the conversation back with a timer ("devolver al bot
   // el lunes 8am"). If that moment has passed, the bot takes it from here — this
