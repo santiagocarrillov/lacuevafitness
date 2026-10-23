@@ -1,17 +1,22 @@
 // One agent turn for a socio (see member-mode.ts). Called by agent-runner while
 // it holds the conversation lock, after the pause and last-inbound checks.
 //
-// Differences with the sales path: no lead stage, no $9, no no-reply cadence; a
-// handoff (injury, money, complaint, asks for a person) pauses the bot with no
-// timer — a person owns it until they hand it back — and leaves a task for the
-// sede so it can't get lost in the inbox.
+// Differences with the sales path: no lead stage, no $9, no no-reply cadence.
+//
+// Santiago (23 oct 2026): "we cannot not answer them". A socio who tells us why
+// they stopped coming always gets an empathetic answer from the agent AND a task
+// for a person to follow up — one open task per socio, updated as they write
+// more. A handoff (injury, money, complaint, asks for a person) no longer pauses
+// the bot: it keeps the conversation warm until someone from the team writes,
+// and that manual message is what pauses it (sendManualMessage). Only a bot that
+// is repeating itself steps aside on its own.
 
 import { prisma } from "@/lib/prisma";
 import type { Message, Sede } from "@/generated/prisma/client";
-import { runMemberAgent, type MemberHandoffReason } from "./agent";
+import { runMemberAgent, type MemberAgentResult, type MemberHandoffReason } from "./agent";
 import { sendText, describeSendError } from "./client";
 import { agentHistory } from "./history";
-import { asksForHuman, handoffReply, isThirdRepeat, memberHandoffReply, memberNeedsPerson } from "./guards";
+import { asksForHuman, handoffReply, isThirdRepeat, memberHandoffReply, memberNeedsPerson, memberReplyIsSafe } from "./guards";
 import { cancelNoReplyCadence } from "./sequences";
 import { templateName } from "./templates";
 import { describeRhythm, memberRhythm, daysBetween } from "./absence-rhythm";
@@ -53,6 +58,7 @@ export async function runMemberTurn(conversation: Conv, socio: SocioRef, opts: {
   const rhythm = memberRhythm(days, ecuadorDateString(socio.joinedAt));
   const shortName = templateName(socio.firstName, socio.lastName);
   const name = shortName && shortName !== "qué tal" ? shortName : null;
+  const openTask = await openFollowupTask(socio.id);
 
   let result;
   try {
@@ -61,6 +67,7 @@ export async function runMemberTurn(conversation: Conv, socio: SocioRef, opts: {
       sede: socio.sede,
       daysSinceLastVisit: days.length ? daysBetween(days[0], ecuadorDateString(now)) : null,
       rhythm: rhythm ? describeRhythm(rhythm) : null,
+      pendingFollowup: openTask?.title ?? null,
     });
   } catch (err) {
     console.error("[whatsapp-agent] runMemberAgent failed", err);
@@ -74,27 +81,35 @@ export async function runMemberTurn(conversation: Conv, socio: SocioRef, opts: {
   const botTail = conversation.messages.filter((m) => m.direction === "OUTBOUND").slice(-2);
   const botOnlyTail = botTail.every((m) => m.llmGenerated && !m.sentByUserId);
 
-  let reply = (result.reply ?? "").trim();
+  const modelReply = (result.reply ?? "").trim();
+  let reply = modelReply;
   let reason: MemberHandoffReason | "repeat" | null = result.handoff ? (result.handoffReason === "ninguno" ? "persona" : result.handoffReason) : null;
   const topic = memberNeedsPerson(burstTexts);
+  // The model's own words when it saw the same thing we did and stayed in its
+  // lane (no diagnosis, no money, names who writes); the fixed line otherwise.
+  const ownWordsOr = (r: MemberHandoffReason) => (result.handoff && memberReplyIsSafe(modelReply, r) ? modelReply : memberHandoffReply(r, name));
   if (asksForHuman(burstTexts)) {
     reason = "persona";
-    reply = memberHandoffReply("persona", name);
+    reply = ownWordsOr("persona");
   } else if (topic) {
-    // Even if the model answered it: a bot doesn't talk about a knee or a charge.
+    // Even if the model didn't flag it: a knee or a charge always goes to a person.
     reason = topic;
-    reply = memberHandoffReply(topic, name);
+    reply = ownWordsOr(topic);
   } else if (!reply) {
     reason = "persona";
     reply = memberHandoffReply("persona", name);
   } else if (botOnlyTail && isThirdRepeat(reply, botTail.map((m) => m.body))) {
     reason = "repeat";
     reply = handoffReply("repeat", name);
+  } else if (reason && !memberReplyIsSafe(reply, reason)) {
+    reply = memberHandoffReply(reason, name);
   }
   const handoff = reason !== null;
 
   const draft = await prisma.$transaction(async (tx) => {
-    if (handoff) {
+    // Only a looping bot steps aside by itself; every other handoff keeps
+    // answering until a person writes (their message pauses the bot).
+    if (reason === "repeat") {
       await tx.conversation.update({ where: { id: conversation.id }, data: { botPaused: true, botResumeAt: null } });
     }
     return tx.message.create({
@@ -105,15 +120,22 @@ export async function runMemberTurn(conversation: Conv, socio: SocioRef, opts: {
   // A socio who came in as a lead may still have the lead's no-reply cadence queued.
   if (conversation.leadId) await cancelNoReplyCadence(conversation.id, "es socio").catch(() => undefined);
 
-  const trigger = burst.at(-1);
-  if (handoff) {
-    await notifyStaffOfBotHandoff({ leadName: `${socio.firstName} ${socio.lastName ?? ""}`.trim() + " (socio)", sede: socio.sede, lastMessage: trigger?.body ?? null }).catch((err) =>
-      console.error("[whatsapp-agent] no se pudo avisar del handoff del socio", err),
-    );
-    await handoffTask(socio, reason!, trigger ?? null).catch((err) => console.error("[whatsapp-agent] no se pudo crear la tarea del handoff", err));
-  } else if (result.vuelve) {
-    await noteReturnDay(socio.id, result.vuelve).catch(() => undefined);
+  const trigger = burst.at(-1) ?? null;
+  // A person follows up on anything that isn't small talk: a reason for not
+  // coming, a return day, or a topic only a person handles.
+  if (handoff || result.causa !== "ninguna" || result.vuelve) {
+    const created = await followupTask(socio, openTask, { reason, causa: result.causa, vuelve: result.vuelve, trigger, burst, reply }).catch((err) => {
+      console.error("[whatsapp-agent] no se pudo crear/actualizar la tarea del socio", err);
+      return false;
+    });
+    // Push once, when a person is newly needed — not on every message after.
+    if (handoff && (created || (openTask?.priority ?? 0) < 1)) {
+      await notifyStaffOfBotHandoff({ leadName: `${socio.firstName} ${socio.lastName ?? ""}`.trim() + " (socio)", sede: socio.sede, lastMessage: trigger?.body ?? null }).catch((err) =>
+        console.error("[whatsapp-agent] no se pudo avisar del handoff del socio", err),
+      );
+    }
   }
+  if (result.vuelve) await noteReturnDay(socio.id, result.vuelve).catch(() => undefined);
 
   const withinWindow = conversation.lastInboundAt != null && now.getTime() - conversation.lastInboundAt.getTime() < WINDOW_MS;
   if (!opts.autoSend || !withinWindow) return handoff ? { status: "handoff", sent: false } : { status: "drafted" };
@@ -135,23 +157,82 @@ export async function runMemberTurn(conversation: Conv, socio: SocioRef, opts: {
   }
 }
 
-/** The handoff as a task in the sede's pool, so it shows in Recepción and the Resumen. */
-async function handoffTask(socio: SocioRef, reason: MemberHandoffReason | "repeat", trigger: Message | null): Promise<void> {
+const CAUSA_LABEL: Record<MemberAgentResult["causa"], string> = {
+  tiempo: "falta de tiempo u horario",
+  resultados: "no ve resultados",
+  motivacion: "desmotivación",
+  viaje_enfermedad: "viaje o enfermedad",
+  lesion: "lesión o dolor",
+  dinero: "tema de dinero",
+  otra: "otra razón",
+  ninguna: "seguimiento",
+};
+
+type OpenTask = { id: string; title: string; priority: number };
+
+/** The socio's open follow-up task from the agent, if any (one at a time). */
+async function openFollowupTask(memberId: string): Promise<OpenTask | null> {
+  return prisma.staffTask.findFirst({
+    where: {
+      memberId,
+      OR: [{ autoKey: { startsWith: "socio-handoff:" } }, { autoKey: { startsWith: "socio-seguimiento:" } }],
+      status: { in: ["TODO", "IN_PROGRESS", "WAITING"] },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true, priority: true },
+  });
+}
+
+const clip = (t: string, n: number) => t.replace(/\s+/g, " ").trim().slice(0, n);
+
+/**
+ * One task per socio for a person to follow up, in the sede's pool (Recepción and
+ * the Resumen). A new message lands on the open task as an entry instead of a
+ * second task; a handoff raises it to priority 1. Returns true when it created one.
+ */
+async function followupTask(
+  socio: SocioRef,
+  open: OpenTask | null,
+  turn: {
+    reason: MemberHandoffReason | "repeat" | null;
+    causa: MemberAgentResult["causa"];
+    vuelve: string | null;
+    trigger: Message | null;
+    burst: Message[];
+    reply: string;
+  },
+): Promise<boolean> {
   const fullName = `${socio.firstName} ${socio.lastName ?? ""}`.replace(/\s+/g, " ").trim();
-  const snippet = trigger?.body?.replace(/\s+/g, " ").trim().slice(0, 200);
+  const said = clip(turn.burst.map((m) => m.body).join(" / "), 300);
+  const what = turn.reason ? HANDOFF_LABEL[turn.reason] : CAUSA_LABEL[turn.causa];
+  const entry =
+    (said ? `Escribió: «${said}». ` : "") +
+    `El bot le respondió: «${clip(turn.reply, 300)}».` +
+    (turn.vuelve ? ` Dice que vuelve: «${turn.vuelve}».` : "");
+
+  if (open) {
+    await prisma.$transaction(async (tx) => {
+      if (turn.reason && open.priority < 1) {
+        await tx.staffTask.update({ where: { id: open.id }, data: { priority: 1, title: `Responder a ${fullName} por WhatsApp: ${what}` } });
+      }
+      await tx.staffTaskEntry.create({ data: { taskId: open.id, kind: "EVENT", body: entry } });
+    });
+    return false;
+  }
+
   try {
     await prisma.$transaction(async (tx) => {
       const t = await tx.staffTask.create({
         data: {
           // One per inbound burst: a retry of the same run never duplicates it.
-          autoKey: `socio-handoff:${trigger?.id ?? `${socio.id}:${Date.now()}`}`,
-          title: `Responder a ${fullName} por WhatsApp: ${HANDOFF_LABEL[reason]}`,
+          autoKey: `${turn.reason ? "socio-handoff" : "socio-seguimiento"}:${turn.trigger?.id ?? `${socio.id}:${Date.now()}`}`,
+          title: turn.reason ? `Responder a ${fullName} por WhatsApp: ${what}` : `Dar seguimiento a ${fullName} (WhatsApp): ${what}`,
           detail:
-            (snippet ? `Escribió: «${snippet}». ` : "") +
-            "El bot le dijo que una persona le escribe y quedó en pausa. Contéstale desde su ficha o Comunicación; " +
-            "cuando termines, puedes devolver la conversación al bot.",
+            entry +
+            " El bot sigue atendiendo la conversación hasta que alguien del equipo le escriba; tu mensaje desde su ficha o Comunicación lo pausa." +
+            (turn.reason === "lesion" ? " Que lo vea su coach para adaptar la rutina." : ""),
           type: "WHATSAPP",
-          priority: 1,
+          priority: turn.reason ? 1 : 0,
           sede: socio.sede,
           memberId: socio.id,
           dueDate: todayDateUtc(),
@@ -159,8 +240,10 @@ async function handoffTask(socio: SocioRef, reason: MemberHandoffReason | "repea
       });
       await tx.staffTaskEntry.create({ data: { taskId: t.id, kind: "EVENT", body: "La creó el agente de WhatsApp (modo socio)." } });
     });
+    return true;
   } catch (err) {
     if ((err as { code?: string }).code !== "P2002") throw err;
+    return false;
   }
 }
 

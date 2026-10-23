@@ -65,6 +65,19 @@ export const TEMPLATE_CATALOG: CatalogTemplate[] = [
     variables: ["nombre"],
     example: ["Andrea"],
   },
+  // Backup for the day-3 no-show touch (23 oct 2026): noshow_dia3 sat in Meta's
+  // review and 33 rescues piled up. This one is about the missed appointment
+  // only — no price, no offer — so it qualifies as UTILITY, which Meta usually
+  // approves in minutes. sequences.ts uses it while noshow_dia3 isn't approved.
+  {
+    name: "noshow_reagendar",
+    category: "UTILITY",
+    label: "No-show: reprogramar la sesión",
+    when: "Respaldo del toque de día 3 del no-show mientras noshow_dia3 no esté aprobada; también a mano desde la ficha del lead.",
+    body: "¡Hola {{1}}! Te escribimos de La Cueva por tu primera sesión de evaluación, que quedó pendiente. ¿Quieres que la reprogramemos? Respóndenos con el día y la hora que te queden mejor y te la confirmamos.",
+    variables: ["nombre"],
+    example: ["Andrea"],
+  },
   // The $9 trial, first session to close (plan Fase 2, 20 oct 2026; trial-touches.ts).
   // Drafts for Santiago to approve before submitting: once Meta approves, the text is frozen.
   {
@@ -102,6 +115,18 @@ export const TEMPLATE_CATALOG: CatalogTemplate[] = [
     body: "¡Hola {{1}}! 👋 Esperamos que estés muy bien. Llevas {{2}} días sin venir a entrenar a La Cueva. Te extrañamos. Si necesitas ayuda o podemos ser de servicio para que puedas retomar, respóndenos y será un placer. 💪",
     variables: ["nombre", "días sin venir"],
     example: ["Andrea", "3"],
+  },
+  // Reopens the conversation with a socio who wrote and got no answer within 24 h
+  // (23 oct 2026: six socios answered the absence notice and nobody replied).
+  // Staff send it from the ficha; once they answer, the agent takes it from there.
+  {
+    name: "socio_seguimiento",
+    category: "UTILITY",
+    label: "Seguimiento a tu mensaje",
+    when: "Socio que nos escribió y se quedó sin respuesta más de 24 h: reabre la conversación (a mano desde la ficha).",
+    body: "¡Hola {{1}}! Te escribimos de La Cueva para darle seguimiento a tu mensaje y disculparnos por la demora en responderte. ¿Cómo sigues? Respóndenos y te ayudamos con lo que necesites para retomar.",
+    variables: ["nombre"],
+    example: ["Andrea"],
   },
   {
     name: "socio_frecuencia_baja",

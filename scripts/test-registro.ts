@@ -94,6 +94,14 @@ const nombres: Array<[string, string | null, string]> = [
   ["𝓛𝓲𝔃𝓮𝓽𝓽𝓮", null, "𝓛𝓲𝔃𝓮𝓽𝓽𝓮"],
   ["ricardoalexdelgado", null, "Ricardoalexdelgado"],
   [" ", "Arcos", "Arcos"],
+  // Reactivación de no-shows (21 oct 2026): perfiles que son frases o llevan título.
+  ["Dios", "Conmigo", "qué tal"],
+  ["Todo", "proceso tiene un propósito", "qué tal"],
+  ["Ing.", "Elianita Pabon", "Elianita"],
+  ["Dra. Carla", null, "Carla"],
+  ["%%%", "Nellita %%%", "Nellita"],
+  ["Fernanda😍⚽", null, "Fernanda"],
+  ["ALEjO", null, "ALEjO"],
 ];
 
 let fallosN = 0;
@@ -132,8 +140,8 @@ for (const [name, variables, esperado] of plantillas) {
   if (!ok) console.log(`   esperaba: ${esperado}\n   obtuvo:   ${real}`);
 }
 // Una plantilla que nadie copió aquí no puede inventarse el texto.
-const desconocida = renderTemplate({ name: "miembro_inasistencia", language: "es", variables: ["Ana"] });
-const okDesc = desconocida.startsWith("[plantilla miembro_inasistencia");
+const desconocida = renderTemplate({ name: "plantilla_que_no_existe", language: "es", variables: ["Ana"] });
+const okDesc = desconocida.startsWith("[plantilla plantilla_que_no_existe");
 if (!okDesc) fallos++;
 console.log(`${okDesc ? "✅" : "❌"} una plantilla sin texto copiado se declara, no se inventa`);
 

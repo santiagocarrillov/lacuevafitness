@@ -162,3 +162,28 @@ export function memberHandoffReply(reason: "lesion" | "cobro" | "reclamo" | "per
       return `Déjame confirmarlo${who}: le paso tu pregunta a recepción para que te responda en cuanto puedan.`;
   }
 }
+
+/**
+ * ¿Se puede mandar lo que el modelo escribió para un socio cuyo tema ve una persona?
+ *
+ * Hasta el 23 oct 2026 esos casos recibían una frase fija ("Gracias por contarme…
+ * le paso tu mensaje a tu coach"), igual para un hombro que para una gripe. Santiago
+ * pidió que el bot entienda por qué no vino y responda con empatía y sinceridad, así
+ * que ahora sale lo que escribió el modelo — salvo que se meta en lo que no le toca.
+ * Si no pasa, vuelve la frase fija: un mensaje frío es mejor que uno peligroso.
+ */
+export function memberReplyIsSafe(reply: string, reason: "lesion" | "cobro" | "reclamo" | "persona" | "no_se"): boolean {
+  const f = foldText(reply);
+  if (!f.trim()) return false;
+  // Siempre dice que una persona del equipo le escribe: es lo que promete la tarea.
+  if (!/\b(coach|equipo|administracion|recepcion|persona|companer[oa]s?)\b/.test(f)) return false;
+  // Ni diagnóstico ni tratamiento: "es normal", "ponte hielo", "descansa", "estira".
+  const medical =
+    /\b(repos[oa]|descans(a|es|ar)|hielo|compresas?|calor local|estir(a|ar|amientos?)|ibuprofeno|antiinflamatori\w*|analgesic\w*|pastillas?|medic(o|ina|amento)s?|pomadas?|cremas?|masajes?|ejercicios? de|tendinitis|desgarro|contractura|esguince|inflamacion|no es grave|es normal|seguro (es|sera))\b/;
+  if (reason === "lesion" && medical.test(f)) return false;
+  // Ni precios ni promesas de plata: eso lo decide la administración.
+  const money = /\$|\b\d+\s*(dolares|usd)\b|\b(descuento|gratis|sin costo|reembolso|te devolvemos|te reembolsamos|te congelamos|ya (esta|quedo) (registrad|pagad)\w*)\b/;
+  if (money.test(f)) return false;
+  return true;
+}
+

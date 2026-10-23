@@ -76,6 +76,24 @@ toques **esperan** en PENDING (hasta 7 días) en vez de cancelarse, y el del dí
 del día 3. Citas vencidas hace más de 2 días se marcan sin rescate; para esas está
 `scripts/noshow-reactivar.ts`. Pruebas: `npm run test:noshow`.
 
+**Respaldo del día 3 (23 oct 2026):** `noshow_reagendar` (UTILITY, sin precio ni oferta: solo reprogramar la
+sesión pendiente). Si `noshow_dia3` no está aprobada y esta sí, el toque del día 3 sale con esta
+(`TEMPLATE_FALLBACK` en `templates.ts`). El staff también la puede mandar desde la ficha del lead.
+
+### Socio sin respuesta: `socio_seguimiento` (23 oct 2026)
+Reabre la conversación con un socio que escribió y se quedó más de 24 h sin respuesta («para darle
+seguimiento a tu mensaje y disculparnos por la demora»). La manda el staff desde la ficha; cuando el socio
+contesta, sigue el agente en modo socio. **Variables:** `{{1}}` = nombre.
+
+### Modo socio: responder siempre y dejar la tarea (23 oct 2026)
+Con `WHATSAPP_AGENT_SOCIOS=true`, el agente contesta a todo socio que escribe (`member-agent-runner.ts`):
+entiende por qué no vino y responde con sus palabras. En lesión, cobro, reclamo o cuando pide una persona
+también responde él, sin diagnosticar ni dar cifras (`memberReplyIsSafe` en `guards.ts`; si no pasa, va la
+frase fija). Ya no se pausa en esos casos: sigue atendiendo hasta que alguien del equipo escribe, y ese
+mensaje lo pausa. Siempre deja **una tarea abierta por socio** en su sede (`socio-handoff:` prioridad alta
+o `socio-seguimiento:` normal); los mensajes siguientes se anotan en esa misma tarea. Pruebas:
+`npm run test:modo-socio` (con `--en-vivo` y `ANTHROPIC_API_KEY`, respuestas reales del modelo).
+
 ---
 
 ## 4. `reengagement_no_reply` — Categoría: **Marketing**
