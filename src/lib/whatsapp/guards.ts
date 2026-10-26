@@ -98,6 +98,26 @@ export function isThirdRepeat(reply: string, previousBotReplies: string[]): bool
   );
 }
 
+const SAME_MESSAGE_THRESHOLD = 0.8;
+
+/**
+ * ¿La respuesta nueva es, casi palabra por palabra, el último mensaje del bot?
+ *
+ * El 22–23 oct 2026 Rousibell preguntó si había parqueadero, cuánto duraba la
+ * sesión y si podía llegar a las 6:30, y recibió cuatro veces el mismo mensaje
+ * de confirmación. isThirdRepeat no lo vio: compara solo las preguntas, y ese
+ * mensaje no tenía ninguna. Esto compara el mensaje entero (sin relleno).
+ */
+export function repeatsLastReply(reply: string, lastBotReply: string | null | undefined): boolean {
+  if (!lastBotReply) return false;
+  const a = tokens(reply);
+  const b = tokens(lastBotReply);
+  if (a.size < 5 || b.size < 5) return false;
+  let inter = 0;
+  for (const w of a) if (b.has(w)) inter++;
+  return inter / (a.size + b.size - inter) >= SAME_MESSAGE_THRESHOLD;
+}
+
 /** Lo que se le dice al lead cuando se lo pasamos a una persona por una de estas guardas. */
 export function handoffReply(reason: "asked" | "repeat", name: string | null): string {
   const who = name ? `, ${name}` : "";

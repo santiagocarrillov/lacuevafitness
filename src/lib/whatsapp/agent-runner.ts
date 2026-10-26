@@ -16,14 +16,15 @@
 
 import { prisma } from "@/lib/prisma";
 import type { LeadStage, Sede } from "@/generated/prisma/client";
-import { runAgent, SEDE_INFO, type AgentTurn, type AgentResult } from "./agent";
+import { runAgent, SEDE_INFO, sedeSlots24h, type AgentTurn, type AgentResult } from "./agent";
 import { sendText, describeSendError } from "./client";
-import { cancelNoReplyCadence, cancelNoShowTouches, NO_REPLY_STAGES, scheduleNoReplyCadence, scheduleTrialReminders } from "./sequences";
+import { cancelNoReplyCadence, cancelNoShowTouches, cancelTrialReminders, NO_REPLY_STAGES, scheduleNoReplyCadence, scheduleTrialReminders } from "./sequences";
 import { closeNoShowTasks } from "@/lib/leads/noshow-task";
 import { notifyStaffOfBotHandoff } from "@/lib/push/notify-staff";
 import { adContextLine } from "./referral";
 import { agentHistory } from "./history";
-import { asksForHuman, handoffReply, isThirdRepeat } from "./guards";
+import { asksForHuman, handoffReply, isThirdRepeat, repeatsLastReply } from "./guards";
+import { bookingProblem } from "./booking";
 import { templateName } from "./templates";
 import { memberModeEnabled, socioOf, SOCIO_SELECT } from "./member-mode";
 import { runMemberTurn } from "./member-agent-runner";
@@ -219,20 +220,42 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
   // never pitches the $9 again nor books a "first session".
   const trialContext = await trialContextFor(conversation.member ?? conversation.lead?.member ?? null);
 
-  let result;
+  // The draft is checked in code (draftIssue): a bad one gets ONE rewrite with the
+  // reason, and if the rewrite is still bad a person takes it (guards below).
+  const lastBotReply = [...conversation.messages]
+    .reverse()
+    .find((m) => m.direction === "OUTBOUND" && m.llmGenerated && !m.sentByUserId)?.body ?? null;
+  const fallbackSede = conversation.lead?.sede ?? conversation.sede ?? null;
+  const check = (r: AgentResult) => draftIssue(r, { lastBotReply, fallbackSede, inTrial: trialContext != null });
+  const agentOpts = { knownSede: null, leadName, adContext, trialContext };
+  let result: AgentResult;
+  let issue: DraftIssue | null;
   try {
-    result = await runAgent(history, { knownSede: null, leadName, adContext, trialContext });
+    result = await runAgent(history, agentOpts);
+    issue = check(result);
+    if (issue) {
+      console.warn("[whatsapp-agent] draft rejected; rewriting", { conversationId, issue });
+      result = await runAgent(history, { ...agentOpts, correction: { draft: result.reply, issue: issue.text } });
+      issue = check(result);
+    }
   } catch (err) {
     console.error("[whatsapp-agent] runAgent failed", err);
     return { status: "error", error: err instanceof Error ? err.message : "agent error" };
   }
+  // A booking that still isn't real is never saved: no reminders for a Saturday.
+  if (issue?.kind === "booking") result = { ...result, scheduledAtISO: null };
 
   const resolvedSede: Sede | null = result.sede === "UNKNOWN" ? null : (result.sede as Sede);
   // In the trial the funnel follows the gym (attendance, the plan they buy), not the chat:
   // a "NEGOTIATING" here would restart the no-reply cadence that pitches the $9.
-  const stage: LeadStage | undefined = !trialContext && VALID_STAGES.includes(result.suggestedStage as LeadStage)
-    ? (result.suggestedStage as LeadStage)
-    : undefined;
+  // "Agendado" only with a real booking in hand: the model also suggests it while
+  // still offering hours, and the lead then sat in SCHEDULED_TRIAL with no date.
+  let stage: LeadStage | undefined =
+    !trialContext &&
+    VALID_STAGES.includes(result.suggestedStage as LeadStage) &&
+    (result.suggestedStage !== "SCHEDULED_TRIAL" || result.scheduledAtISO != null)
+      ? (result.suggestedStage as LeadStage)
+      : undefined;
 
   // Never send a blank message: if the model returned an empty reply, hand off to
   // a human with a safe holding message instead of pushing "" to WhatsApp.
@@ -260,9 +283,14 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     replyText = handoffReply("asked", shortName);
     forceHandoff = true;
     guarded = true;
-  } else if (botOnlyTail && isThirdRepeat(replyText, botTail.map((m) => m.body))) {
-    console.warn("[whatsapp-agent] same question a third time; handing off", { conversationId });
+  } else if (issue?.kind === "repeat" || (botOnlyTail && isThirdRepeat(replyText, botTail.map((m) => m.body)))) {
+    console.warn("[whatsapp-agent] repeating itself; handing off", { conversationId });
     replyText = handoffReply("repeat", shortName);
+    forceHandoff = true;
+    guarded = true;
+  } else if (issue?.kind === "booking") {
+    console.warn("[whatsapp-agent] booking still invalid after a rewrite; handing off", { conversationId, issue });
+    replyText = bookingHoldReply(shortName);
     forceHandoff = true;
     guarded = true;
   }
@@ -340,6 +368,22 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     );
   }
 
+  // Postponed, or "no voy a poder llegar" without a new time: the booked session is
+  // off. Left in place it fired the 1 h reminder and then "vimos que no pudiste
+  // venir" (Byron, Edison, 26 oct 2026).
+  if (conversation.lead && !trialContext && !result.scheduledAtISO && (postponeUntil || result.cancelaCita)) {
+    const released = await releaseTrialBooking(
+      conversation.lead,
+      conversation.id,
+      postponeUntil ? "pospuso su arranque" : "avisó que no llega a su primera sesión",
+      stage === "LOST" ? "LOST" : "NEGOTIATING",
+    ).catch((err) => {
+      console.error("[whatsapp-agent] no se pudo soltar la cita", { conversationId, err });
+      return false;
+    });
+    if (released && stage !== "LOST") stage = "NEGOTIATING";
+  }
+
   // If the agent booked an evaluation, record it and schedule anti-no-show reminders.
   if (result.scheduledAtISO && !trialContext) {
     const when = new Date(result.scheduledAtISO);
@@ -409,6 +453,67 @@ async function runLocked(conversationId: string): Promise<RunOutcome> {
     }
     return { status: "error", error: err instanceof Error ? err.message : "send error" };
   }
+}
+
+export type DraftIssue = { kind: "booking" | "repeat"; text: string };
+
+/** Map lines are attached by code (locationSuffix); they say nothing about the reply. */
+const withoutMaps = (text: string) => text.replace(/^📍.*$/gmu, "").trim();
+
+/**
+ * What's wrong with the agent's draft, in words its rewrite can use, or null.
+ * Pure. Booking: a first session on a day or hour that doesn't exist (revisión
+ * del 26 oct 2026, booking.ts). Repeat: the same message it sent last time.
+ */
+export function draftIssue(
+  result: Pick<AgentResult, "reply" | "sede" | "scheduledAtISO">,
+  ctx: { lastBotReply: string | null; fallbackSede: Sede | null; inTrial: boolean },
+  now: Date = new Date(),
+): DraftIssue | null {
+  if (result.scheduledAtISO && !ctx.inTrial) {
+    const sede = result.sede === "UNKNOWN" ? ctx.fallbackSede : (result.sede as Sede);
+    const slots = sede ? sedeSlots24h(sede) : [...sedeSlots24h("FITNESS_CENTER"), ...sedeSlots24h("XTREME")];
+    const problem = bookingProblem(result.scheduledAtISO, slots, now);
+    if (problem) return { kind: "booking", text: problem };
+  }
+  if (ctx.lastBotReply && repeatsLastReply(withoutMaps(result.reply ?? ""), withoutMaps(ctx.lastBotReply))) {
+    return {
+      kind: "repeat",
+      text: "repetía casi palabra por palabra tu mensaje anterior, sin contestar lo que el lead acaba de escribir",
+    };
+  }
+  return null;
+}
+
+/** What the lead reads when the agent couldn't land a real day and hour. */
+function bookingHoldReply(name: string | null): string {
+  return `Déjame confirmar ese horario con el equipo${name ? `, ${name}` : ""} 🙌 Te escribimos enseguida para dejarlo listo.`;
+}
+
+/**
+ * Take a booked first session off the lead: no booking, no reminders, no no-show
+ * rescue, no "Recibir a…" task for today. Only an upcoming (or today's) session
+ * the lead hasn't attended. Returns whether there was one to release.
+ */
+async function releaseTrialBooking(
+  lead: { id: string; trialScheduledAt: Date | null; trialAttended: boolean | null },
+  conversationId: string,
+  why: string,
+  nextStage: LeadStage,
+): Promise<boolean> {
+  const at = lead.trialScheduledAt;
+  if (!at || lead.trialAttended === true || at.getTime() < Date.now() - 12 * 60 * 60 * 1000) return false;
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { trialScheduledAt: null, trialAttended: null, stage: nextStage },
+  });
+  await cancelTrialReminders(conversationId, `el lead ${why}`);
+  await cancelNoShowTouches(conversationId, `el lead ${why}`);
+  await prisma.staffTask.updateMany({
+    where: { leadId: lead.id, autoKey: { startsWith: `eval:${lead.id}:` }, status: { in: ["TODO", "IN_PROGRESS", "WAITING"] } },
+    data: { status: "CANCELED", outcome: `Sin cita: el lead ${why} por WhatsApp.` },
+  });
+  return true;
 }
 
 /**
