@@ -10,6 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Sede } from "@/generated/prisma/client";
+import { bookingDaysContext } from "./booking";
 
 // Model + effort are env-overridable; defaults favor quality (Opus) at a moderate
 // effort suited to short conversational replies.
@@ -124,12 +125,12 @@ Si te dice un sector que no está en la lista, usa el más cercano que sí esté
 
 # Si pide que le escribamos más adelante
 Si el lead dice que ahora no puede y pide que le escribamos después (tiene pagado otro gimnasio hasta cierta fecha, viaja, empieza en enero, "escríbeme la otra semana", "después de quincena"), no insistas ni le ofrezcas agendar ya: agradece, confirma en una línea cuándo le escribimos ("¡De una! Te escribo el 5 de noviembre 🙌") y devuelve contactarDesde con esa fecha. Desde ese momento no recibe más seguimientos automáticos y ese día una persona del equipo le escribe.
-- contactarDesde va en formato "YYYY-MM-DD". Resuelve "la otra semana", "a fin de mes", "en enero" con la fecha actual que te damos. Si dice hasta cuándo no puede ("tengo pagado hasta el 5"), usa ese día. Si quiere arrancar en un día que queda a más de 2 días, usa el día anterior a ese, para agendarle a tiempo.
+- contactarDesde va en formato "YYYY-MM-DD". Resuelve "la otra semana", "a fin de mes", "en enero" con la fecha actual que te damos. Si dice hasta cuándo no puede ("tengo pagado hasta el 5"), usa ese día. Si quiere arrancar en un día que no está entre los días agendables del contexto, usa el día hábil anterior a ese, para agendarle a tiempo.
 - Si solo dice "más adelante" sin fecha, usa 14 días desde hoy y dile que le escribes en un par de semanas.
-- Si quiere agendar dentro de hoy, mañana o pasado mañana, eso no es posponer: agenda. Si dijo que no le interesa, eso tampoco: es LOST. En cualquier otro caso, contactarDesde=null.
+- Si quiere agendar en uno de los días agendables del contexto, eso no es posponer: agenda. Si dijo que no le interesa, eso tampoco: es LOST. En cualquier otro caso, contactarDesde=null.
 
 # Agendar la primera sesión (arranque de sus dos semanas)
-Ofrece los horarios de la sede del lead (te los damos abajo). Enmárcalo como "tu primera sesión" / "arrancas tus dos semanas", no como "tu evaluación" suelta. Agenda solo para hoy, mañana o máximo pasado mañana; si pide más de 2 días, no agendes aún: devuelve contactarDesde con el día anterior (ver "Si pide que le escribamos más adelante"). Al confirmar, pon shareLocation="sede" para adjuntar el mapa de la sede (no escribas el enlace tú) y pide que llegue 15 min antes.
+Ofrece los horarios de la sede del lead (te los damos abajo). Enmárcalo como "tu primera sesión" / "arrancas tus dos semanas", no como "tu evaluación" suelta. Agenda solo en los días agendables que te damos en el contexto (de lunes a viernes: nunca sábado ni domingo); si pide otro día, no agendes aún: devuelve contactarDesde con el día hábil anterior (ver "Si pide que le escribamos más adelante"). Cuando nombres el día, usa el día de la semana que le corresponde en el calendario del contexto ("mañana lunes 27"), nunca lo adivines. Al confirmar, pon shareLocation="sede" para adjuntar el mapa de la sede (no escribas el enlace tú) y pide que llegue 15 min antes.
 
 # Notas de voz, fotos y archivos (NO los puedes abrir)
 Por este canal solo te llega TEXTO. Cuando veas un turno marcado como "[El cliente envió una NOTA DE VOZ / IMAGEN / ...]", significa que el cliente mandó un archivo que tú NO escuchaste ni viste. Nunca finjas que lo revisaste ni adivines su contenido.
@@ -154,7 +155,8 @@ Devuelve SIEMPRE el JSON con:
 - handoff: true si hay que pasar a un humano.
 - suggestedStage: etapa sugerida del lead en el funnel.
 - contactarDesde: la fecha "YYYY-MM-DD" en que el lead pidió que le volvamos a escribir (ver "Si pide que le escribamos más adelante"), o null.
-- scheduledAtISO: si en ESTE mensaje confirmas la primera sesión (arranque de las dos semanas) con día y hora concretos (dentro de hoy, mañana o máximo pasado mañana, y en un horario válido de la sede), devuelve la fecha-hora en ISO 8601 con zona de Ecuador, formato "YYYY-MM-DDTHH:MM:00-05:00" (usa la fecha/hora actual que te doy en el contexto para resolver "mañana", etc.). Si no hay cita confirmada aún, devuelve null.`;
+- cancelaCita: true si el lead ya tenía agendada su primera sesión y en su último mensaje dice que no va a llegar o quiere moverla, y en ESTE mensaje no le confirmas una nueva fecha y hora; si no, false.
+- scheduledAtISO: si en ESTE mensaje confirmas la primera sesión (arranque de las dos semanas) con día y hora concretos (en uno de los días agendables del contexto y en un horario válido de la sede), devuelve la fecha-hora en ISO 8601 con zona de Ecuador, formato "YYYY-MM-DDTHH:MM:00-05:00" (usa la fecha/hora actual que te doy en el contexto para resolver "mañana", etc.). Si no hay cita confirmada aún, devuelve null.`;
 
 // ── Structured output schema ────────────────────────────────────────────────
 const OUTPUT_SCHEMA = {
@@ -179,9 +181,10 @@ const OUTPUT_SCHEMA = {
       enum: ["NEW", "CONTACTED", "SCHEDULED_TRIAL", "NEGOTIATING", "CONVERTED", "LOST"],
     },
     contactarDesde: { type: ["string", "null"], description: "YYYY-MM-DD en que el lead pidió que le volvamos a escribir, o null." },
+    cancelaCita: { type: "boolean", description: "El lead suelta la primera sesión que tenía agendada y no se le confirma otra en este mensaje." },
     scheduledAtISO: { type: ["string", "null"] },
   },
-  required: ["reply", "shareLocation", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "contactarDesde", "scheduledAtISO"],
+  required: ["reply", "shareLocation", "intent", "sede", "objetivo", "horarioPreferido", "handoff", "suggestedStage", "contactarDesde", "cancelaCita", "scheduledAtISO"],
   additionalProperties: false,
 } as const;
 
@@ -196,6 +199,8 @@ export type AgentResult = {
   suggestedStage: "NEW" | "CONTACTED" | "SCHEDULED_TRIAL" | "NEGOTIATING" | "CONVERTED" | "LOST";
   /** "YYYY-MM-DD": the lead asked us to write again that day (see postpone.ts). */
   contactarDesde: string | null;
+  /** The lead dropped the session they had booked (the runner clears it). */
+  cancelaCita: boolean;
   scheduledAtISO: string | null;
 };
 
@@ -298,6 +303,18 @@ export function nudgeIssues(text: string, step: FollowupStep["step"]): string[] 
 }
 
 /**
+ * The internal turn that sends a rejected draft back (agent-runner.ts): the
+ * draft rides as our own turn, then this explains what was wrong with it.
+ */
+export function correctionInstruction(issue: string): string {
+  return (
+    `[INSTRUCCIÓN INTERNA — no es un mensaje del lead] Ese borrador NO se envió porque ${issue}. ` +
+    `Escribe de nuevo tu respuesta al último mensaje del lead, corrigiendo eso. ` +
+    `Contesta primero lo que el lead preguntó o pidió en su último mensaje. Devuelve el JSON completo.`
+  );
+}
+
+/**
  * Run the agent over a conversation history and return the reply + qualification.
  * `history` is oldest→newest; the last entry should be the lead's inbound message.
  * `knownSede` narrows the slots we show when the sede is already known.
@@ -312,6 +329,8 @@ export async function runAgent(
     trialContext?: string | null;
     /** Write a no-reply nudge instead of answering (see followupInstruction). */
     followup?: FollowupStep | null;
+    /** Why the previous draft of this same reply was rejected (see correctionInstruction). */
+    correction?: { draft: string; issue: string } | null;
   } = {},
 ): Promise<AgentResult> {
   // Slots context: show the known sede's, or both when undecided.
@@ -326,17 +345,20 @@ export async function runAgent(
     })
     .join("\n");
 
+  const now = new Date();
   const nowEcuador = new Intl.DateTimeFormat("es-EC", {
     timeZone: "America/Guayaquil",
     weekday: "long", year: "numeric", month: "long", day: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: false,
-  }).format(new Date());
+  }).format(now);
 
   const contextBlock =
-    `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}. Úsala para resolver "hoy", "mañana", "pasado mañana".\n\n` +
+    `Fecha y hora actual (Ecuador, UTC-5): ${nowEcuador}. Úsala para resolver "hoy", "mañana", "pasado mañana".\n` +
+    `${bookingDaysContext(now)}\n\n` +
     `Horarios disponibles para la primera sesión (L–V, hora Ecuador):\n${slotsContext}\n` +
     `Son HORAS DE INICIO: la clase dura una hora. La última de la tarde empieza a la hora que dice y termina una hora después — no ofrezcas nada más tarde.\n` +
-    `Sábados SÍ hay clases para socios, pero NO se agendan evaluaciones ni primeras sesiones: suele haber un solo coach y no se abastece. Si preguntan por sábado, dilo así — no digas que cerramos el fin de semana.` +
+    `Sábados SÍ hay clases para socios, pero NO se agendan evaluaciones ni primeras sesiones: suele haber un solo coach y no se abastece. Si preguntan por sábado, dilo así — no digas que cerramos el fin de semana.\n` +
+    `Los domingos el gimnasio está cerrado: nunca ofrezcas ni propongas el domingo, tampoco en un seguimiento.` +
     (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "") +
     (opts.adContext ? `\n\n${opts.adContext}` : "") +
     (opts.trialContext ? `\n\n${opts.trialContext}` : "");
@@ -346,6 +368,12 @@ export async function runAgent(
     { role: "assistant", content: "Entendido. Estoy listo para atender al lead con ese contexto." },
     ...history.map((t) => ({ role: t.role, content: t.text })),
     ...(opts.followup ? [{ role: "user", content: followupInstruction(opts.followup) }] : []),
+    ...(opts.correction
+      ? [
+          { role: "assistant", content: opts.correction.draft },
+          { role: "user", content: correctionInstruction(opts.correction.issue) },
+        ]
+      : []),
   ];
 
   const parsed = await callResponder<AgentResult>(SYSTEM_PROMPT, OUTPUT_SCHEMA, messages, "Devuelve la respuesta de WhatsApp para el lead + su calificación estructurada.");

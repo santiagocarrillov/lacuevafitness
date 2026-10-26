@@ -102,6 +102,31 @@ export function nextSendableAt(from: Date): Date {
   return new Date(target.getTime() + EC_OFFSET_MS);
 }
 
+/**
+ * ¿Este toque espera a la franja en vez de salir ahora?
+ *
+ * Programar dentro de franja no basta: lo que queda represado (el techo diario
+ * de plantillas, una corrida caída) salía en la primera corrida después, y el
+ * domingo 25 oct 2026 se llegó al techo a las 18:15 → 8 mensajes a las 00:00 del
+ * lunes. El recordatorio de 1 h es la excepción: va pegado a la clase, y la de
+ * las 5:30 lo necesita a las 4:30.
+ */
+export function waitsForSendWindow(kind: FollowupKind, now: Date): boolean {
+  if (kind === "TRIAL_REMINDER_1H" || kind === "TRIAL_REMINDER_2H") return false;
+  return nextSendableAt(now).getTime() > now.getTime();
+}
+
+/**
+ * ¿El recordatorio de 24 h ya llegaría el mismo día de la cita (o después)?
+ * Dice "Mañana arrancas…": si salió tarde, decirlo el mismo día confunde, y el
+ * de 1 h ya cubre ese día (Mayfe, 26 oct 2026: "mañana" a las 00:00 de su día).
+ */
+export function dayReminderIsLate(trialAt: Date | null, now: Date): boolean {
+  if (!trialAt) return false;
+  const day = (d: Date) => new Date(d.getTime() - EC_OFFSET_MS).toISOString().slice(0, 10);
+  return day(now) >= day(trialAt);
+}
+
 /** Create a followup unless its fire time is already in the past. */
 export async function scheduleFollowup(
   conversationId: string,
@@ -114,6 +139,8 @@ export async function scheduleFollowup(
     data: { conversationId, kind, fireAt, status: "PENDING", payload: { message } },
   });
 }
+
+const TRIAL_REMINDER_KINDS: FollowupKind[] = ["TRIAL_REMINDER_24H", "TRIAL_REMINDER_2H", "TRIAL_REMINDER_1H"];
 
 /**
  * (Re)schedule the 24h + 1h anti-no-show reminders for a booked evaluation.
@@ -130,11 +157,7 @@ export async function scheduleTrialReminders(
   sede: Sede | null,
 ): Promise<void> {
   await prisma.scheduledFollowup.updateMany({
-    where: {
-      conversationId,
-      kind: { in: ["TRIAL_REMINDER_24H", "TRIAL_REMINDER_2H", "TRIAL_REMINDER_1H"] },
-      status: "PENDING",
-    },
+    where: { conversationId, kind: { in: TRIAL_REMINDER_KINDS }, status: "PENDING" },
     data: { status: "CANCELED" },
   });
 
@@ -144,14 +167,23 @@ export async function scheduleTrialReminders(
     timeZone: "America/Guayaquil", hour: "2-digit", minute: "2-digit", hour12: false,
   }).format(when);
 
+  // A 6:00 class put the day-before reminder at 6:00; it waits for 8:00 (same day).
   await scheduleFollowup(
-    conversationId, "TRIAL_REMINDER_24H", new Date(when.getTime() - 24 * 60 * 60 * 1000),
+    conversationId, "TRIAL_REMINDER_24H", nextSendableAt(new Date(when.getTime() - 24 * 60 * 60 * 1000)),
     `¡Hola ${name}! 👋 Mañana arrancas tus dos semanas de evaluación en ${sedeName} a las ${hora}. Llega 15 min antes. ¿Confirmas que vienes? 💪`,
   );
   await scheduleFollowup(
     conversationId, "TRIAL_REMINDER_1H", new Date(when.getTime() - 60 * 60 * 1000),
     `¡Hola ${name}! En una hora es tu primera sesión en ${sedeName} (${hora}). Llega 15 min antes para tomarte los datos de tu evaluación. ¡Te esperamos! 📍💪`,
   );
+}
+
+/** Cancela los recordatorios pendientes de la primera sesión (la soltó o la movió). */
+export async function cancelTrialReminders(conversationId: string, reason: string): Promise<void> {
+  await prisma.scheduledFollowup.updateMany({
+    where: { conversationId, kind: { in: TRIAL_REMINDER_KINDS }, status: "PENDING" },
+    data: { status: "CANCELED", errorMessage: reason },
+  });
 }
 
 // ── Rescate de no-show ──────────────────────────────────────────────────────
@@ -339,6 +371,8 @@ export type ProcessSummary = {
   botResumed: number;
   /** Seguimientos de no respuesta que redactó el agente en esta corrida. */
   written: number;
+  /** Vencidos fuera de la franja 08–21: siguen PENDING hasta que abra. */
+  outsideHours: number;
 };
 
 /**
@@ -380,6 +414,7 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     templateHeld: 0,
     botResumed,
     written: 0,
+    outsideHours: 0,
   };
   // Plantillas aprobadas en Meta, pedidas una sola vez y solo si hacen falta.
   // Si la consulta falla, no se frena nada (null): Meta rechazará lo que no exista.
@@ -412,6 +447,16 @@ export async function processDueFollowups(limit = 100): Promise<ProcessSummary> 
     if (now.getTime() - f.fireAt.getTime() > maxLateMs(f.kind)) {
       await mark(f.id, "CANCELED", `vencido: debía salir ${f.fireAt.toISOString()}`);
       summary.skipped += 1;
+      continue;
+    }
+    if (f.kind === "TRIAL_REMINDER_24H" && dayReminderIsLate(conv.lead?.trialScheduledAt ?? null, now)) {
+      await mark(f.id, "CANCELED", "ya es el día de la cita: queda el recordatorio de 1 h");
+      summary.skipped += 1;
+      continue;
+    }
+    if (waitsForSendWindow(f.kind, now)) {
+      // Sigue PENDING: sale en la primera corrida desde las 8:00.
+      summary.outsideHours += 1;
       continue;
     }
 
