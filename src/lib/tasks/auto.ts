@@ -8,7 +8,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { isStaffFreeTraining } from "@/lib/staff-free-training";
-import { ecuadorDateAt, ecuadorTimeOfDayMinutes, todayDateUtc } from "@/lib/timezone";
+import { ecuadorDateAt, ecuadorDateString, ecuadorTimeOfDayMinutes, todayDateUtc } from "@/lib/timezone";
+import { holidaysBetween } from "@/lib/holidays";
 import { dueLabel, minutesToTime } from "@/lib/tasks/meta";
 import type { LeadStage, Sede, StaffTaskType } from "@/generated/prisma/client";
 import { blockOf, evaluationGaps } from "@/lib/srxfit/group-stats";
@@ -294,7 +295,8 @@ async function planInactive(now: Date): Promise<AutoTaskPlan[]> {
     .filter((m) => !isStaffMember(m) && m.attendance.length > 0)
     .map((m) => {
       const last = m.attendance[0].recordedAt;
-      const days = Math.floor((now.getTime() - last.getTime()) / DAY);
+      // Holidays (holidays.ts) don't count as days without coming.
+      const days = Math.floor((now.getTime() - last.getTime()) / DAY) - holidaysBetween(ecuadorDateString(last), ecuadorDateString(now));
       return { days, plan: inactivePlan(m, last, days, m.staffTasks.map((t) => t.autoKey!)) };
     })
     .filter((x): x is { days: number; plan: AutoTaskPlan } => x.plan !== null)

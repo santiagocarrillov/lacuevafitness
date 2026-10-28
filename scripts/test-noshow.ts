@@ -35,7 +35,8 @@ const casos: Array<[string, string, string, string, string]> = [
   // [marcado (hora EC), primero, día 3, día 7, por qué]
   ["2026-10-22T11:00", "2026-10-22T11:01", "2026-10-25T11:00", "2026-10-29T11:00", "cita de las 8 am: sale a media mañana"],
   ["2026-10-22T22:30", "2026-10-23T08:00", "2026-10-26T08:00", "2026-10-30T08:00", "cita de las 7:30 pm: nada de noche, a las 8"],
-  ["2026-10-30T20:59", "2026-10-31T08:00", "2026-11-02T20:59", "2026-11-06T20:59", "en el filo de las 21: el primero (+1 min) espera a las 8; los otros caben"],
+  ["2026-10-16T20:59", "2026-10-17T08:00", "2026-10-19T20:59", "2026-10-23T20:59", "en el filo de las 21: el primero (+1 min) espera a las 8; los otros caben"],
+  ["2026-10-30T20:59", "2026-11-04T08:00", "2026-11-06T08:00", "2026-11-10T08:00", "feriado 31 oct–3 nov: todo espera al miércoles 4 y cada toque guarda su distancia"],
 ];
 for (const [marked, first, d3, d7, why] of casos) {
   const t = noShowTimes(ec(marked));

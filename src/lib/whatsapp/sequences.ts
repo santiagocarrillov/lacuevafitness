@@ -27,6 +27,7 @@ import { createPostponeTask } from "./postpone";
 import { createNoShowTask } from "@/lib/leads/noshow-task";
 import { fetchMetaTemplates } from "./graph";
 import type { FollowupKind, LeadStage, Sede } from "@/generated/prisma/client";
+import { isOffDay } from "@/lib/holidays";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 /** Ecuador es UTC-5 todo el año (no hay horario de verano). */
@@ -89,15 +90,19 @@ const SEND_WINDOW_END_H = 21;
 
 /**
  * El mismo instante si cae en franja, o el siguiente arranque de franja si no.
+ * Los feriados (holidays.ts) no tienen franja: los seguimientos a leads esperan
+ * al siguiente día normal a las 8:00 (Santiago, 28 oct 2026: en el feriado casi
+ * nadie responde y cada plantilla cuesta).
  * Ecuador es UTC-5 todo el año, así que la aritmética en UTC es exacta.
  */
 export function nextSendableAt(from: Date): Date {
   const ec = new Date(from.getTime() - EC_OFFSET_MS);
   const hour = ec.getUTCHours();
-  if (hour >= SEND_WINDOW_START_H && hour < SEND_WINDOW_END_H) return from;
+  if (hour >= SEND_WINDOW_START_H && hour < SEND_WINDOW_END_H && !isOffDay(ec.toISOString().slice(0, 10))) return from;
 
   const target = new Date(ec);
   if (hour >= SEND_WINDOW_END_H) target.setUTCDate(target.getUTCDate() + 1);
+  while (isOffDay(target.toISOString().slice(0, 10))) target.setUTCDate(target.getUTCDate() + 1);
   target.setUTCHours(SEND_WINDOW_START_H, 0, 0, 0);
   return new Date(target.getTime() + EC_OFFSET_MS);
 }
@@ -208,8 +213,13 @@ const NOSHOW_GAP_DAYS = 4;
 
 /** Cuándo sale cada toque, contando desde que se marcó el no-show (puro: scripts/test-noshow.ts). */
 export function noShowTimes(markedAt: Date): { first: Date; day3: Date; day7: Date } {
-  const at = (ms: number) => nextSendableAt(new Date(markedAt.getTime() + ms));
-  return { first: at(60_000), day3: at(3 * DAY_MS), day7: at(7 * DAY_MS) };
+  // Each touch keeps its distance from the one before: after a long weekend
+  // (holidays.ts) the first and the day-3 would otherwise both land at 8:00.
+  const at = (ms: number, notBefore = 0) => nextSendableAt(new Date(Math.max(markedAt.getTime() + ms, notBefore)));
+  const first = at(60_000);
+  const day3 = at(3 * DAY_MS, first.getTime() + 2 * DAY_MS);
+  const day7 = at(7 * DAY_MS, day3.getTime() + NOSHOW_GAP_DAYS * DAY_MS);
+  return { first, day3, day7 };
 }
 
 /**

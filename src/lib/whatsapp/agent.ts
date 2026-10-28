@@ -11,6 +11,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Sede } from "@/generated/prisma/client";
 import { bookingDaysContext } from "./booking";
+import { holidayContext } from "@/lib/holidays";
+import { ecuadorDateString } from "@/lib/timezone";
 
 // Model + effort are env-overridable; defaults favor quality (Opus) at a moderate
 // effort suited to short conversational replies.
@@ -61,6 +63,9 @@ export function sedeSlots24h(sede: Sede): string[] {
     });
   return [...parse(info.morning, false), ...parse(info.evening, true)];
 }
+
+/** A context section after a blank line, or nothing when it's empty. */
+const prefixed = (section: string) => (section ? `\n\n${section}` : "");
 
 // ── Persona / system prompt (canonical copy from the playbook) ──────────────
 /** How La Cueva sounds. Shared by the sales prompt and the socio prompt. */
@@ -359,6 +364,7 @@ export async function runAgent(
     `Son HORAS DE INICIO: la clase dura una hora. La última de la tarde empieza a la hora que dice y termina una hora después — no ofrezcas nada más tarde.\n` +
     `Sábados SÍ hay clases para socios, pero NO se agendan evaluaciones ni primeras sesiones: suele haber un solo coach y no se abastece. Si preguntan por sábado, dilo así — no digas que cerramos el fin de semana.\n` +
     `Los domingos el gimnasio está cerrado: nunca ofrezcas ni propongas el domingo, tampoco en un seguimiento.` +
+    prefixed(holidayContext(ecuadorDateString(now), sedesToShow, { sales: true })) +
     (opts.leadName ? `\n\nNombre del lead (de WhatsApp): ${opts.leadName}` : "") +
     (opts.adContext ? `\n\n${opts.adContext}` : "") +
     (opts.trialContext ? `\n\n${opts.trialContext}` : "");
@@ -534,7 +540,8 @@ export function memberContextBlock(ctx: MemberContext, now = new Date()): string
 ` +
     `Turnos de ${i.name} (L–V, hora de inicio, la clase dura una hora): mañana ${i.morning} · tarde ${i.evening}.
 ` +
-    `Los sábados hay clases para socios, pero no tienes sus horarios: si preguntan, que recepción le confirme (handoff=true, no_se).`
+    `Los sábados hay clases para socios, pero no tienes sus horarios: si preguntan, que recepción le confirme (handoff=true, no_se).` +
+    prefixed(holidayContext(ecuadorDateString(now), [ctx.sede], { sales: false }))
   );
 }
 

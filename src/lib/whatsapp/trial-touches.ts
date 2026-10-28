@@ -19,6 +19,7 @@
 
 import { addDays } from "@/lib/nutrition/appointments";
 import { weekdayOf } from "@/lib/nutrition/slots";
+import { holidaysBetween, isHoliday } from "@/lib/holidays";
 
 export type TrialTouchKind = "PRUEBA_DIA3" | "PRUEBA_DIA7" | "PRUEBA_CIERRE";
 
@@ -52,15 +53,18 @@ export function trialDay(startDay: string, endDay: string, today: string): Trial
 
 /**
  * Which touch is due today for a trial running startDay → endDay, or null.
- * Nothing on Sundays (the gym is closed; Monday catches up) nor once it ended.
+ * Nothing on Sundays (the gym is closed; Monday catches up), on holidays
+ * (holidays.ts; the catch-up grows by them) nor once it ended.
  */
 export function trialTouch(startDay: string, endDay: string, today: string): TrialTouchKind | null {
-  if (weekdayOf(today) === 7) return null;
+  if (weekdayOf(today) === 7 || isHoliday(today)) return null;
   const { dayN, daysLeft } = trialDay(startDay, endDay, today);
   if (dayN < 1 || daysLeft < CLOSE_UNTIL_DAYS_LEFT) return null;
   if (daysLeft <= CLOSE_FROM_DAYS_LEFT) return "PRUEBA_CIERRE";
-  if (dayN >= 7 && dayN <= 7 + CATCH_UP_DAYS) return "PRUEBA_DIA7";
-  if (dayN >= 3 && dayN <= 3 + CATCH_UP_DAYS) return "PRUEBA_DIA3";
+  // Holidays from the touch's day (included) to today stretch its catch-up.
+  const catchUp = (n: number) => CATCH_UP_DAYS + holidaysBetween(addDays(startDay, n - 2), today);
+  if (dayN >= 7 && dayN <= 7 + catchUp(7)) return "PRUEBA_DIA7";
+  if (dayN >= 3 && dayN <= 3 + catchUp(3)) return "PRUEBA_DIA3";
   return null;
 }
 

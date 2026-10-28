@@ -26,6 +26,7 @@
     "test:wa-id": "tsx scripts/test-wa-id.ts",
     "test:guardas": "tsx scripts/test-guardas.ts",
     "test:agenda": "tsx scripts/test-agenda.ts",
+    "test:feriados": "tsx scripts/test-feriados.ts",
     "test:owner-notas": "tsx scripts/test-owner-notas.ts",
     "test:tareas-auto": "tsx scripts/test-tareas-auto.ts",
     "test:nutricion-agenda": "tsx scripts/test-nutricion-agenda.ts",

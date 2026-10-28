@@ -27,6 +27,7 @@
 
 import { addDays } from "@/lib/nutrition/appointments";
 import { weekdayOf } from "@/lib/nutrition/slots";
+import { isHoliday } from "@/lib/holidays";
 
 export const RHYTHM_WEEKS = 4;
 /** Fewer weeks of history than this and the rhythm is a guess: use DEFAULT. */
@@ -94,13 +95,14 @@ export function memberRhythm(visitDays: string[], joinedDay: string | null): Rhy
   return { kind: "RATE", perWeek, trainingDays: inWindow.some((d) => weekdayOf(d) === 6) ? 6 : 5 };
 }
 
-/** Expected sessions missed between the last visit and today, both excluded. */
+/** Expected sessions missed between the last visit and today, both excluded (holidays don't count). */
 export function missedSessions(rhythm: Rhythm, lastDay: string, today: string): number {
   if (rhythm.kind === "LOW") return 0;
   let usualDays = 0;
   let trainingDays = 0;
   const week = rhythm.kind === "RATE" ? rhythm.trainingDays : 5;
   for (let d = addDays(lastDay, 1); d < today; d = addDays(d, 1)) {
+    if (isHoliday(d)) continue; // reduced schedule: not a session they were expected at
     const w = weekdayOf(d);
     if (rhythm.kind === "PATTERN" && rhythm.days.includes(w)) usualDays++;
     if (w <= week) trainingDays++;
