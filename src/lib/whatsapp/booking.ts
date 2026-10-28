@@ -12,6 +12,7 @@
  */
 
 import { ecuadorParts } from "@/lib/timezone";
+import { holidayOn, isHoliday } from "@/lib/holidays";
 
 const DAY_MS = 86_400_000;
 const EC_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -33,13 +34,13 @@ const label = (d: Date) => `${WEEKDAY_ES[d.getUTCDay()]} ${d.getUTCDate()} de ${
 const isWeekend = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
 
 /**
- * The next BOOKABLE_WEEKDAYS weekdays, starting today if today is one. Today is
+ * The next BOOKABLE_WEEKDAYS weekdays that aren't holidays (holidays.ts), starting today if today is one. Today is
  * listed even late in the evening: the slot check is what rules out a past hour.
  */
 export function bookableDays(now: Date = new Date()): Date[] {
   const days: Date[] = [];
   for (let d = ecuadorDay(now); days.length < BOOKABLE_WEEKDAYS; d = new Date(d.getTime() + DAY_MS)) {
-    if (!isWeekend(d)) days.push(d);
+    if (!isWeekend(d) && !isHoliday(ymd(d))) days.push(d);
   }
   return days;
 }
@@ -53,7 +54,8 @@ export function bookingDaysContext(now: Date = new Date()): string {
   const today = ecuadorDay(now);
   const rel = ["hoy", "mañana", "pasado mañana"].map((word, i) => {
     const d = new Date(today.getTime() + i * DAY_MS);
-    const note = d.getUTCDay() === 0 ? " (domingo: el gimnasio está cerrado)" : d.getUTCDay() === 6 ? " (sábado: no se agendan primeras sesiones)" : "";
+    const holiday = holidayOn(ymd(d));
+    const note = d.getUTCDay() === 0 ? " (domingo: el gimnasio está cerrado)" : holiday ? ` (${holiday.name}: horario reducido, no se agendan primeras sesiones)` : d.getUTCDay() === 6 ? " (sábado: no se agendan primeras sesiones)" : "";
     return `${word} = ${label(d)}${note}`;
   });
   const days = bookableDays(now).map((d) => `${label(d)} (${ymd(d)})`);
@@ -76,6 +78,8 @@ export function bookingProblem(iso: string, slots: string[], now: Date = new Dat
 
   const day = ecuadorDay(when);
   if (day.getUTCDay() === 0) return `agendaste el domingo ${day.getUTCDate()}, y el domingo el gimnasio está cerrado`;
+  const holiday = holidayOn(ymd(day));
+  if (holiday) return `agendaste el ${label(day)}, que es ${holiday.name}: solo hay clases de la mañana para socios y no se agendan primeras sesiones`;
   if (day.getUTCDay() === 6) return `agendaste el sábado ${day.getUTCDate()}, y los sábados no se agendan primeras sesiones`;
   if (!bookableDays(now).some((d) => d.getTime() === day.getTime())) {
     return `agendaste el ${label(day)}, que no está entre los días agendables`;

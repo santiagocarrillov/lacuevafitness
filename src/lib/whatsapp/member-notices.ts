@@ -20,6 +20,7 @@ import { approvedTemplateNames } from "@/lib/whatsapp/graph";
 import { absenceDecision } from "@/lib/whatsapp/absence-rhythm";
 import { memberModeEnabled } from "@/lib/whatsapp/member-mode";
 import { longDay, trialTouch, type TrialTouchKind } from "@/lib/whatsapp/trial-touches";
+import { holidaysBetween, isHoliday, isOffDay } from "@/lib/holidays";
 
 export type NoticeKind = "AUSENCIA" | "FRECUENCIA" | "CUMPLEANOS" | "NUTRI_TRIAL" | "NUTRI_MEDICION" | "NUTRI_RECORDATORIO" | "TESTS" | TrialTouchKind;
 
@@ -61,12 +62,19 @@ const longDate = (ymd: string) =>
   new Intl.DateTimeFormat("es-EC", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${ymd}T12:00:00Z`)).replace(",", "");
 const SEDE_NAME: Record<Sede, string> = { FITNESS_CENTER: "La Cueva Fitness Center", XTREME: "La Cueva Xtreme" };
 
-/** Days between two Ecuador calendar days, not counting Sundays (the gym is closed). */
+/** Days between two Ecuador calendar days, not counting Sundays (the gym is closed) nor holidays. */
 export function trainingDaysBetween(from: string, to: string): number {
   let n = 0;
-  for (let d = addDays(from, 1); d <= to; d = addDays(d, 1)) if (weekdayOf(d) !== 7) n++;
+  for (let d = addDays(from, 1); d <= to; d = addDays(d, 1)) if (weekdayOf(d) !== 7 && !isHoliday(d)) n++;
   return n;
 }
+
+/**
+ * Kinds that still go out on a holiday or long-weekend Sunday (holidays.ts): a birthday and tomorrow's
+ * appointment are the same on a long weekend. The rest (absence, frequency,
+ * trial check-ins, booking links) wait for the next normal day.
+ */
+const HOLIDAY_KINDS: NoticeKind[] = ["CUMPLEANOS", "NUTRI_RECORDATORIO"];
 
 function candidate(kind: NoticeKind, key: string, m: { id: string; firstName: string; lastName: string | null; sede: Sede; phone: string | null }, variables: string[], invite?: NoticeCandidate["invite"]): NoticeCandidate {
   const template = NOTICE_KINDS.find((k) => k.kind === kind)!.template;
@@ -102,7 +110,10 @@ export async function planNotices(now = new Date()): Promise<NoticeCandidate[]> 
     }
     // FRECUENCIA reads two weeks: a socio of less than three is still settling in.
     if (m.joinedAt.getTime() > now.getTime() - 21 * DAY) continue;
-    const last14 = visits.filter((v) => v.getTime() >= now.getTime() - 14 * DAY).length;
+    // Two weeks of training days: the window grows by the holidays inside it.
+    const since = now.getTime() - 14 * DAY;
+    const windowDays = 14 + holidaysBetween(ecuadorDateString(new Date(since)), today);
+    const last14 = visits.filter((v) => v.getTime() >= now.getTime() - windowDays * DAY).length;
     const recentlyNudged = m.notices.some((n) => n.kind === "FRECUENCIA" || (n.kind === "AUSENCIA" && n.createdAt.getTime() >= now.getTime() - 7 * DAY));
     // 3–5 visits in two weeks = 1,5–2,5 a week ("veces" stays plural); fewer is an absence.
     if (last14 >= 3 && last14 <= 5 && !recentlyNudged) {
@@ -190,9 +201,11 @@ export async function planNotices(now = new Date()): Promise<NoticeCandidate[]> 
     }
   }
 
-  // Drop what was already sent (or attempted) under the same key.
+  // Drop what was already sent (or attempted) under the same key, and on a
+  // holiday whatever can wait for the next normal day.
+  const holiday = isOffDay(today);
   const done = new Set((await prisma.memberNotice.findMany({ where: { key: { in: out.map((c) => c.key) } }, select: { key: true } })).map((n) => n.key));
-  return out.filter((c) => !done.has(c.key));
+  return out.filter((c) => !done.has(c.key) && (!holiday || HOLIDAY_KINDS.includes(c.kind)));
 }
 
 export type SendOutcome = { key: string; status: "SENT" | "FAILED" | "SKIPPED"; detail?: string };

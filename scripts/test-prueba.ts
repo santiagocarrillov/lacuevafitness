@@ -42,7 +42,9 @@ check("cierre sale el viernes 30 (3 días antes del 2 nov)", first("PRUEBA_CIERR
 check("nada en domingo", Object.keys(cal).every((d) => weekdayOf(d) !== 7));
 check("nada antes de empezar", trialTouch(LUNES, "2026-11-02", "2026-10-18") === null);
 check("nada después de terminar", trialTouch(LUNES, "2026-11-02", "2026-11-03") === null);
-check("2 días antes todavía es cierre (se pone al día)", trialTouch(LUNES, "2026-11-02", "2026-10-31") === "PRUEBA_CIERRE");
+// El sábado 31 oct 2026 es feriado (holidays.ts): ese día no sale nada.
+check("2 días antes en feriado: nada", trialTouch(LUNES, "2026-11-02", "2026-10-31") === null);
+check("2 días antes todavía es cierre (se pone al día)", trialTouch("2026-10-20", "2026-11-09", "2026-11-07") === "PRUEBA_CIERRE");
 check("el último día ya no sale (queda la tarea del staff)", trialTouch(LUNES, "2026-11-02", "2026-11-01") === null && trialTouch(LUNES, "2026-11-02", "2026-11-02") === null);
 check("día 1 y 2 no tienen toque", !cal["2026-10-19"] && !cal["2026-10-20"]);
 
