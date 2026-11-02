@@ -1,7 +1,7 @@
-# SRXFit · Bloque 4 — Semanas 1 a 9 (9 nov 2026 → 9 ene 2027)
+# SRXFit · Bloque 4 — Semanas 1 a 9 (16 nov 2026 → 16 ene 2027)
 
-> **Alcance:** ciclo de 9 semanas, lun 9 nov 2026 → sáb 9 ene 2027. 54 sesiones (6 días × 9 semanas). En el calendario de la app son las semanas 28 a 36.
-> **Estado:** sembrada en la app el 12-oct-2026 (semanas 28–36), sin cambios sobre la propuesta. Este documento es la fuente: si se edita, se vuelve a sembrar con `npx tsx scripts/seed-bloque-overrides.ts --bloque=4 --write`.
+> **Alcance:** ciclo de 9 semanas, lun 16 nov 2026 → sáb 16 ene 2027 (se corrió una semana el 1 nov 2026, porque el test del Bloque 3 pasó al 9–14 nov). 54 sesiones (6 días × 9 semanas). En el calendario de la app son las semanas 29 a 37.
+> **Estado:** sembrada en la app el 12-oct-2026, sin cambios sobre la propuesta; corrida una semana el 1-nov-2026. Este documento es la fuente: si se edita, se vuelve a sembrar con `npx tsx scripts/seed-bloque-overrides.ts --bloque=4 --write`.
 > **Método:** igual que el Bloque 3, cada sesión se recombina desde una rutina ya vivida y corregida. Lo nuevo es que todas se adaptaron a la estructura del Manual v3, y que **los días de Rotación se crearon desde las reglas** (decisión del 10-oct-2026).
 
 ---
@@ -11,7 +11,7 @@
 1. **Los seis días de Rotación creados desde cero** (semanas 1, 2, 4, 5, 6 y 8). Principal olímpico o de potencia, primer de rotación explosiva sin balón y al menos dos estaciones de rotación o anti-rotación con carga (landmine, polea, banda, DB).
 2. **El intervalo largo del día Unilateral** (semanas 1, 2, 5 y 6). El manual pide 4 × 3 min «con descanso similar», pero con 3 min de descanso el bloque dura 21 min y la clase no cabe en 50. Los cuatro agentes lo resolvieron igual: **4 × 3 min con 1 min de descanso** (15 min). Alternativas: 6 × 2 min con 1 min, o acortar la Fuerza ese día.
 3. **El énfasis del bloque** (abajo): es un supuesto mío.
-4. **Feriados:** el viernes 25 dic (semana 7, día de Unilateral tras los ensayos) y el viernes 1 ene (semana 8). Están programados con una nota para pasarlos al sábado si la sede no abre. La re-evaluación cae del 4 al 9 de enero, justo después de las fiestas: si prefieres correr el bloque una semana, dímelo antes de sembrar.
+4. **Feriados:** el viernes 25 dic (semana 6) y el viernes 1 ene (semana 7, día de Unilateral tras los ensayos). Están programados con una nota para pasarlos al sábado si la sede no abre. El segundo ensayo cae del 28 al 31 de diciembre, entre las fiestas; la re-evaluación es del 11 al 16 de enero.
 
 ---
 
@@ -57,15 +57,15 @@ Dos consecuencias que conviene que confirmes:
 
 | Sem | Fechas | Fase | Énfasis | Nota |
 |---|---|---|---|---|
-| 1 | 9–14 nov | Aprender | Resistencia muscular | Salto largo en el primer del lunes |
-| 2 | 16–21 nov | Desarrollar | Resistencia muscular | — |
-| 3 | 23–28 nov | **Desafiar** | Resistencia muscular | Ensayo: 4 días de fuerza |
-| 4 | 30 nov–5 dic | Recuperar | Resistencia muscular | Mitad de series, misma carga |
-| 5 | 7–12 dic | Aprender | **Potencia** | Salto largo en el primer del lunes |
-| 6 | 14–19 dic | Desarrollar | Potencia | — |
-| 7 | 21–26 dic | **Desafiar** | Potencia | Ensayo. Viernes 25: feriado |
-| 8 | 28 dic–2 ene | Recuperar | Potencia | Viernes 1: feriado |
-| 9 | 4–9 ene | **Re-evaluación** | — | Batería completa + salto largo + entrega |
+| 1 | 16–21 nov | Aprender | Resistencia muscular | Salto largo en el primer del lunes |
+| 2 | 23–28 nov | Desarrollar | Resistencia muscular | — |
+| 3 | 30 nov–5 dic | **Desafiar** | Resistencia muscular | Ensayo: 4 días de fuerza |
+| 4 | 7–12 dic | Recuperar | Resistencia muscular | Mitad de series, misma carga |
+| 5 | 14–19 dic | Aprender | **Potencia** | Salto largo en el primer del lunes |
+| 6 | 21–26 dic | Desarrollar | Potencia | Viernes 25: feriado |
+| 7 | 28 dic–2 ene | **Desafiar** | Potencia | Ensayo. Viernes 1: feriado |
+| 8 | 4–9 ene | Recuperar | Potencia | — |
+| 9 | 11–16 ene | **Re-evaluación** | — | Batería completa + salto largo + entrega |
 
 ### Ejercicio principal por día
 
@@ -98,62 +98,62 @@ Dos consecuencias que conviene que confirmes:
 
 | Sem | Día | Patrón | Fuente |
 |---|---|---|---|
-| 1 | Lun 9 | Empuje | sem 5 día 3 |
-| 1 | Mar 10 | Bisagra | sem 10 día 5 |
-| 1 | Mié 11 | Unilateral | sem 14 día 4 |
-| 1 | Jue 12 | Rotación | creada desde las reglas |
-| 1 | Vie 13 | Jalón | sem 14 día 5 |
-| 1 | Sáb 14 | Full-body (prioriza Rotación) | sem 10 día 6 |
-| 2 | Lun 16 | Empuje | sem 11 día 1 |
-| 2 | Mar 17 | Bisagra | sem 15 día 2 |
-| 2 | Mié 18 | Unilateral | sem 2 día 2 |
-| 2 | Jue 19 | Rotación | creada desde las reglas |
-| 2 | Vie 20 | Jalón | sem 2 día 3 |
-| 2 | Sáb 21 | Full-body (prioriza Jalón) | sem 2 día 6 |
-| 3 | Lun 23 | Bisagra + Jalón | sem 21 día 1 |
-| 3 | Mar 24 | Empuje | sem 21 día 2 |
-| 3 | Mié 25 | Olímpico | sem 21 día 3 |
-| 3 | Jue 26 | Olímpico | sem 21 día 4 |
-| 3 | Vie 27 | Unilateral | sem 16 día 5 |
-| 3 | Sáb 28 | Full-body (prioriza Rotación (esta semana no hubo día de Rotación)) | sem 3 día 6 |
-| 4 | Lun 30 | Bisagra | sem 8 día 3 |
-| 4 | Mar 1 | Unilateral | sem 17 día 5 |
-| 4 | Mié 2 | Rotación | creada desde las reglas |
-| 4 | Jue 3 | Jalón | sem 17 día 1 |
-| 4 | Vie 4 | Empuje | sem 13 día 2 |
-| 4 | Sáb 5 | Full-body (prioriza Empuje) | sem 8 día 6 |
-| 5 | Lun 7 | Unilateral | sem 10 día 2 |
-| 5 | Mar 8 | Rotación | creada desde las reglas |
-| 5 | Mié 9 | Jalón | sem 1 día 3 |
-| 5 | Jue 10 | Empuje | sem 14 día 3 |
-| 5 | Vie 11 | Bisagra | sem 5 día 2 |
-| 5 | Sáb 12 | Full-body (prioriza Bisagra) | sem 1 día 6 |
-| 6 | Lun 14 | Unilateral | sem 15 día 4 |
-| 6 | Mar 15 | Rotación | creada desde las reglas |
-| 6 | Mié 16 | Jalón | sem 6 día 5 |
-| 6 | Jue 17 | Empuje | sem 2 día 1 |
-| 6 | Vie 18 | Bisagra | sem 11 día 5 |
-| 6 | Sáb 19 | Full-body (prioriza Unilateral) | sem 6 día 6 |
-| 7 | Lun 21 | Bisagra + Jalón | sem 25 día 1 |
-| 7 | Mar 22 | Empuje | sem 25 día 2 |
-| 7 | Mié 23 | Olímpico | sem 25 día 3 |
-| 7 | Jue 24 | Olímpico | sem 25 día 4 |
-| 7 | Vie 25 | Unilateral | sem 3 día 3 (ya usada en el Bloque 3) |
-| 7 | Sáb 26 | Full-body (prioriza cierre ligero tras la semana de ensayo) | sem 7 día 6 |
-| 8 | Lun 28 | Rotación | creada desde las reglas |
-| 8 | Mar 29 | Jalón | sem 4 día 4 |
-| 8 | Mié 30 | Empuje | sem 17 día 4 |
-| 8 | Jue 31 | Bisagra | sem 13 día 1 |
-| 8 | Vie 1 | Unilateral | sem 4 día 3 |
-| 8 | Sáb 2 | Full-body (prioriza cierre técnico antes de la re-evaluación) | sem 4 día 6 |
+| 1 | Lun 16 | Empuje | sem 5 día 3 |
+| 1 | Mar 17 | Bisagra | sem 10 día 5 |
+| 1 | Mié 18 | Unilateral | sem 14 día 4 |
+| 1 | Jue 19 | Rotación | creada desde las reglas |
+| 1 | Vie 20 | Jalón | sem 14 día 5 |
+| 1 | Sáb 21 | Full-body (prioriza Rotación) | sem 10 día 6 |
+| 2 | Lun 23 | Empuje | sem 11 día 1 |
+| 2 | Mar 24 | Bisagra | sem 15 día 2 |
+| 2 | Mié 25 | Unilateral | sem 2 día 2 |
+| 2 | Jue 26 | Rotación | creada desde las reglas |
+| 2 | Vie 27 | Jalón | sem 2 día 3 |
+| 2 | Sáb 28 | Full-body (prioriza Jalón) | sem 2 día 6 |
+| 3 | Lun 30 | Bisagra + Jalón | sem 21 día 1 |
+| 3 | Mar 1 | Empuje | sem 21 día 2 |
+| 3 | Mié 2 | Olímpico | sem 21 día 3 |
+| 3 | Jue 3 | Olímpico | sem 21 día 4 |
+| 3 | Vie 4 | Unilateral | sem 16 día 5 |
+| 3 | Sáb 5 | Full-body (prioriza Rotación (esta semana no hubo día de Rotación)) | sem 3 día 6 |
+| 4 | Lun 7 | Bisagra | sem 8 día 3 |
+| 4 | Mar 8 | Unilateral | sem 17 día 5 |
+| 4 | Mié 9 | Rotación | creada desde las reglas |
+| 4 | Jue 10 | Jalón | sem 17 día 1 |
+| 4 | Vie 11 | Empuje | sem 13 día 2 |
+| 4 | Sáb 12 | Full-body (prioriza Empuje) | sem 8 día 6 |
+| 5 | Lun 14 | Unilateral | sem 10 día 2 |
+| 5 | Mar 15 | Rotación | creada desde las reglas |
+| 5 | Mié 16 | Jalón | sem 1 día 3 |
+| 5 | Jue 17 | Empuje | sem 14 día 3 |
+| 5 | Vie 18 | Bisagra | sem 5 día 2 |
+| 5 | Sáb 19 | Full-body (prioriza Bisagra) | sem 1 día 6 |
+| 6 | Lun 21 | Unilateral | sem 15 día 4 |
+| 6 | Mar 22 | Rotación | creada desde las reglas |
+| 6 | Mié 23 | Jalón | sem 6 día 5 |
+| 6 | Jue 24 | Empuje | sem 2 día 1 |
+| 6 | Vie 25 | Bisagra | sem 11 día 5 |
+| 6 | Sáb 26 | Full-body (prioriza Unilateral) | sem 6 día 6 |
+| 7 | Lun 28 | Bisagra + Jalón | sem 25 día 1 |
+| 7 | Mar 29 | Empuje | sem 25 día 2 |
+| 7 | Mié 30 | Olímpico | sem 25 día 3 |
+| 7 | Jue 31 | Olímpico | sem 25 día 4 |
+| 7 | Vie 1 | Unilateral | sem 3 día 3 (ya usada en el Bloque 3) |
+| 7 | Sáb 2 | Full-body (prioriza cierre ligero tras la semana de ensayo) | sem 7 día 6 |
+| 8 | Lun 4 | Rotación | creada desde las reglas |
+| 8 | Mar 5 | Jalón | sem 4 día 4 |
+| 8 | Mié 6 | Empuje | sem 17 día 4 |
+| 8 | Jue 7 | Bisagra | sem 13 día 1 |
+| 8 | Vie 8 | Unilateral | sem 4 día 3 |
+| 8 | Sáb 9 | Full-body (prioriza cierre técnico antes de la re-evaluación) | sem 4 día 6 |
 
 ---
 
-# SEMANA 1 · Aprender · Resistencia muscular · 9–14 nov
+# SEMANA 1 · Aprender · Resistencia muscular · 16–21 nov
 
 > RPE 6–7 · 4–5 en reserva. Primera semana del Bloque 4: se aprende el patrón de cada día y se mide el salto de partida. Técnica antes que carga, series largas con descansos cortos y cada estación terminada con buena forma.
 
-## Lun 9 · Empuje
+## Lun 16 · Empuje
 
 > _Origen: sem 5 día 3 (1B · Aprender · Empuje) — el bench press con barra 5 × 5 (test) pasa a DB bench 4 × 12 de resistencia muscular; se añaden primer con medición de salto, isométrico y estaciones del Manual v3, y el 3RFT se reformatea a EMOM con los mismos movimientos._
 
@@ -224,7 +224,7 @@ _Z3 sostenida. Si no sobran al menos 10 segundos en el minuto, baja carga o repe
 
 ---
 
-## Mar 10 · Bisagra
+## Mar 17 · Bisagra
 
 > _Origen: sem 10 día 5 (2A · Aprender · Bisagra) — el combo goblet + step-ups pasa a box squat con pausa como único principal (sentadilla; es el mismo de la semana 2), se añaden primer de salto, wall sit y estaciones de bisagra, y el AMRAP se reformatea a RFT con los mismos movimientos._
 
@@ -296,7 +296,7 @@ _Z3. Densidad de piernas sostenida. Tiempo objetivo: 8–10 min._
 
 ---
 
-## Mié 11 · Unilateral
+## Mié 18 · Unilateral
 
 > _Origen: sem 14 día 4 (2B · Aprender · Unilateral) — los lunges 6 × 6 de potencia pasan a Bulgarian split squat con DB 4 × 10/lado de resistencia muscular (mismo principal de la semana 2), se añaden primer a una pierna y split squat isométrico, y el 3/2 se reformatea a intervalos Z4 de 4 × 3 min con los mismos movimientos (run y farmers walk)._
 
@@ -365,7 +365,7 @@ _Es el único Z4 de la semana. Modula el pulso: fuerte pero constante, que el ú
 
 ---
 
-## Jue 12 · Rotación
+## Jue 19 · Rotación
 
 > _Creada desde las reglas del Manual v3 (día de Rotación / potencia). Referencia de estilo: sem 1 día 4._
 
@@ -436,7 +436,7 @@ _Z3: ritmo sostenible durante las 8 rondas, no sprint. Si la técnica del burpee
 
 ---
 
-## Vie 13 · Jalón
+## Vie 20 · Jalón
 
 > _Origen: sem 14 día 5 (2B · Aprender · Jalón) — el speed deadlift 4 × 10 de potencia pasa a Romanian deadlift con barra 4 × 12 de resistencia muscular (mismo principal de la semana 2); se añaden primer, isométrico y estaciones del Manual v3, y el 21-15-9 se reformatea a estaciones sin KB swing (ya se usa lunes y martes), con ring row, box jump-over y carry._
 
@@ -506,7 +506,7 @@ _Z3 sostenida. Encadena jalón horizontal, salto y agarre sin romper la técnica
 
 ---
 
-## Sáb 14 · Full-body (prioriza **Rotación**)
+## Sáb 21 · Full-body (prioriza **Rotación**)
 > _Origen: sem 10 día 6 (2A · Aprender · Full-body) — la prioridad pasa de Unilateral a Rotación; el circuito se reordena con una estación por patrón (se añade sentadilla isométrica en lugar de hip thrust), el push press pasa a press de hombro con DB y el AMRAP se reformatea a parejas you-go-I-go._
 
 ### # Activación (9 min)
@@ -572,11 +572,11 @@ _Cuenten los turnos de la pareja. Cierre metabólico modulado, RPE 6-7._
 
 ---
 
-# SEMANA 2 · Desarrollar · Resistencia muscular · 16–21 nov
+# SEMANA 2 · Desarrollar · Resistencia muscular · 23–28 nov
 
 > RPE 7–8 · 2–3 en reserva. Misma estructura de la semana 1, pero con sobrecarga: más carga o más repeticiones en cada principal y descansos que no bajan la densidad. Los primers de potencia suben de altura o de distancia; la técnica aprendida la semana pasada ya se puede cargar.
 
-## Lun 16 · Empuje
+## Lun 23 · Empuje
 
 > _Origen: sem 11 día 1 (2A · Desarrollar · Empuje) — DB bench pasa de 4/10 a 4 × 12 por el énfasis de resistencia, se añade primer de potencia e isométrico, los dips pasan después del principal y las 3 tabatas se reformatean a RFT._
 
@@ -648,7 +648,7 @@ _Z3. Densidad constante: que la ronda 3 sea igual de limpia que la 1, sin caída
 
 ---
 
-## Mar 17 · Bisagra
+## Mar 24 · Bisagra
 
 > _Origen: sem 15 día 2 (2B · Desarrollar · Bisagra) — de potencia a resistencia: box squat pasa de 5 × 8 con contraste de saltos a 4 × 12, los saltos suben al primer, y el EMOM se reformatea a Tabata._
 
@@ -716,7 +716,7 @@ _Z3 sostenido, no sprint: la última ronda debe tener las mismas reps que la pri
 
 ---
 
-## Mié 18 · Unilateral
+## Mié 25 · Unilateral
 
 > _Origen: sem 2 día 2 (1A · Desarrollar · Unilateral) — se conserva Bulgarian split squat con +carga sobre la semana 1; la activación baja a 2 rondas para dar tiempo al intervalo Z4; face pull sale (no es patrón unilateral) y entran isométrico, isquio a una pierna y primer; el AMRAP pasa a intervalos Z4._
 
@@ -787,7 +787,7 @@ _Z4: respiración exigente, frases de 2–3 palabras. Es el único trabajo de Z4
 
 ---
 
-## Jue 19 · Rotación
+## Jue 26 · Rotación
 
 > _Creada desde las reglas del Manual v3 (día de Rotación / potencia). Referencia de estilo: sem 6 día 1._
 
@@ -862,7 +862,7 @@ _Z3 con técnica olímpica bajo fatiga y rotación con carga. Si la técnica se 
 
 ---
 
-## Vie 20 · Jalón
+## Vie 27 · Jalón
 
 > _Origen: sem 2 día 3 (1A · Desarrollar · Jalón) — el principal pasa de remos a RDL con barra (peso muerto vive en Jalón, el estándar solo en Desafiar), los remos y el curl pasan a estaciones, el plate pinch a farmer hold isométrico, y el RFT se reformatea a AMRAP._
 
@@ -934,7 +934,7 @@ _Z3 sostenido. Cada ronda en aprox 2 min._
 
 ---
 
-## Sáb 21 · Full-body (prioriza **Jalón**)
+## Sáb 28 · Full-body (prioriza **Jalón**)
 > _Origen: sem 2 día 6 (1A · Desarrollar · Full-body) — la prioridad pasa de Unilateral a Jalón (sale el skater jump por woodchop, entra wall sit isométrico), el circuito sigue en 5 estaciones × 2 rondas, y el AMRAP pasa a parejas; la regulación baja a 6 min._
 
 ### # Activación (9 min)
@@ -1000,11 +1000,11 @@ _Cierre metabólico modulado. RPE 6–7. Pueden hablar entre turnos: el ritmo lo
 
 ---
 
-# SEMANA 3 · Desafiar · Resistencia muscular · 23–28 nov
+# SEMANA 3 · Desafiar · Resistencia muscular · 30 nov–5 dic
 
 > RPE 8–9 · ensayo general. De lunes a jueves se ensaya, un levantamiento técnico por día, el orden exacto de la semana 9: nadie busca fallo, todos buscan una barra rápida y una técnica que aguante. El viernes se trabaja el unilateral con normalidad y el sábado cubre la rotación, el patrón que esta semana no tuvo día propio.
 
-## Lun 23 · Bisagra + Jalón · ENSAYO back squat + deadlift
+## Lun 30 · Bisagra + Jalón · ENSAYO back squat + deadlift
 
 > _Origen: sem 21 día 1 (Bloque 3 · Desafiar · Bisagra + Jalón) — conservado casi intacto; se añade primer corto de salto al cajón y un wall sit al final (no fatiga el levantamiento); el acondicionamiento pasa a parejas Z2 ligero de 8 min._
 
@@ -1066,11 +1066,11 @@ _Día de fuerza. Acondicionamiento ligero, con implemento ligero, conversación 
 **Respiración (2 min):**
 - Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.
 
-**Cierre:** Hoy viste lo que tus piernas y tu espalda van a mostrar la semana del 4 de enero. Faltan seis semanas para subirlo.
+**Cierre:** Hoy viste lo que tus piernas y tu espalda van a mostrar la semana del 11 de enero. Faltan seis semanas para subirlo.
 
 ---
 
-## Mar 24 · Empuje · ENSAYO bench press + push press
+## Mar 1 · Empuje · ENSAYO bench press + push press
 
 > _Origen: sem 21 día 2 (Bloque 3 · Desafiar · Empuje) — conservado casi intacto; se añade primer corto de push-up explosivo + pogos y un sostén de pantorrilla al final; el acondicionamiento RFT pasa a parejas Z2 ligero._
 
@@ -1109,7 +1109,7 @@ Esquema: A · Bench press 5 × 5 · RPE 8–9 · descanso 2 min (prueba ensayada
 **Estaciones después del principal:**
 - Sostén de pantorrilla a una pierna — 3 × 30 s por lado (isométrico · inferior)
 
-**Coach note:** **Las dos sedes miden bench Y push press.** En Xtreme hay que tener los bancos listos desde hoy, no el 4 de enero. Un spotter por barra en bench. La barra baja controlada y sube con intención; en el push press, si se cae adelante faltó dip-drive. El sostén de pantorrilla va al final para no restarle piernas al push press.
+**Coach note:** **Las dos sedes miden bench Y push press.** En Xtreme hay que tener los bancos listos desde hoy, no el 11 de enero. Un spotter por barra en bench. La barra baja controlada y sube con intención; en el push press, si se cae adelante faltó dip-drive. El sostén de pantorrilla va al final para no restarle piernas al push press.
 
 ### # Acondicionamiento (8 min)
 
@@ -1137,7 +1137,7 @@ _Ligero, Z2, sin comprometer el press._
 
 ---
 
-## Mié 25 · Olímpico · ENSAYO clean & jerk
+## Mié 2 · Olímpico · ENSAYO clean & jerk
 
 > _Origen: sem 21 día 3 (Bloque 3 · Desafiar · Olímpico, clean & jerk) — conservado casi intacto; se añade primer corto de broad jump y Pallof sostenido al final; acondicionamiento pasa a parejas Z2 ligero de 8 min._
 
@@ -1205,7 +1205,7 @@ _Ligero. Nada que castigue hombro ni muñeca después del jerk._
 
 ---
 
-## Jue 26 · Olímpico · ENSAYO snatch
+## Jue 3 · Olímpico · ENSAYO snatch
 
 > _Origen: sem 21 día 4 (Bloque 3 · Desafiar · Olímpico, snatch) — conservado casi intacto; se añade primer corto de salto vertical y plancha lateral al final; acondicionamiento pasa a parejas Z2 ligero y el DB snatch se cambia por KB swing para respetar «sin sobrecabeza»._
 
@@ -1274,7 +1274,7 @@ _Ligero y sin sobrecabeza: el hombro ya trabajó._
 
 ---
 
-## Vie 27 · Unilateral
+## Vie 4 · Unilateral
 
 > _Origen: sem 16 día 5 (2B · Desafiar · Unilateral) — principal y estaciones intactos; se añade primer hop and stick y split squat isométrico al final; el AMRAP pasa a Tabata Z3 de 10 min con los mismos movimientos._
 
@@ -1342,7 +1342,7 @@ _Umbral. Este día sí exige metabólico (no lleva test)._
 
 ---
 
-## Sáb 28 · Full-body (prioriza **Rotación**)
+## Sáb 5 · Full-body (prioriza **Rotación**)
 > _Origen: sem 3 día 6 (1A · Desafiar · Full-body) — circuito conservado; el patrón priorizado cambia de Empuje a Rotación (esta semana no hubo día de Rotación): la estación de rotación pasa a landmine rotation con dos estaciones de rotación/anti-rotación, se añade primer de rotación y una estación isométrica; el AMRAP pasa a 3 RFT Z3._
 
 ### # Activación (10 min)
@@ -1409,11 +1409,11 @@ _Cierre metabólico modulado. RPE 6-7. Cada ronda en aprox 2 min 30 s._
 
 ---
 
-# SEMANA 4 · Recuperar · Resistencia muscular · 30 nov–5 dic
+# SEMANA 4 · Recuperar · Resistencia muscular · 7–12 dic
 
 > RPE 5–6 · sin acercarte al fallo. Mitad de series con la misma carga, primer a mitad de contactos y acondicionamiento suave en Z2: no es descanso, es la semana en que el cuerpo absorbe las tres anteriores antes de entrar a potencia.
 
-## Lun 30 · Bisagra
+## Lun 7 · Bisagra
 
 > _Origen: sem 8 día 3 (1B · Recuperar · Bisagra) — back squat (test) cambiado por box squat con pausa de 1 s (el principal de la sem 2), 2 de sus 4 × 12 con la misma carga a RPE 5–6, estaciones de bisagra con isométrico de pared, primer de salto a mitad de contactos y acondicionamiento reformateado a estaciones Z2._
 
@@ -1482,7 +1482,7 @@ _Z2 suave. Ritmo de conversación; técnica idéntica en la ronda 2._
 
 ---
 
-## Mar 1 · Unilateral
+## Mar 8 · Unilateral
 
 > _Origen: sem 17 día 5 (2B · Recuperar · Unilateral) — Bulgarian split squat con DB (el principal de la sem 2), 2 de sus 4 × 10/lado con la misma carga; pistols y GHD sit-ups cambiados por isquio a una pierna y Pallof, split squat isométrico por sostén de pantorrilla para no duplicar el principal; Tabata convertido a AMRAP Z2 suave; sin referencia a test._
 
@@ -1547,7 +1547,7 @@ _Z2 suave. Ritmo de conversación; la técnica de la última ronda igual a la de
 
 ---
 
-## Mié 2 · Rotación
+## Mié 9 · Rotación
 
 > _Creada desde las reglas del Manual v3 (día de Rotación / potencia). Referencia de estilo: sem 4 día 5._
 
@@ -1613,7 +1613,7 @@ _Z2 suave. Termina cada minuto con segundos de sobra; descarga neural._
 
 ---
 
-## Jue 3 · Jalón
+## Jue 10 · Jalón
 
 > _Origen: sem 17 día 1 (2B · Recuperar · Jalón) — deadlift (test) cambiado por Romanian deadlift con barra (el principal de la sem 2), 2 de sus 4 × 12 con la misma carga a RPE 5–6; AMRAP pasado a RFT con remo en lugar de run; sin referencia a la re-evaluación._
 
@@ -1680,7 +1680,7 @@ _Z2 suave. Ritmo de conversación; sin carrera contra el reloj._
 
 ---
 
-## Vie 4 · Empuje
+## Vie 11 · Empuje
 
 > _Origen: sem 13 día 2 (2A · Recuperar · Empuje) — push press (test) cambiado por DB bench press (el principal de la sem 2), 2 de sus 4 × 12 con la misma carga a RPE 5–6; estaciones de tríceps y dips con sostén abajo del push-up; 5 RFT pasado a Tabata Z2 suave._
 
@@ -1746,7 +1746,7 @@ _Z2 suave. Ritmo de conversación aunque el reloj sea de Tabata; técnica idént
 
 ---
 
-## Sáb 5 · Full-body (prioriza **Empuje**)
+## Sáb 12 · Full-body (prioriza **Empuje**)
 > _Origen: sem 8 día 6 (1B · Recuperar · Full-body) — prioridad cambiada de Rotación a Empuje; RDL con DB cambiado por wall sit como estación de sentadilla isométrica; primer de potencia añadido; circuito a 60 s de trabajo para completar el bloque de fuerza._
 
 ### # Activación (10 min)
@@ -1813,11 +1813,11 @@ _Z2 suave. Cierre metabólico modulado, RPE 5–6, ritmo de conversación._
 
 ---
 
-# SEMANA 5 · Aprender · Potencia · 7–12 dic
+# SEMANA 5 · Aprender · Potencia · 14–19 dic
 
 > RPE 6–7 · 4–5 en reserva. Primera semana de potencia: cargas del 55–65 % moviendo cada repetición con intención de velocidad máxima, descanso completo de 2 min y series cortas. Si la barra se frena, la serie termina; técnica y aterrizaje limpio antes que carga.
 
-## Lun 7 · Unilateral
+## Lun 14 · Unilateral
 
 > _Origen: sem 10 día 2 (2A · Aprender · Unilateral) — walking lunges + step-ups en densidad pasan a reverse lunge con DB 5 × 3/lado al 55–60 % con intención de velocidad; se añaden primer con medición de salto largo e isométrico inferior; el AMRAP se reformatea a intervalos Z4 con los mismos movimientos._
 
@@ -1890,7 +1890,7 @@ _Z4: esfuerzo 8 de 10 sostenido, ritmo parejo; anota las rondas de cada interval
 
 ---
 
-## Mar 8 · Rotación
+## Mar 15 · Rotación
 
 > _Creada desde las reglas del Manual v3 (día de Rotación / potencia). Referencia de estilo: sem 10 día 4._
 
@@ -1961,7 +1961,7 @@ _Z3: densidad rotacional sostenida, ritmo parejo; el DB siempre con torso firme.
 
 ---
 
-## Mié 9 · Jalón
+## Mié 16 · Jalón
 
 > _Origen: sem 1 día 3 (1A · Aprender · Jalón) — power clean 4 × 6 pasa a speed trap bar deadlift 5 × 3 al 55–60 % con intención de velocidad y 2 min de descanso; ring row se mueve a estación después del principal; se añaden primer e isométrico entre series._
 
@@ -2032,7 +2032,7 @@ _Z3 intermitente. El descanso lo gana la velocidad._
 
 ---
 
-## Jue 10 · Empuje
+## Jue 17 · Empuje
 
 > _Origen: sem 14 día 3 (2B · Aprender · Empuje) — bench explosivo con barra 4 × 10 pasa a DB bench press explosivo (banco plano) 5 × 3 al 55–60 % con 2 min de descanso; el curl de bíceps sale por elevaciones laterales; los plyo push-ups de la activación pasan a scap push-ups para no solaparse con el primer._
 
@@ -2104,7 +2104,7 @@ _Z3 sostenido; pausa en el piso, no en el aire._
 
 ---
 
-## Vie 11 · Bisagra
+## Vie 18 · Bisagra
 
 > _Origen: sem 5 día 2 (1B · Aprender · Bisagra) — front squat 5 × 5 pasa a box squat 5 × 3 al 55–60 % con intención de velocidad y descanso de 2 min; calf raise y ab wheel quedan como estaciones, se añaden wall sit y hip thrust; el EMOM se reformatea a Tabata con los mismos movimientos._
 
@@ -2175,7 +2175,7 @@ _Z3. Mismo ritmo desde la ronda 1 hasta la 8; cuenta tus repeticiones por ronda 
 
 ---
 
-## Sáb 12 · Full-body (prioriza **Bisagra**)
+## Sáb 19 · Full-body (prioriza **Bisagra**)
 > _Origen: sem 1 día 6 (1A · Aprender · Full-body) — la prioridad pasa de Unilateral a Bisagra (sentadilla); se añaden primer de 16 contactos e isométrico inferior; el AMRAP se reformatea a parejas you-go-I-go con los mismos movimientos._
 
 ### # Activación (10 min)
@@ -2241,11 +2241,11 @@ _Z3 sostenido. Cuenta los turnos completados por el equipo; ritmo de cerca de 90
 
 ---
 
-# SEMANA 6 · Desarrollar · Potencia · 14–19 dic
+# SEMANA 6 · Desarrollar · Potencia · 21–26 dic
 
 > RPE 7–8 · 2–3 en reserva. Sobrecarga progresiva sobre la semana 5: +5 % de carga o una serie más en cada principal, siempre con la barra o el cuerpo moviéndose a máxima velocidad. Si la velocidad cae, la serie termina.
 
-## Lun 14 · Unilateral
+## Lun 21 · Unilateral
 
 > _Origen: sem 15 día 4 (2B · Desarrollar · Unilateral) — «Lunges 5x5» pasa a reverse lunge 5 × 4/lado con intención de velocidad; el lateral bound queda como nivel N3 del primer; el Tabata se reformatea a intervalos largos Z4 (4 × 3 min)._
 
@@ -2316,7 +2316,7 @@ _Z4. Máximo esfuerzo sostenible con técnica limpia. Es el único Z4 de la sema
 
 ---
 
-## Mar 15 · Rotación
+## Mar 22 · Rotación
 
 > _Creada desde las reglas del Manual v3 (día de Rotación / potencia). Referencia de estilo: sem 2 día 4._
 
@@ -2389,7 +2389,7 @@ _Z3. Densidad rotacional; el minuto que te sobra es tu descanso, gánalo con vel
 
 ---
 
-## Mié 16 · Jalón
+## Mié 23 · Jalón
 
 > _Origen: sem 6 día 5 (1B · Desarrollar · Jalón) — trap bar 5 × 5 pasa a speed trap bar deadlift 6 × 3 con intención de velocidad; el agarre y el bíceps se mueven al bloque posterior al principal; el EMOM se reformatea a RFT._
 
@@ -2462,7 +2462,7 @@ _Z3. Densidad metabólica; el reloj marca cuánto te cuesta repetir potencia con
 
 ---
 
-## Jue 17 · Empuje
+## Jue 24 · Empuje
 
 > _Origen: sem 2 día 1 (1A · Desarrollar · Empuje) — DB bench 4 × 10 pasa a DB bench explosivo 5 × 4 con intención de velocidad; los accesorios van después del principal; el EMOM se reformatea a Tabata._
 
@@ -2535,7 +2535,9 @@ _Z3. Trabajo intermitente; el descanso lo gana la velocidad de ejecución._
 
 ---
 
-## Vie 18 · Bisagra
+## Vie 25 · Bisagra
+
+> _Feriado: si la sede no abre, esta sesión se ofrece el sábado._
 
 > _Origen: sem 11 día 5 (2A · Desarrollar · Bisagra) — la densidad de goblet pasa a box squat 5 × 3 con intención de velocidad (el principal de Bisagra es sentadilla); la pantorrilla pasa a entre series; los step-ups quedan para el día Unilateral; las 21-15-9 se reformatean a estaciones._
 
@@ -2608,7 +2610,7 @@ _Z3. Umbral. Elige una carga de thruster que te deje sostener el ritmo las 4 ron
 
 ---
 
-## Sáb 19 · Full-body (prioriza **Unilateral**)
+## Sáb 26 · Full-body (prioriza **Unilateral**)
 > _Origen: sem 6 día 6 (1B · Desarrollar · Full-body) — la prioridad pasa de Bisagra a Unilateral, se añade el primer de potencia y una estación isométrica (farmer hold) en lugar del KB swing; el AMRAP se reformatea a parejas._
 
 ### # Activación (10 min)
@@ -2675,11 +2677,11 @@ _Z3. Cierre metabólico modulado. RPE 6-7. Cuenta cuántas rondas suma la pareja
 
 ---
 
-# SEMANA 7 · Desafiar · Potencia · 21–26 dic
+# SEMANA 7 · Desafiar · Potencia · 28 dic–2 ene
 
 > RPE 8–9 · 1–2 en reserva, sin fallo. Ensayo general: lunes a jueves repetimos el orden exacto de la semana 9, un levantamiento técnico por día, y registramos cada carga. El viernes volvemos al patrón unilateral y el sábado cerramos ligero.
 
-## Lun 21 · Bisagra + Jalón · ENSAYO back squat + deadlift
+## Lun 28 · Bisagra + Jalón · ENSAYO back squat + deadlift
 
 > _Origen: sem 25 día 1 (Bloque 3 · Desafiar · Bisagra + Jalón) — se conserva el ensayo; se añade primer corto (salto vertical), una estación isométrica de pantorrilla entre series del deadlift y el acondicionamiento Z2 en parejas, y se recortan tiempos para entrar en 50 min._
 
@@ -2747,7 +2749,7 @@ _Ligero, Z2, conversación posible._
 
 ---
 
-## Mar 22 · Empuje · ENSAYO bench press + push press
+## Mar 29 · Empuje · ENSAYO bench press + push press
 
 > _Origen: sem 25 día 2 (Bloque 3 · Desafiar · Empuje) — se conserva el ensayo; se añade primer corto, Pallof sostenido entre series (no fatiga el hombro) y se recortan tiempos para entrar en 50 min._
 
@@ -2787,7 +2789,7 @@ Esquema:
 _Una serie en cada descanso del bench press. Con la banda anclada a la altura del pecho; el hombro no trabaja._
 - Pallof sostenido — 3 × 20–30 s/lado (isométrico · core · anti-rotación)
 
-**Coach note:** Sin fallo, spotter por barra. Cue del bench: escápulas atrás y abajo, pies firmes, la barra baja al esternón y sube rápida. Las dos sedes miden ambos el martes 5 de enero: si en Xtreme algún socio todavía no tiene bench estable, hoy es el último día para corregirlo con tiempo.
+**Coach note:** Sin fallo, spotter por barra. Cue del bench: escápulas atrás y abajo, pies firmes, la barra baja al esternón y sube rápida. Las dos sedes miden ambos el martes 12 de enero: si en Xtreme algún socio todavía no tiene bench estable, hoy es el último día para corregirlo con tiempo.
 
 ### # Acondicionamiento (7 min)
 
@@ -2813,7 +2815,7 @@ _Ligero. Nada de man-makers ni thrusters después de dos press pesados._
 
 ---
 
-## Mié 23 · Olímpico · ENSAYO clean & jerk
+## Mié 30 · Olímpico · ENSAYO clean & jerk
 
 > _Origen: sem 25 día 3 (Bloque 3 · Desafiar · Olímpico, clean & jerk) — se conserva el ensayo; se añade primer de rotación corto y sostén de pantorrilla entre series, y se acorta la técnica para entrar en 50 min._
 
@@ -2881,7 +2883,7 @@ _Ligero. El hombro y la muñeca ya trabajaron. 1 min c/u._
 
 ---
 
-## Jue 24 · Olímpico · ENSAYO snatch
+## Jue 31 · Olímpico · ENSAYO snatch
 
 > _Origen: sem 25 día 4 (Bloque 3 · Desafiar · Olímpico, snatch) — se conserva el ensayo; se añade primer corto (broad jump), Pallof sostenido entre series y se acorta la técnica para entrar en 50 min._
 
@@ -2946,11 +2948,11 @@ _Ligero, sin sobrecabeza pesado. 1 min c/u._
 **Respiración (2 min):**
 - Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal). 8–10 ciclos.
 
-**Cierre:** Cuatro días, cuatro levantamientos. Así vas a llegar al 7 de enero.
+**Cierre:** Cuatro días, cuatro levantamientos. Así vas a llegar al 14 de enero.
 
 ---
 
-## Vie 25 · Unilateral
+## Vie 1 · Unilateral
 
 > _Origen: sem 3 día 3 (1A · Desafiar · Unilateral) — se conserva la activación y su estilo; el principal pasa de clean & jerk (ya usado) a reverse lunge con barra, y el acondicionamiento pasa a RFT Z3 con los movimientos de la fuente._
 > _Feriado: si la sede no abre, esta sesión se ofrece el sábado._
@@ -3016,7 +3018,7 @@ _Z3. Ritmo sostenido, respiración controlada; que la pierna que trabajó se not
 
 ---
 
-## Sáb 26 · Full-body (cierre ligero tras la semana de ensayo)
+## Sáb 2 · Full-body (cierre ligero tras la semana de ensayo)
 
 > _Origen: sem 7 día 6 (1B · Desafiar · Full-body) — se conserva el circuito y su estilo; la sentadilla sustituye al hip thrust, se añade primer de 18 contactos y el acondicionamiento pasa a RFT Z3._
 
@@ -3083,11 +3085,11 @@ _Cierre metabólico modulado. RPE 6–7, cada ronda en aprox. 3 min._
 
 ---
 
-# SEMANA 8 · Recuperar · Potencia · 28 dic–2 ene
+# SEMANA 8 · Recuperar · Potencia · 4–9 ene
 
 > RPE 5–6 · lejos del fallo. Mitad de series con la misma carga de la semana 6: la barra sigue saliendo rápida, el cuerpo absorbe el bloque y llegamos frescos a la re-evaluación. No es descanso: es calidad de movimiento.
 
-## Lun 28 · Rotación
+## Lun 4 · Rotación
 
 > _Creada desde las reglas del Manual v3 (día de Rotación / potencia). Referencia de estilo: sem 8 día 2 (1B · Recuperar · Rotación)._
 
@@ -3159,7 +3161,7 @@ _Z2 suave. Ritmo de conversación, rotación completa y controlada. RPE 5–6._
 
 ---
 
-## Mar 29 · Jalón
+## Mar 5 · Jalón
 
 > _Origen: sem 4 día 4 (1A · Recuperar · Jalón) — el principal pasa de row a speed trap bar deadlift (el mismo de la semana 6; el peso muerto vive en Jalón); el DB row y el curl pasan a estaciones después del principal; el plate pinch queda como isométrico; high knees como cardio de la activación._
 
@@ -3231,7 +3233,7 @@ _Z2 suave. Descarga con ritmo constante: si no puedes hablar, baja el ritmo._
 
 ---
 
-## Mié 30 · Empuje
+## Mié 6 · Empuje
 
 > _Origen: sem 17 día 4 (2B · Recuperar · Empuje) — el bench y el push press estándar (test) pasan a DB bench press explosivo (el mismo de la semana 6); el push press sale; TRX y dips pasan a después del principal; el RFT con run y devil press se reformatea a AMRAP._
 
@@ -3301,7 +3303,7 @@ _Z2 suave. Ritmo cómodo, rondas parejas. RPE 5–6._
 
 ---
 
-## Jue 31 · Bisagra
+## Jue 7 · Bisagra
 
 > _Origen: sem 13 día 1 (2A · Recuperar · Bisagra) — el back squat estándar (test) pasa a box squat (el mismo de la semana 6); el 5×5 baja a 3×3 por el énfasis de Potencia; las estaciones se pasan a después del principal y se reordenan al patrón (BSS fuera, hip thrust y curl nórdico dentro); squat hold de la activación a 30 s; el EMOM se conserva._
 
@@ -3371,10 +3373,9 @@ Si en el minuto los atletas no completan 5 pull-ups + 10 push-ups + 15 squats, e
 
 ---
 
-## Vie 1 · Unilateral
+## Vie 8 · Unilateral
 
 > _Origen: sem 4 día 3 (1A · Recuperar · Unilateral) — el principal pasa de BSS + step-up a reverse lunge con DB (el mismo de la semana 6, 3×4/lado por Potencia); el step-up pasa a ser el bajo impacto del primer; el GHD (sin patrón) se cambia por estaciones de Unilateral; el EMOM se reformatea a RFT; sin intervalo largo._
-> _Feriado: si la sede no abre, esta sesión se ofrece el sábado._
 
 ### # Activación (9 min)
 
@@ -3444,7 +3445,7 @@ _Descarga con foco postural en el farmer carry: hombros atrás, abdomen firme. R
 
 ---
 
-## Sáb 2 · Full-body (cierre técnico antes de la re-evaluación)
+## Sáb 9 · Full-body (cierre técnico antes de la re-evaluación)
 
 > _Origen: sem 4 día 6 (1A · Recuperar · Full-body) — el circuito pasa de empuje a cierre técnico: cada estación repasa, con barra vacía o carga ligera, los levantamientos que se miden la semana siguiente; el AMRAP se reformatea a parejas._
 
@@ -3513,7 +3514,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 
 ---
 
-# SEMANA 9 · RE-EVALUACIÓN · 4–9 ene
+# SEMANA 9 · RE-EVALUACIÓN · 11–16 ene
 
 > **Semana de medición. No se entrena para producir adaptación: se mide.** El acondicionamiento de los cuatro días de test es ligero y en Z2 a propósito.
 >
@@ -3523,7 +3524,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 >
 > **Las dos sedes miden bench press Y push press.** Confirmar bancos en Xtreme antes del martes.
 
-## Lun 4 · TEST — Salto largo + Back squat 3RM + Deadlift 3RM
+## Lun 11 · TEST — Salto largo + Back squat 3RM + Deadlift 3RM
 
 **Composición corporal:** las tomas (peso, medidas, % graso) se hacen a la llegada, antes de entrenar, según agenda del sábado.
 
@@ -3541,7 +3542,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 - 5 air squats pausados
 
 **Rampa (parte del bloque, no se recorta):**
-- Barra vacía × 5 → 5 @55% → 3 @70% → 2 @80% del ensayo del 21 de diciembre
+- Barra vacía × 5 → 5 @55% → 3 @70% → 2 @80% del ensayo del 28 de diciembre
 
 ### # Fuerza (30 min) — TEST
 
@@ -3557,7 +3558,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 
 **Scaling:** N1 registra 3RM técnico con la carga que domina (trap bar en deadlift es registro válido, se anota la variante). N2/N3 estándar.
 
-**Coach note:** El squat va primero: es el que más se degrada con la fatiga lumbar del deadlift. Compara en vivo contra el ensayo del 21 de diciembre — si el socio está muy por debajo, casi siempre es fatiga o nervios, no pérdida de fuerza.
+**Coach note:** El squat va primero: es el que más se degrada con la fatiga lumbar del deadlift. Compara en vivo contra el ensayo del 28 de diciembre — si el socio está muy por debajo, casi siempre es fatiga o nervios, no pérdida de fuerza.
 
 ### # Acondicionamiento (8 min)
 
@@ -3574,7 +3575,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 
 ---
 
-## Mar 5 · TEST — Bench press 3RM + Push press 3RM
+## Mar 12 · TEST — Bench press 3RM + Push press 3RM
 
 ### # Activación (12 min)
 
@@ -3589,7 +3590,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 - 8 scapular push-ups
 - 8 band pull-apart en Y
 
-**Rampa:** barra vacía × 8 → 5 @55% → 3 @70% → 2 @80% del ensayo del 22 de diciembre.
+**Rampa:** barra vacía × 8 → 5 @55% → 3 @70% → 2 @80% del ensayo del 29 de diciembre.
 
 ### # Fuerza (30 min) — TEST
 
@@ -3620,7 +3621,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 
 ---
 
-## Mié 6 · TEST — Clean & Jerk 1RM
+## Mié 13 · TEST — Clean & Jerk 1RM
 
 ### # Activación (15 min)
 
@@ -3639,7 +3640,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 - 5 muscle clean · 5 front squat · 5 clean pull
 - 5 push press · 5 push jerk · 5 split jerk (footwork)
 
-**Rampa:** 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 23 de diciembre.
+**Rampa:** 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 30 de diciembre.
 
 ### # Fuerza (25 min) — TEST
 
@@ -3672,7 +3673,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 
 ---
 
-## Jue 7 · TEST — Snatch 1RM
+## Jue 14 · TEST — Snatch 1RM
 
 ### # Activación (15 min)
 
@@ -3691,7 +3692,7 @@ _Cierre metabólico suave. RPE 5–6. Conversación posible todo el tiempo._
 - 5 snatch grip deadlift · 5 high pull · 5 overhead squat
 - 5 hang power snatch · 3 snatch balance
 
-**Rampa:** 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 24 de diciembre.
+**Rampa:** 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 31 de diciembre.
 
 ### # Fuerza (25 min) — TEST
 
@@ -3726,7 +3727,7 @@ _Sin sobrecabeza: el hombro ya trabajó cuatro días._
 
 ---
 
-## Vie 8 · TEST — Gimnásticos + Christine
+## Vie 15 · TEST — Gimnásticos + Christine
 
 ### # Activación (12 min)
 
@@ -3776,7 +3777,7 @@ _Se registra el tiempo total (`CHRISTINE_TIME_SECONDS`)._
 
 ---
 
-## Sáb 9 · TEST — Cooper + 500m row + **entrega de comparativas**
+## Sáb 16 · TEST — Cooper + 500m row + **entrega de comparativas**
 
 ### # Activación (12 min)
 
@@ -3853,7 +3854,7 @@ _Lo que cada agente cambió respecto a la rutina fuente o decidió por su cuenta
 - Jueves: cambié el DB snatch del acondicionamiento por KB swing porque la nota dice «sin sobrecabeza». Conteo lun–vie: KB swing 2 (lun, jue), thruster 2 (mar, mié), burpee 2 (mar, mié), v-ups 2 (jue, vie), DB snatch 1.
 - Acondicionamientos recortados a 8 min (parejas) para que cada día sume 49 min; las fuentes de 14 y 12 min no cabían con el primer.
 - Viernes: conservé 5 × 6/lado RPE 7–8 de la fuente (viernes «normal») aunque el énfasis es resistencia; Tabata de 2 bloques (snatch/step-overs alternados y V-ups).
-- Fechas del cierre/coach notes: el test pasa de «2 de noviembre» a la semana del 4 de enero; ajusta si la semana 9 cambia.
+- Fechas del cierre/coach notes: el test pasa de «2 de noviembre» a la semana del 11 de enero; ajusta si la semana 9 cambia.
 
 ### Semana 4
 
@@ -3911,8 +3912,8 @@ _Lo que cada agente cambió respecto a la rutina fuente o decidió por su cuenta
 
 ## Notas de implementación
 
-1. **Ya está en la app** (12-oct-2026): el plan tiene las semanas 28–36 y cada sesión vive en los cuatro campos de la rutina, editable desde el editor de semana. El 9 de noviembre cae justo en la semana 28.
+1. **Ya está en la app** (12-oct-2026): el plan tiene las semanas 29–37 y cada sesión vive en los cuatro campos de la rutina, editable desde el editor de semana. El 16 de noviembre cae justo en la semana 29.
 2. **Tiempos.** Todas las sesiones suman 49 min o menos sobre el papel. Son estimaciones: conviene probar en clase real los días que quedaron justos (los de intervalo largo y los de ensayo).
-3. **Xtreme necesita bancos** el martes 24 de noviembre, el martes 22 de diciembre y el martes 5 de enero (bench press en las dos sedes).
+3. **Xtreme necesita bancos** el martes 1 de diciembre, el martes 29 de diciembre y el martes 12 de enero (bench press en las dos sedes).
 4. **Salto largo:** hace falta una cinta métrica fija en el piso de cada sede para las semanas 1, 5 y 9.
 5. **Sin balones para lanzar** (decisión del 10-oct-2026): ningún primer ni estación usa lanzamientos o slams.

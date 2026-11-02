@@ -122,7 +122,7 @@ export default async function SrxfitPage() {
           ))}
         </div>
         <p className="text-xs text-muted-foreground pt-1">
-          Re-evaluación grupal: semanas 9, 18, 27 y 36. Desde el Bloque 3 la batería de fuerza se reparte en cuatro días (squat+deadlift · bench+push press · clean &amp; jerk · snatch) y la entrega de comparativas cierra el sábado. Desde el Bloque 4 se suma el salto largo el lunes.
+          Re-evaluación grupal: semanas 9, 18, 28 y 37. Desde el Bloque 3 la batería de fuerza se reparte en cuatro días (squat+deadlift · bench+push press · clean &amp; jerk · snatch) y la entrega de comparativas cierra el sábado. Desde el Bloque 4 se suma el salto largo el lunes.
         </p>
       </section>
     </div>

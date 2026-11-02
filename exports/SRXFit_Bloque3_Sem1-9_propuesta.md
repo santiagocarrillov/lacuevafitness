@@ -1,4 +1,6 @@
-# SRXFit · Bloque 3 — Semanas 1 a 9 (7 sep → 7 nov 2026)
+# SRXFit · Bloque 3 — Semanas 1 a 10 (7 sep → 14 nov 2026)
+
+> **Cambio del 1 nov 2026:** por el feriado del 2 y 3 de noviembre se agregó una semana puente (semana 9, 2–7 nov) y la re-evaluación pasó a la semana 10 (9–14 nov). Las fechas de test que aparecen en las semanas 1 a 8 son las originales. En el calendario de la app el bloque son las semanas 19 a 28.
 
 > **Alcance:** ciclo nuevo de 9 semanas. Lun 7 sep 2026 → sáb 7 nov 2026. 54 sesiones (6 días × 9 semanas).
 > **Estado:** BORRADOR para revisión. No escrito en producción todavía.
@@ -2898,7 +2900,349 @@ Cuatro estaciones, 4 min cada una, todos a la vez y guiados por el coach. **Barr
 ---
 ---
 
-# SEMANA 9 · RE-EVALUACIÓN · 2–7 nov
+# SEMANA 9 · PUENTE antes del test · Fuerza · 2–7 nov
+
+> RPE 7 · 3 en reserva. Semana agregada el 1 nov 2026: el lunes 2 y el martes 3 son feriado (horario reducido) y el miércoles suele bajar la asistencia, así que la re-evaluación pasó al 9–14 nov. Se mantiene el ritmo sin buscar marcas ni llegar cansado. Sale de la semana 6 de este bloque, con variantes en lugar de los ejercicios de test (regla 9.4 del Manual v3) y menos volumen al final de la semana.
+
+## Lun 2 · Empuje
+
+> _Feriado: horario reducido. Quien no venga no tiene que recuperar esta sesión._
+
+### # Activación (9 min)
+
+**Movilidad:**
+- Open book — 5/lado
+- Band dislocates — 8
+
+**4 rondas:**
+- 12 banded pull-aparts
+- 6 scapular push-ups
+- 8 hand-release push-ups
+- 100 m run
+
+**Reglas:**
+- Sin agotar hombro antes de las mancuernas.
+
+### # Fuerza (25 min)
+
+**Ejercicio principal:** DB push press — 4 × 6 · RPE 7 · descanso 90s
+
+**Scaling:**
+- N1: DB press estricto.
+- N2: DB push press.
+- N3: DB push press a un brazo, 4 × 5/lado.
+
+**Estaciones (en el descanso):**
+- Tríceps overhead reach con anillos o TRX — 10
+- Bíceps curl con barra — 12
+
+**Coach note:** Semana puente: el press con barra se mide el martes 10 de noviembre, hoy va con mancuernas. Dip-drive lanza, brazos bloquean. Nadie busca marca; deben terminar con 3 repeticiones en reserva.
+
+### # Acondicionamiento (12 min)
+
+**RFT 3 rondas · Z3**
+- 9 DB push jerk
+- 15 devil press ligeros
+- 21 wall balls
+
+**Scaling:** N1 DB ligero · N2 estándar · N3 pesado.
+
+### # Regulación (5 min)
+
+**Movilidad regenerativa:**
+- Doorway pec stretch — 60s/lado
+- T-spine opener sobre foam roller — 90s
+
+**Respiración (2 min):**
+- Exhalación 1:2. 8–10 ciclos.
+
+**Cierre:** Hoy mantuviste el empuje con la barra guardada. La próxima semana se mide.
+
+---
+
+## Mar 3 · Bisagra
+
+> _Feriado: horario reducido. Quien no venga no tiene que recuperar esta sesión._
+
+### # Activación (10 min)
+
+**Movilidad:**
+- Hip CARs — 5/lado
+- 90/90 transitions — 5
+- Cat-cow + hollow rocks
+
+**3 rondas:**
+- 60 saltar soga · alternativas: 30 mountain climbers/lado · 8 burpees supinos
+- 12 glute bridge
+- 10 glute kickback/lado
+- 8 jumping squats con bumper
+
+**Reglas:**
+- PROHIBIDO: saltos máximos, isquios al fallo, sentadillas profundas con peso antes de fuerza.
+- Glúteo y core ANTES de cualquier carga axial.
+
+### # Fuerza (25 min)
+
+**Ejercicio principal:** Front squat — 4 × 5 · RPE 7 · descanso 2 min
+
+**Scaling:**
+- N1: goblet con KB.
+- N2: front squat.
+- N3: front squat con pausa de 2 s abajo.
+
+**Estaciones (en el descanso):**
+- Sumo deadlift desde cajón — 10
+- Curl nórdico (pareja sostiene los pies) — 8
+
+**Coach note:** Front squat en vez de back squat: el back squat se mide el lunes 9 de noviembre. Carga que se mueve limpia y con 3 repeticiones en reserva. Si los codos caen, se baja carga.
+
+### # Acondicionamiento (12 min)
+
+**Intervalos 3/2 · Z3**
+
+3 bloques de 3 min de trabajo / 2 min suaves. En cada bloque:
+- 8 DB thrusters
+- 10 single-leg Romanian deadlift con DB (5/lado)
+- resto del bloque: saltar soga
+
+**Scaling:** N1 DB ligero · N2 estándar · N3 DB pesado, dobles con soga.
+
+### # Regulación (5 min)
+
+**Movilidad regenerativa:**
+- Couch stretch — 90s/lado
+- Butterfly stretch — 90s
+
+**Respiración (2 min):**
+- Exhalación 1:2. 8–10 ciclos.
+
+**Cierre:** Piernas activas y sin desgaste. Eso es lo que necesitan esta semana.
+
+---
+
+## Mié 4 · Unilateral
+
+### # Activación (9 min)
+
+**Movilidad:**
+- 90/90 hip stretch dinámico — 4/lado
+- World's greatest stretch — 3/lado
+
+**3 rondas:**
+- 15 mountain climbers/lado · alternativas: 20 skaters · 8 burpees supinos
+- 12 banded clams/lado
+- 10 monster walks con banda — 5/lado
+- 5 single-leg balance + reach/lado (10s c/u)
+
+**Reglas:**
+- PROHIBIDO fatiga unilateral antes del bloque de fuerza.
+
+### # Fuerza (25 min)
+
+**Ejercicio principal:** Walking lunges con DB — 4 × 10/lado · RPE 7 · descanso 90s
+
+**Scaling:**
+- N1: sumar reps con carga estable.
+- N2: estándar.
+- N3: overhead lunges.
+
+**Estaciones (4 sets):**
+- Pallof press con banda — 10/lado
+- Bíceps curl unilateral — 10/lado
+
+**Coach note:** Para muchos es la primera clase de la semana después del feriado: que retomen con una carga que dominan. Si el ritmo cae, se baja carga antes que reps.
+
+### # Acondicionamiento (12 min)
+
+**EMOM 12 min · Z3** — 3 estaciones rotando:
+- **Min 1:** 12 box step-ups con DB
+- **Min 2:** 10 skaters con disco
+- **Min 3:** 8 single-arm DB snatch alternado
+
+_Densidad unilateral. Reps consistentes en cada minuto._
+
+**Scaling:** N1 ligeros, cajón bajo · N2 estándar · N3 pesados, cajón alto.
+
+### # Regulación (5 min)
+
+**Movilidad regenerativa:**
+- 90/90 hip stretch — 90s/lado
+- Couch stretch — 60s/lado
+
+**Respiración (2 min):**
+- Exhalación 1:2. 8–10 ciclos.
+
+**Cierre:** De vuelta al ritmo. Cada pierna hizo su parte.
+
+---
+
+## Jue 5 · Rotación
+
+### # Activación (9 min)
+
+**Movilidad:**
+- Thread the needle — 5/lado
+- Open book + T-spine rotation en cuadrupedia — 5/lado
+- Ankle CARs — 10/lado
+
+**3 rondas:**
+- 20 skaters con disco (disco toca el suelo en la pierna de apoyo, overhead diagonal al otro lado)
+- 16 mountain climbers con patada lateral cruzada
+- 12 pogo jumps en sitio
+- 8 burpees
+
+**Reglas:**
+- Activación neural alta SIN agotar.
+- Tobillo y T-spine son prerrequisito.
+
+### # Fuerza (25 min)
+
+**Ejercicio principal:** Complejo rotación + potencia — 4 rondas de:
+- 6 single-arm DB rotational press (6/brazo)
+- 5 box jumps drop-and-jump (al tocar suelo, salto inmediato)
+
+**Scaling:**
+- N1: press sin salto explosivo, cajón bajo.
+- N2: estándar.
+- N3: DB pesado en thruster + cajón alto, mínimo tiempo de contacto.
+
+**Estaciones (4 rondas, en el descanso):**
+- Single-leg Romanian deadlift con DB — 8/pierna
+- Plank lateral — 30s/lado
+
+**Coach note:** La rotación nace del pie y la cadera; el brazo solo transmite. En el drop-and-jump: "suelo caliente". Sin medball slams. Una ronda menos que de costumbre: desde hoy se va soltando volumen para llegar frescos al lunes.
+
+### # Acondicionamiento (12 min)
+
+**AMRAP 12 min · Z3**
+- 5 devil press
+- 10 box jump-overs
+- 50 saltar soga
+
+**Scaling:** N1 DB ligero, step-over · N2 estándar · N3 DB pesado, cajón alto.
+
+### # Regulación (5 min)
+
+**Movilidad regenerativa:**
+- Pancake stretch — 90s
+- Thread the needle — 60s/lado
+
+**Respiración (2 min):**
+- Exhalación 1:2. 8–10 ciclos.
+
+**Cierre:** Rotaste, saltaste y sostuviste el pulso. Modular el esfuerzo también es fuerza.
+
+---
+
+## Vie 6 · Jalón
+
+### # Activación (9 min)
+
+**Movilidad:**
+- Cat-cow + thoracic extension — 8
+- Hip CARs — 5/lado
+
+**3 rondas:**
+- 12 KB swing ruso técnico
+- 8 scapular pull-ups
+- 6 kip swings
+- 10 banded face pulls
+
+**Reglas:**
+- Sin dead hang máximo ni pull-ups al fallo antes de la barra.
+
+### # Fuerza (25 min)
+
+**Ejercicio principal:** Trap bar deadlift — 4 × 5 · RPE 6 · descanso 2 min
+
+**Scaling:**
+- N1: KB deadlift.
+- N2: trap bar, carga moderada.
+- N3: trap bar, foco en velocidad de despegue.
+
+**Estaciones (en el descanso):**
+- Gorilla row DB — 10 (5/brazo)
+- DB high pull — 10
+
+**Coach note:** El deadlift se mide el lunes 9 de noviembre, así que hoy no hay deadlift convencional ni carga pesada. Trap bar por su menor demanda lumbar. Despegue rápido, bajada controlada.
+
+### # Acondicionamiento (10 min)
+
+**2 Tabatas · Z3** (20s on / 10s off × 8, 2 min de descanso entre ambos)
+- Tabata 1: burpees over bar
+- Tabata 2: KB swing americano
+
+_A ritmo constante, sin ir al límite._
+
+**Scaling:** N1 step-over, KB ligero · N2 estándar · N3 KB moderado.
+
+### # Regulación (5 min)
+
+**Movilidad regenerativa:**
+- Child's pose con lat reach — 90s/lado
+- Thread the needle — 60s/lado
+
+**Respiración (2 min):**
+- Exhalación 1:2. 8–10 ciclos.
+
+**Cierre:** Espalda trabajada y sin fatiga. Mañana cerramos suave.
+
+---
+
+## Sáb 7 · Full-body (cierre ligero antes de la re-evaluación)
+
+### # Activación (10 min)
+
+**Movilidad:**
+- Hip CARs — 5/lado
+- World's greatest stretch — 3/lado
+
+**2 rondas:**
+- 100 saltar soga
+- 10 glute bridge
+- 8 jumping squats
+- 12 band pull-apart
+
+### # Fuerza (20 min) — circuito 5 estaciones × 2 rondas
+
+40s/20s. **Prioridad bisagra:**
+1. **Bisagra:** goblet squat — 10
+2. **Rotación:** DB rotational press — 6/brazo
+3. **Empuje:** DB push jerk — 8
+4. **Jalón:** KB swing americano — 12
+5. **Unilateral:** reverse lunge DB — 8/lado
+
+**Scaling:** N1 ligero · N2 moderado · N3 moderado con más control.
+
+**Coach note:** Calidad de movimiento, nada al fallo: el lunes empieza la re-evaluación. Avisa a todos el orden de la semana: lun squat + deadlift, mar bench + push press, mié clean & jerk, jue snatch, vie gimnásticos + Christine, sáb Cooper + entrega.
+
+### # Acondicionamiento (10 min)
+
+**Chipper (1 ronda) · Z2–Z3**
+- 20 wall balls
+- 15 KB swing americano
+- 15 box step-overs
+- 10 burpees
+- 10 DB snatch (5/brazo)
+
+_Un solo pase, conversando. Si terminas agotado, fue demasiado._
+
+**Scaling:** N1 mitad de reps · N2 estándar · N3 un poco más de carga, mismo ritmo.
+
+### # Regulación (5 min)
+
+**Movilidad regenerativa:**
+- Couch stretch — 90s/lado
+- Butterfly stretch — 90s
+
+**Respiración (2 min):**
+- Exhalación 1:2. 8–10 ciclos.
+
+**Cierre:** Diez semanas de trabajo listas para medirse. El lunes empieza la re-evaluación: llega dormido, comido e hidratado.
+
+---
+
+# SEMANA 10 · RE-EVALUACIÓN · 9–14 nov
 
 > **Semana de medición. No se entrena para producir adaptación: se mide.** El acondicionamiento de los cuatro días de test es ligero y en Z2 a propósito.
 >
@@ -2908,7 +3252,7 @@ Cuatro estaciones, 4 min cada una, todos a la vez y guiados por el coach. **Barr
 >
 > **Las dos sedes miden bench press Y push press.** Confirmar bancos en Xtreme antes del martes.
 
-## Lun 2 · TEST — Back squat 3RM + Deadlift 3RM
+## Lun 9 · TEST — Back squat 3RM + Deadlift 3RM
 
 **Composición corporal:** las tomas (peso, medidas, % graso) se hacen a la llegada, antes de entrenar, según agenda del sábado.
 
@@ -2957,7 +3301,7 @@ Cuatro estaciones, 4 min cada una, todos a la vez y guiados por el coach. **Barr
 
 ---
 
-## Mar 3 · TEST — Bench press 3RM + Push press 3RM
+## Mar 10 · TEST — Bench press 3RM + Push press 3RM
 
 ### # Activación (12 min)
 
@@ -3003,7 +3347,7 @@ Cuatro estaciones, 4 min cada una, todos a la vez y guiados por el coach. **Barr
 
 ---
 
-## Mié 4 · TEST — Clean & Jerk 1RM
+## Mié 11 · TEST — Clean & Jerk 1RM
 
 ### # Activación (15 min)
 
@@ -3055,7 +3399,7 @@ Cuatro estaciones, 4 min cada una, todos a la vez y guiados por el coach. **Barr
 
 ---
 
-## Jue 5 · TEST — Snatch 1RM
+## Jue 12 · TEST — Snatch 1RM
 
 ### # Activación (15 min)
 
@@ -3109,7 +3453,7 @@ _Sin sobrecabeza: el hombro ya trabajó cuatro días._
 
 ---
 
-## Vie 6 · TEST — Gimnásticos + Christine
+## Vie 13 · TEST — Gimnásticos + Christine
 
 ### # Activación (12 min)
 
@@ -3159,7 +3503,7 @@ _Se registra el tiempo total (`CHRISTINE_TIME_SECONDS`)._
 
 ---
 
-## Sáb 7 · TEST — Cooper + 500m row + **entrega de comparativas**
+## Sáb 14 · TEST — Cooper + 500m row + **entrega de comparativas**
 
 ### # Activación (12 min)
 
@@ -3208,5 +3552,5 @@ Cada socio se lleva su comparación contra la evaluación anterior: fuerza (6 le
 1. **Fechas.** El calendario del dashboard arranca hoy en `SRXFIT_START = 2026-05-04` con 18 semanas. Para publicar este bloque hay que mover el arranque a **2026-09-07** y ajustar la duración a 9 semanas (`src/lib/srxfit-calendar.ts`).
 2. **Los 82 overrides del ciclo anterior** quedan huérfanos al cambiar la numeración de semanas: hay que archivarlos antes de sembrar (el export del 7 sep ya está guardado en `exports/`).
 3. **Siembra.** Cada sesión de este documento mapea 1:1 a los cuatro campos markdown de `SrxfitSessionOverride` (`activacionMd`, `fuerzaMd`, `acondicionamientoMd`, `regulacionMd`), igual que la propuesta del Bloque 2.
-4. **Xtreme necesita bancos** para el martes 3 de noviembre. Confirmarlo antes de anunciar el cambio a los socios.
+4. **Xtreme necesita bancos** para el martes 10 de noviembre. Confirmarlo antes de anunciar el cambio a los socios.
 5. **Énfasis del bloque** (3A hipertrofia → 3B fuerza) es el único supuesto que tomé sin consultarte. Cambiarlo no altera el mapa de mezcla.
