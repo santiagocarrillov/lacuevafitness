@@ -2,11 +2,11 @@
  * Seeds a 9-week block of programming into `SrxfitSessionOverride`, parsed
  * straight from its reviewed proposal:
  *
- *   Bloque 3 (weeks 19-27, 7 sep - 7 nov 2026)  exports/SRXFit_Bloque3_Sem1-9_propuesta.md
- *   Bloque 4 (weeks 28-36, 9 nov - 9 ene 2027)  exports/SRXFit_Bloque4_Sem1-9_propuesta.md
+ *   Bloque 3 (weeks 19-28, 7 sep - 14 nov 2026)  exports/SRXFit_Bloque3_Sem1-9_propuesta.md
+ *   Bloque 4 (weeks 29-37, 16 nov - 16 ene 2027) exports/SRXFit_Bloque4_Sem1-9_propuesta.md
  *
- * The document's weeks are numbered 1-9 (the block's own numbering); they map
- * to the plan weeks above. Each `### # <Bloque>` section becomes one markdown
+ * The document's weeks use the block's own numbering (from 1); they map to the
+ * plan weeks above. Bloque 3 has 10: the bridge week of the 2-3 nov holiday. Each `### # <Bloque>` section becomes one markdown
  * column on the override row; a note between the day heading and its first
  * block (holiday, body composition) becomes the coach note.
  *
@@ -15,6 +15,7 @@
  *
  *   npx tsx scripts/seed-bloque-overrides.ts --bloque=4          # dry run
  *   npx tsx scripts/seed-bloque-overrides.ts --bloque=4 --write  # writes to the DB
+ *   npx tsx scripts/seed-bloque-overrides.ts --bloque=3 --semana=27 --write  # one plan week only
  */
 
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -26,7 +27,9 @@ import { resolve } from "path";
 const WRITE = process.argv.includes("--write");
 const BLOQUE = Number(process.argv.find((a) => a.startsWith("--bloque="))?.split("=")[1]);
 // Plan week that precedes each block: doc week 1 -> offset + 1.
-const OFFSETS: Record<number, number> = { 3: 18, 4: 27 };
+const OFFSETS: Record<number, number> = { 3: 18, 4: 28 };
+const WEEKS_IN_BLOCK: Record<number, number> = { 3: 10, 4: 9 };
+const ONLY_WEEK = Number(process.argv.find((a) => a.startsWith("--semana="))?.split("=")[1]) || null;
 if (!(BLOQUE in OFFSETS)) {
   console.error("Indica el bloque: --bloque=3 o --bloque=4");
   process.exit(1);
@@ -34,7 +37,8 @@ if (!(BLOQUE in OFFSETS)) {
 const SRC = resolve(process.cwd(), `exports/SRXFit_Bloque${BLOQUE}_Sem1-9_propuesta.md`);
 const WEEK_OFFSET = OFFSETS[BLOQUE];
 const FIRST_WEEK = WEEK_OFFSET + 1;
-const LAST_WEEK = WEEK_OFFSET + 9;
+const LAST_WEEK = WEEK_OFFSET + WEEKS_IN_BLOCK[BLOQUE];
+const EXPECTED_SESSIONS = WEEKS_IN_BLOCK[BLOQUE] * 6;
 
 const DAY_INDEX: Record<string, number> = {
   Lun: 1, Mar: 2, "Mié": 3, Jue: 4, Vie: 5, "Sáb": 6,
@@ -132,11 +136,11 @@ function parse(md: string): Session[] {
 }
 
 async function main() {
-  const sessions = parse(readFileSync(SRC, "utf8"));
+  const parsed = parse(readFileSync(SRC, "utf8"));
 
   const problems: string[] = [];
-  if (sessions.length !== 54) problems.push(`se esperaban 54 sesiones, se parsearon ${sessions.length}`);
-  for (const s of sessions) {
+  if (parsed.length !== EXPECTED_SESSIONS) problems.push(`se esperaban ${EXPECTED_SESSIONS} sesiones, se parsearon ${parsed.length}`);
+  for (const s of parsed) {
     if (s.weekNumber < FIRST_WEEK || s.weekNumber > LAST_WEEK) problems.push(`${s.title}: semana fuera de rango (${s.weekNumber})`);
     if (!s.dayIndex) problems.push(`${s.title}: día no reconocido`);
     for (const k of ["activacionMd", "fuerzaMd", "acondicionamientoMd", "regulacionMd"] as const) {
@@ -144,15 +148,16 @@ async function main() {
     }
   }
   const seen = new Set<string>();
-  for (const s of sessions) {
+  for (const s of parsed) {
     const key = `${s.weekNumber}-${s.dayIndex}`;
     if (seen.has(key)) problems.push(`sesión duplicada: ${key}`);
     seen.add(key);
   }
 
-  console.log(`Parseadas ${sessions.length} sesiones · semanas ${sessions[0]?.weekNumber}-${sessions[sessions.length - 1]?.weekNumber}`);
+  const sessions = ONLY_WEEK ? parsed.filter((s) => s.weekNumber === ONLY_WEEK) : parsed;
+  console.log(`Parseadas ${parsed.length} sesiones · semanas ${parsed[0]?.weekNumber}-${parsed[parsed.length - 1]?.weekNumber}`);
   for (let w = FIRST_WEEK; w <= LAST_WEEK; w++) {
-    const inWeek = sessions.filter((s) => s.weekNumber === w);
+    const inWeek = parsed.filter((s) => s.weekNumber === w);
     const chars = inWeek.reduce((n, s) => n + (s.activacionMd!.length + s.fuerzaMd!.length + s.acondicionamientoMd!.length + s.regulacionMd!.length), 0);
     console.log(`  sem ${w}: ${inWeek.length} días · ${chars.toLocaleString("es")} caracteres`);
   }
@@ -162,7 +167,7 @@ async function main() {
     problems.slice(0, 20).forEach((p) => console.error("  -", p));
     process.exit(1);
   }
-  console.log("\n✓ Validación OK: 54 sesiones, 4 bloques cada una, sin duplicados.");
+  console.log(`\n✓ Validación OK: ${parsed.length} sesiones, 4 bloques cada una, sin duplicados.`);
   for (const s of sessions.filter((x) => x.coachNotesMd)) console.log(`  nota sem ${s.weekNumber} · ${s.title}: ${s.coachNotesMd}`);
 
   if (!WRITE) {
@@ -176,7 +181,7 @@ async function main() {
   const owner = await prisma.user.findFirst({ where: { role: "OWNER" }, select: { id: true, fullName: true } });
   if (!owner) throw new Error("No se encontró un usuario OWNER para atribuir las ediciones.");
 
-  const inBlock = { weekNumber: { gte: FIRST_WEEK, lte: LAST_WEEK } };
+  const inBlock = ONLY_WEEK ? { weekNumber: ONLY_WEEK } : { weekNumber: { gte: FIRST_WEEK, lte: LAST_WEEK } };
   const before = await prisma.srxfitSessionOverride.count({ where: inBlock });
 
   // Interactive transaction with a generous timeout: 54 upserts over a pooled
@@ -213,7 +218,7 @@ async function main() {
 
   const after = await prisma.srxfitSessionOverride.count({ where: inBlock });
   const earlier = await prisma.srxfitSessionOverride.count({ where: { weekNumber: { lt: FIRST_WEEK } } });
-  console.log(`\n✓ Sembrado. Overrides sem ${FIRST_WEEK}-${LAST_WEEK}: ${before} → ${after}. Atribuido a ${owner.fullName}.`);
+  console.log(`\n✓ Sembrado. Overrides sem ${ONLY_WEEK ?? `${FIRST_WEEK}-${LAST_WEEK}`}: ${before} → ${after}. Atribuido a ${owner.fullName}.`);
   console.log(`  Overrides de semanas anteriores intactos: ${earlier}.`);
   await prisma.$disconnect();
 }

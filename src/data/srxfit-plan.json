@@ -1,12 +1,12 @@
 {
  "metadata": {
-  "title": "SRXFit · Plan 2026 — Bloques 1-4 (36 semanas)",
+  "title": "SRXFit · Plan 2026 — Bloques 1-4 (37 semanas)",
   "facility": "La Cueva Fitness Center · La Cueva Xtreme",
   "version": "3.0",
   "year": 2026,
-  "duration_weeks": 36,
+  "duration_weeks": 37,
   "total_blocks": 4,
-  "total_sessions": 216,
+  "total_sessions": 222,
   "class_real_duration_min": 50,
   "intended_use": "Calendario digital para coaches. Cada día contiene la programación completa.",
   "methodology_source": [
@@ -145,7 +145,7 @@
    "number": 3,
    "weeks_range": [
     19,
-    27
+    28
    ],
    "general_emphasis": "Hipertrofia (Mesociclo A) → Fuerza (Mesociclo B)",
    "rationale": "Reinicio del macrociclo sobre la base que dejaron los bloques 1 y 2. Las 54 sesiones se recombinan desde los cuatro mesociclos ya vividos (1A/1B/2A/2B) respetando fase y patrón motor. La re-evaluación reparte la batería de fuerza en cuatro días para no apilar levantamientos técnicos.",
@@ -168,14 +168,14 @@
      "emphasis": "Fuerza"
     }
    ],
-   "reeval_week": 27
+   "reeval_week": 28
   },
   {
    "id": "bloque-4",
    "number": 4,
    "weeks_range": [
-    28,
-    36
+    29,
+    37
    ],
    "general_emphasis": "Resistencia muscular (Mesociclo A) → Potencia (Mesociclo B)",
    "rationale": "Continúa el macrociclo tras la hipertrofia y fuerza del Bloque 3. Las sesiones se recombinan desde rutinas ya vividas que el Bloque 3 no usó, adaptadas al Manual v3 (matriz de días, primer de potencia, isométricos, intervalo largo semanal). Los días de Rotación se crearon desde las reglas. La re-evaluación suma el salto largo.",
@@ -184,21 +184,21 @@
     {
      "id": "4A",
      "weeks": [
-      28,
-      31
+      29,
+      32
      ],
      "emphasis": "Resistencia muscular"
     },
     {
      "id": "4B",
      "weeks": [
-      32,
-      35
+      33,
+      36
      ],
      "emphasis": "Potencia"
     }
    ],
-   "reeval_week": 36
+   "reeval_week": 37
   }
  ],
  "weeks": [
@@ -16240,6 +16240,634 @@
    "week_number": 27,
    "block": 3,
    "block_label": "Bloque 3",
+   "mesocycle": "Mesociclo B",
+   "phase": "Desarrollar",
+   "phase_params": {
+    "rpe": "7",
+    "rir": "3",
+    "rest": "Medios (75-90s fuerza)"
+   },
+   "rotation_key": "Puente antes del test",
+   "block_emphasis": "Fuerza",
+   "breathing_technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+   "week_summary": "Semana puente antes del test · Fuerza · Mesociclo B. RPE 7 / 3 en reserva. Se mantiene el ritmo con variantes, sin buscar marcas y con menos volumen hacia el sábado. La re-evaluación es del 9 al 14 de noviembre.",
+   "key_principles": [
+    "Semana agregada por el feriado del 2 y 3 de noviembre.",
+    "Variantes en lugar de los ejercicios de test (regla 9.4 del Manual v3).",
+    "Nada al fallo: se llega fresco a la re-evaluación."
+   ],
+   "days": [
+    {
+     "day_index": 1,
+     "day_name": "Lunes",
+     "pattern": "Empuje",
+     "day_type": "Equilibrado",
+     "para_que_entrenas": "Hoy entrenamos empuje con mancuernas, a ritmo de mantener: el cuerpo sigue activo y la barra se guarda para la medición de la próxima semana.",
+     "duration_breakdown": {
+      "activacion": 9,
+      "fuerza": 25,
+      "acondicionamiento": 10,
+      "regulacion": 5,
+      "transitions": 1,
+      "total_class": 50
+     },
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Open book — 5/lado",
+        "Cat-cow + thoracic extension cuadrupedia — 8 reps"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "{cardio}",
+        "12 banded pull-aparts",
+        "10 face pulls con banda",
+        "8 scapular push-ups (sin doblar codo)"
+       ],
+       "cardio_options": {
+        "primary": "100m run",
+        "alternatives": [
+         "20 skaters",
+         "8 burpees"
+        ]
+       },
+       "rules": [
+        "PROHIBIDO: agotar manguito rotador, push-ups al fallo, dips antes del bloque de fuerza.",
+        "La activación termina con sensación de 'listo para empujar fuerte', no 'ya estoy cansado'.",
+        "Cardio modulable según espacio disponible."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "DB push press",
+        "scheme": "4 × 6 · RPE 7 · descanso 90s"
+       },
+       "scaling": {
+        "N1": "DB press estricto.",
+        "N2": "DB push press.",
+        "N3": "DB push press a un brazo, 4 × 5/lado."
+       },
+       "stations": [
+        {
+         "name": "Tríceps overhead reach con anillos o TRX",
+         "reps": "10",
+         "focus": "Tríceps (accesorio del press)"
+        },
+        {
+         "name": "Bíceps curl con barra",
+         "reps": "12",
+         "focus": "Bíceps"
+        }
+       ],
+       "stations_protocol": "Ejecutar 1 set de cada estación entre series del ejercicio principal (en los huecos de descanso).",
+       "coach_note": "Semana puente: el press con barra se mide el martes 10 de noviembre, hoy va con mancuernas. Dip-drive lanza, brazos bloquean. Nadie busca marca; deben terminar con 3 repeticiones en reserva."
+      },
+      "acondicionamiento": {
+       "format": "EMOM 10 min",
+       "zone": "Z4 intermitente",
+       "description": "EMOM 10 min:\n- Min impar: 5 DB push press explosivos + 5 burpees\n- Min par: 30s sprint en sitio (high knees a tope)",
+       "scaling": "N1: DB ligero, burpees step-back. N2: estándar. N3: DB moderado, sprint con resistencia (banda).",
+       "has_implement": true,
+       "objective": "Cada minuto al 90%+ de esfuerzo. El descanso es lo que sobra del minuto.",
+       "duration_min": 10
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": {
+        "duration_min": 3,
+        "exercises": [
+         "Doorway pec stretch — 60s/lado",
+         "T-spine opener sobre foam roller — 90s"
+        ]
+       },
+       "breathing": {
+        "duration_min": 2,
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "duration_seconds": "30-60",
+        "message": "Hoy mantuviste el empuje con la barra guardada. La próxima semana se mide."
+       }
+      }
+     },
+     "transitions_note": "1 min de transición/explicación entre bloques (parte del diseño, no tiempo perdido).",
+     "coach_notes": "Feriado: horario reducido. Quien no venga no tiene que recuperar esta sesión."
+    },
+    {
+     "day_index": 2,
+     "day_name": "Martes",
+     "pattern": "Bisagra",
+     "day_type": "Equilibrado",
+     "para_que_entrenas": "Hoy entrenamos piernas con una variante: mantenemos la fuerza sin gastar lo que vas a mostrar en la medición de la próxima semana.",
+     "duration_breakdown": {
+      "activacion": 10,
+      "fuerza": 25,
+      "acondicionamiento": 10,
+      "regulacion": 5,
+      "transitions": 2,
+      "total_class": 52
+     },
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "Hip CARs — 5/lado",
+        "90/90 transitions — 5 reps"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "{cardio}",
+        "12 glute bridge bilateral (BW)",
+        "10 banded glute kickback/lado",
+        "8 cat-cow + 5 hollow rocks"
+       ],
+       "cardio_options": {
+        "primary": "30 saltar soga",
+        "alternatives": [
+         "15 mountain climbers/lado",
+         "8 burpees supinos"
+        ]
+       },
+       "rules": [
+        "PROHIBIDO: saltos máximos, isquios al fallo, sentadillas profundas con peso antes del bloque de fuerza.",
+        "Activación de glúteo y core ANTES de cualquier carga axial.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Front squat",
+        "scheme": "4 × 5 · RPE 7 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "Goblet con KB.",
+        "N2": "Front squat.",
+        "N3": "Front squat con pausa de 2 s abajo."
+       },
+       "stations": [
+        {
+         "name": "Sumo deadlift desde cajón",
+         "reps": "10",
+         "focus": "Bisagra (accesorio)"
+        },
+        {
+         "name": "Curl nórdico (pareja sostiene los pies)",
+         "reps": "8",
+         "focus": "Isquios"
+        }
+       ],
+       "stations_protocol": "Ejecutar 1 set de cada estación entre series del ejercicio principal (en los huecos de descanso).",
+       "coach_note": "Front squat en vez de back squat: el back squat se mide el lunes 9 de noviembre. Carga que se mueve limpia y con 3 repeticiones en reserva. Si los codos caen, se baja carga."
+      },
+      "acondicionamiento": {
+       "format": "AMRAP 10 min",
+       "zone": "Z3",
+       "description": "AMRAP 10 min:\n- 8 thrusters con DB\n- 10 KB swing americano\n- 200m run",
+       "scaling": "N1: DB ligero, KB ligero, 150m run. N2: estándar. N3: DB pesado.",
+       "has_implement": true,
+       "objective": "Z3-Z4. Cada ronda en aprox 90s.",
+       "duration_min": 10
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": {
+        "duration_min": 3,
+        "exercises": [
+         "Couch stretch — 90s/lado",
+         "Butterfly stretch — 90s"
+        ]
+       },
+       "breathing": {
+        "duration_min": 2,
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "duration_seconds": "30-60",
+        "message": "Piernas activas y sin desgaste. Eso es lo que necesitan esta semana."
+       }
+      }
+     },
+     "transitions_note": "2 min de transición/explicación entre bloques (parte del diseño, no tiempo perdido).",
+     "coach_notes": "Feriado: horario reducido. Quien no venga no tiene que recuperar esta sesión."
+    },
+    {
+     "day_index": 3,
+     "day_name": "Miércoles",
+     "pattern": "Unilateral",
+     "day_type": "Equilibrado",
+     "para_que_entrenas": "Hoy trabajamos cada pierna por separado: caminar, subir escaleras, cargar cosas mientras te mueves. Volvemos al ritmo con una carga que ya dominas.",
+     "duration_breakdown": {
+      "activacion": 9,
+      "fuerza": 25,
+      "acondicionamiento": 10,
+      "regulacion": 5,
+      "transitions": 1,
+      "total_class": 50
+     },
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "90/90 hip stretch dinámico — 4/lado",
+        "World's greatest stretch — 3/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "{cardio}",
+        "12 banded clams/lado",
+        "10 monster walks (lateral con banda) — 5/lado",
+        "5 single-leg balance + reach/lado (10s c/u)"
+       ],
+       "cardio_options": {
+        "primary": "30 saltar soga",
+        "alternatives": [
+         "15 mountain climbers/lado",
+         "8 burpees supinos"
+        ]
+       },
+       "rules": [
+        "PROHIBIDO: fatiga unilateral antes del bloque de fuerza (sin lunges ni split squats al RPE alto en activación).",
+        "Activación de glúteo medio y core profundo SIN agotar pierna unilateral.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Walking lunges con DB",
+        "scheme": "4 × 10/lado · RPE 7 · descanso 90s"
+       },
+       "scaling": {
+        "N1": "Sumar reps con carga estable.",
+        "N2": "Estándar.",
+        "N3": "Overhead lunges."
+       },
+       "stations": [
+        {
+         "name": "Pallof press con banda",
+         "reps": "10/lado",
+         "focus": "Anti-rotación de core"
+        },
+        {
+         "name": "Bíceps curl unilateral",
+         "reps": "10/lado",
+         "focus": "Bíceps"
+        }
+       ],
+       "stations_protocol": "Ejecutar 1 set de cada estación entre series del ejercicio principal (en los huecos de descanso).",
+       "coach_note": "Para muchos es la primera clase de la semana después del feriado: que retomen con una carga que dominan. Si el ritmo cae, se baja carga antes que reps."
+      },
+      "acondicionamiento": {
+       "format": "3 Tabatas · 12 min",
+       "zone": "Z3-Z4",
+       "description": "3 Tabatas con 1 min descanso entre tabatas:\n- Tabata 1: walking lunges con DB\n- Tabata 2: KB goblet squat\n- Tabata 3: jumping jacks cruzados",
+       "scaling": "N1: BW lunges, KB ligero. N2: estándar. N3: DB y KB pesados.",
+       "has_implement": true,
+       "objective": "Densidad unilateral. Reps consistentes en cada tabata.",
+       "duration_min": 10
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": {
+        "duration_min": 3,
+        "exercises": [
+         "90/90 hip stretch — 90s/lado",
+         "Couch stretch — 60s/lado"
+        ]
+       },
+       "breathing": {
+        "duration_min": 2,
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "duration_seconds": "30-60",
+        "message": "De vuelta al ritmo. Cada pierna hizo su parte."
+       }
+      }
+     },
+     "transitions_note": "1 min de transición/explicación entre bloques (parte del diseño, no tiempo perdido).",
+     "coach_notes": null
+    },
+    {
+     "day_index": 4,
+     "day_name": "Jueves",
+     "pattern": "Rotación",
+     "day_type": "Equilibrado",
+     "para_que_entrenas": "Hoy trabajamos rotación y potencia con una ronda menos: desde hoy soltamos volumen para llegar frescos a la medición del lunes.",
+     "duration_breakdown": {
+      "activacion": 9,
+      "fuerza": 25,
+      "acondicionamiento": 10,
+      "regulacion": 5,
+      "transitions": 1,
+      "total_class": 50
+     },
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Thread the needle — 5/lado",
+        "Open book + T-spine rotation cuadrupedia — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "{cardio}",
+        "10 ankle CARs/lado",
+        "10 pogo jumps en sitio (preparación pliométrica)",
+        "5 skips A + 5 skips B (mecánica)"
+       ],
+       "cardio_options": {
+        "primary": "20 skaters",
+        "alternatives": [
+         "8 burpees",
+         "15 high knees/lado"
+        ]
+       },
+       "rules": [
+        "Activación neural alta SIN agotar — técnica > volumen en pliométricos de activación.",
+        "Tobillo y T-spine son prerequisitos del trabajo principal — no saltarlos.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Complejo rotación + potencia",
+        "scheme": "4 rondas de: 6 single-arm DB rotational press (6/brazo) + 5 box jumps drop-and-jump"
+       },
+       "scaling": {
+        "N1": "Press sin salto explosivo, cajón bajo.",
+        "N2": "Estándar.",
+        "N3": "DB pesado en thruster + cajón alto, mínimo tiempo de contacto."
+       },
+       "stations": [
+        {
+         "name": "Single-leg Romanian deadlift con DB",
+         "reps": "8/pierna",
+         "focus": "Unilateral"
+        },
+        {
+         "name": "Plank lateral",
+         "reps": "30s/lado",
+         "focus": "Core"
+        }
+       ],
+       "stations_protocol": "Ejecutar 1 set de cada estación entre series del ejercicio principal (en los huecos de descanso).",
+       "coach_note": "La rotación nace del pie y la cadera; el brazo solo transmite. En el drop-and-jump: \"suelo caliente\". Sin medball slams. Una ronda menos que de costumbre: desde hoy se va soltando volumen para llegar frescos al lunes."
+      },
+      "acondicionamiento": {
+       "format": "3 Tabatas · 12 min",
+       "zone": "Z3-Z4",
+       "description": "3 Tabatas con 1 min descanso entre tabatas:\n- Tabata 1: DB rotational press alterno\n- Tabata 2: skater jumps\n- Tabata 3: KB swing americano",
+       "scaling": "N1: ligero. N2: estándar. N3: moderado-pesado.",
+       "has_implement": true,
+       "objective": "Densidad máxima en cada tabata.",
+       "duration_min": 10
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": {
+        "duration_min": 3,
+        "exercises": [
+         "Thread the needle — 60s/lado",
+         "Pancake stretch — 90s"
+        ]
+       },
+       "breathing": {
+        "duration_min": 2,
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "duration_seconds": "30-60",
+        "message": "Rotaste, saltaste y sostuviste el pulso. Modular el esfuerzo también es fuerza."
+       }
+      }
+     },
+     "transitions_note": "1 min de transición/explicación entre bloques (parte del diseño, no tiempo perdido).",
+     "coach_notes": null
+    },
+    {
+     "day_index": 5,
+     "day_name": "Viernes",
+     "pattern": "Jalón",
+     "day_type": "Equilibrado",
+     "para_que_entrenas": "Hoy entrenamos jalón con carga moderada: despegue rápido y nada pesado, porque el lunes empieza la medición.",
+     "duration_breakdown": {
+      "activacion": 9,
+      "fuerza": 25,
+      "acondicionamiento": 10,
+      "regulacion": 5,
+      "transitions": 1,
+      "total_class": 50
+     },
+     "blocks": {
+      "activacion": {
+       "duration_min": 9,
+       "mobility": [
+        "Scapular CARs — 5/dirección",
+        "Open book — 5/lado"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "{cardio}",
+        "12 banded face pulls",
+        "8 Y-T-W con DB ligeros (3 cada letra)",
+        "5 scapular pull-ups en barra (sin llegar a fallo)"
+       ],
+       "cardio_options": {
+        "primary": "25 jumping jacks",
+        "alternatives": [
+         "10 jumping lunges no profundas",
+         "20 jumping jacks cruzados"
+        ]
+       },
+       "rules": [
+        "PROHIBIDO: dead hang al máximo, pull-ups al fallo, swings pesados antes de fuerza.",
+        "Activación escapular completa — no recortar.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "main_exercise": {
+        "name": "Trap bar deadlift",
+        "scheme": "4 × 5 · RPE 6 · descanso 2 min"
+       },
+       "scaling": {
+        "N1": "KB deadlift.",
+        "N2": "Trap bar, carga moderada.",
+        "N3": "Trap bar, foco en velocidad de despegue."
+       },
+       "stations": [
+        {
+         "name": "Gorilla row DB",
+         "reps": "10 (5/brazo)",
+         "focus": "Espalda"
+        },
+        {
+         "name": "DB high pull",
+         "reps": "10",
+         "focus": "Jalón"
+        }
+       ],
+       "stations_protocol": "Ejecutar 1 set de cada estación entre series del ejercicio principal (en los huecos de descanso).",
+       "coach_note": "El deadlift se mide el lunes 9 de noviembre, así que hoy no hay deadlift convencional ni carga pesada. Trap bar por su menor demanda lumbar. Despegue rápido, bajada controlada."
+      },
+      "acondicionamiento": {
+       "format": "Intervalos 6 × 40s on / 40s off",
+       "zone": "Z4",
+       "description": "6 rondas alternando:\n- 40s sled push + 40s descanso\n- 40s KB swing pesado + 40s descanso\n(si no hay sled: row a tope o sprint en sitio)",
+       "scaling": "N1: cargas moderadas. N2: estándar. N3: pesado.",
+       "has_implement": true,
+       "objective": "Potencia metabólica.",
+       "duration_min": 10
+      },
+      "regulacion": {
+       "duration_min": 5,
+       "mobility": {
+        "duration_min": 3,
+        "exercises": [
+         "Child's pose con lat reach — 90s/lado",
+         "Thread the needle — 60s/lado"
+        ]
+       },
+       "breathing": {
+        "duration_min": 2,
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "instructions": "Posición decúbito supino, palmas sobre el abdomen. Coach guía con voz pausada. 8-10 ciclos respiratorios."
+       },
+       "closing": {
+        "duration_seconds": "30-60",
+        "message": "Espalda trabajada y sin fatiga. Mañana cerramos suave."
+       }
+      }
+     },
+     "transitions_note": "1 min de transición/explicación entre bloques (parte del diseño, no tiempo perdido).",
+     "coach_notes": null
+    },
+    {
+     "day_index": 6,
+     "day_name": "Sábado",
+     "pattern": "Full-body",
+     "priority_pattern": "Bisagra",
+     "day_type": "Equilibrado · Cobertura",
+     "para_que_entrenas": "Hoy cerramos la semana suave, tocando todos los patrones sin ir al fallo. El lunes empieza la re-evaluación: llega dormido, comido e hidratado.",
+     "blocks": {
+      "activacion": {
+       "duration_min": 10,
+       "mobility": [
+        "World's greatest stretch — 3/lado",
+        "Hip CARs + scapular CARs — 5 c/u"
+       ],
+       "rounds_format": "3 rondas",
+       "rounds_content": [
+        "20 skaters (o 8 burpees · 15 high knees/lado)",
+        "10 banded pull-aparts",
+        "10 glute bridge",
+        "8 inchworm (caminata a plancha)"
+       ],
+       "cardio_options": {
+        "primary": "20 skaters",
+        "alternatives": [
+         "8 burpees",
+         "15 high knees/lado"
+        ]
+       },
+       "rules": [
+        "Activación general modulable según asistencia y energía del grupo.",
+        "Cubrir hombro, cadera y core en cada ronda.",
+        "Cardio modulable según espacio."
+       ]
+      },
+      "fuerza": {
+       "duration_min": 25,
+       "format": "Circuito 5 estaciones × 2 rondas, 45s trabajo / 15s transición · 1 min descanso entre rondas",
+       "stations": [
+        {
+         "position": 1,
+         "pattern": "Bisagra",
+         "exercise": "Goblet squat con KB",
+         "duration_seconds": 45,
+         "note": "PRIORIDAD del día"
+        },
+        {
+         "position": 2,
+         "pattern": "Empuje",
+         "exercise": "Push-ups (estándar o con manos elevadas)",
+         "duration_seconds": 45
+        },
+        {
+         "position": 3,
+         "pattern": "Unilateral",
+         "exercise": "Walking lunges BW",
+         "duration_seconds": 45
+        },
+        {
+         "position": 4,
+         "pattern": "Jalón",
+         "exercise": "KB swing ruso",
+         "duration_seconds": 45
+        },
+        {
+         "position": 5,
+         "pattern": "Rotación",
+         "exercise": "DB rotational press ligero",
+         "duration_seconds": 45
+        }
+       ],
+       "scaling": {
+        "N1": "Cargas ligeras o BW. Modulación a la baja.",
+        "N2": "Cargas estándar moderadas. RPE 6-7.",
+        "N3": "Cargas moderadas con técnica perfecta. RPE 7."
+       },
+       "coach_note": "Calidad de movimiento, nada al fallo: el lunes empieza la re-evaluación. Avisa a todos el orden de la semana."
+      },
+      "acondicionamiento": {
+       "duration_min": 8,
+       "format": "AMRAP 8 min (sostenible)",
+       "zone": "Z2-Z3",
+       "description": "AMRAP 8 min sostenible:\n- 200m run o 30 saltar soga\n- 10 air squats\n- 8 push-ups",
+       "scaling": "N1: 150m run, push-up rodillas. N2: estándar. N3: 250m run, push-up estricto.",
+       "has_implement": false,
+       "objective": "Cierre metabólico modulado. RPE 6-7. Cada ronda en aprox 90s."
+      },
+      "regulacion": {
+       "duration_min": 7,
+       "mobility": {
+        "duration_min": 5,
+        "exercises": [
+         "Pigeon pose — 60s/lado",
+         "Child's pose extendido — 90s",
+         "Lying twist — 60s/lado"
+        ]
+       },
+       "breathing": {
+        "duration_min": 2,
+        "technique": "Exhalación 1:2 (4 inhalar nasal · 8 exhalar nasal)",
+        "instructions": "Posición decúbito supino. Sesión de cierre de semana — más larga y pausada."
+       },
+       "closing": {
+        "duration_seconds": "60-90",
+        "message": "Diez semanas de trabajo listas para medirse. El lunes empieza la re-evaluación: llega dormido, comido e hidratado."
+       }
+      }
+     },
+     "transitions_note": "Transiciones suaves entre bloques. El sábado tiene tono más relajado que un día de semana.",
+     "coach_notes": null
+    }
+   ]
+  },
+  {
+   "week_number": 28,
+   "block": 3,
+   "block_label": "Bloque 3",
    "mesocycle": "Re-evaluación",
    "phase": "Re-evaluación",
    "phase_params": {
@@ -16797,7 +17425,7 @@
    ]
   },
   {
-   "week_number": 28,
+   "week_number": 29,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo A",
@@ -17314,7 +17942,7 @@
    ]
   },
   {
-   "week_number": 29,
+   "week_number": 30,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo A",
@@ -17834,7 +18462,7 @@
    ]
   },
   {
-   "week_number": 30,
+   "week_number": 31,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo A",
@@ -17927,7 +18555,7 @@
         "duration_min": 2
        },
        "closing": {
-        "message": "Hoy viste lo que tus piernas y tu espalda van a mostrar la semana del 4 de enero. Faltan seis semanas para subirlo."
+        "message": "Hoy viste lo que tus piernas y tu espalda van a mostrar la semana del 11 de enero. Faltan seis semanas para subirlo."
        }
       }
      }
@@ -17971,7 +18599,7 @@
         "N2": "ambos al pico del bloque.",
         "N3": "pico máximo técnico del ciclo, sin fallo."
        },
-       "coach_note": "**Las dos sedes miden bench Y push press.** En Xtreme hay que tener los bancos listos desde hoy, no el 4 de enero. Un spotter por barra en bench. La barra baja controlada y sube con intención; en el push press, si se cae adelante faltó dip-drive. El sostén de pantorrilla va al final para no restarle piernas al push press.",
+       "coach_note": "**Las dos sedes miden bench Y push press.** En Xtreme hay que tener los bancos listos desde hoy, no el 11 de enero. Un spotter por barra en bench. La barra baja controlada y sube con intención; en el push press, si se cae adelante faltó dip-drive. El sostén de pantorrilla va al final para no restarle piernas al push press.",
        "stations": [
         {
          "name": "Primer de potencia (3 min): Push-up explosivo 3 × 5 + pogos 2 × 10 · descanso completo",
@@ -18308,7 +18936,7 @@
    ]
   },
   {
-   "week_number": 31,
+   "week_number": 32,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo A",
@@ -18817,7 +19445,7 @@
    ]
   },
   {
-   "week_number": 32,
+   "week_number": 33,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo B",
@@ -19351,7 +19979,7 @@
    ]
   },
   {
-   "week_number": 33,
+   "week_number": 34,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo B",
@@ -19832,7 +20460,8 @@
         "message": "Tus piernas ya saben ser rápidas, no solo aguantar. La semana que viene esa base se convierte en carga de test."
        }
       }
-     }
+     },
+     "coach_notes": "Feriado: si la sede no abre, esta sesión se ofrece el sábado."
     },
     {
      "day_index": 6,
@@ -19893,7 +20522,7 @@
    ]
   },
   {
-   "week_number": 34,
+   "week_number": 35,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo B",
@@ -20029,7 +20658,7 @@
         "N3": "pico máximo técnico del ciclo, sin fallo."
        },
        "stations_protocol": "Una serie en cada descanso del bench press. Con la banda anclada a la altura del pecho; el hombro no trabaja.",
-       "coach_note": "Sin fallo, spotter por barra. Cue del bench: escápulas atrás y abajo, pies firmes, la barra baja al esternón y sube rápida. Las dos sedes miden ambos el martes 5 de enero: si en Xtreme algún socio todavía no tiene bench estable, hoy es el último día para corregirlo con tiempo.",
+       "coach_note": "Sin fallo, spotter por barra. Cue del bench: escápulas atrás y abajo, pies firmes, la barra baja al esternón y sube rápida. Las dos sedes miden ambos el martes 12 de enero: si en Xtreme algún socio todavía no tiene bench estable, hoy es el último día para corregirlo con tiempo.",
        "stations": [
         {
          "name": "Primer de potencia (3 min): Push-up explosivo 2 × 5 + pogos 2 × 8 · descanso completo",
@@ -20218,7 +20847,7 @@
         "duration_min": 2
        },
        "closing": {
-        "message": "Cuatro días, cuatro levantamientos. Así vas a llegar al 7 de enero."
+        "message": "Cuatro días, cuatro levantamientos. Así vas a llegar al 14 de enero."
        }
       }
      }
@@ -20361,7 +20990,7 @@
    ]
   },
   {
-   "week_number": 35,
+   "week_number": 36,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Mesociclo B",
@@ -20836,8 +21465,7 @@
         "message": "Descarga unilateral. El cuerpo está recuperando para volver más fuerte."
        }
       }
-     },
-     "coach_notes": "Feriado: si la sede no abre, esta sesión se ofrece el sábado."
+     }
     },
     {
      "day_index": 6,
@@ -20898,7 +21526,7 @@
    ]
   },
   {
-   "week_number": 36,
+   "week_number": 37,
    "block": 4,
    "block_label": "Bloque 4",
    "mesocycle": "Re-evaluación",
@@ -20940,13 +21568,13 @@
         "5 air squats pausados"
        ],
        "exercises": [
-        "Rampa (parte del bloque, no se recorta): Barra vacía × 5 → 5 @55% → 3 @70% → 2 @80% del ensayo del 21 de diciembre"
+        "Rampa (parte del bloque, no se recorta): Barra vacía × 5 → 5 @55% → 3 @70% → 2 @80% del ensayo del 28 de diciembre"
        ]
       },
       "fuerza": {
        "duration_min": 30,
        "format": "Fuerza (30 min) — TEST",
-       "notes": "0 · Salto largo — después de la rampa y antes de cargar la barra. Mejor de 3 intentos, en cm, desde la línea hasta el talón más atrasado; el aterrizaje se sostiene 2 s o el intento no cuenta. Quien entrena en bajo impacto no lo hace: se deja el campo vacío («no aplica»).\nA · Back squat 3RM — 2 a 3 intentos, subiendo 2.5-5 kg entre intentos. Se registra el último set de 3 limpio.\nB · Deadlift 3RM — misma lógica, con rampa propia corta (2 series de aproximación).\nEstándares:\n- Salto largo: despegue a dos pies sin paso previo, aterrizaje a dos pies y sostenido.\n- Squat: cadera por debajo de la rodilla, sin colapso de rodilla, sin rebote.\n- Deadlift: bloqueo completo arriba, espalda neutra, sin hitching.\n- Un intento fallido cierra el test. Se registra el último válido.\nScaling: N1 registra 3RM técnico con la carga que domina (trap bar en deadlift es registro válido, se anota la variante). N2/N3 estándar.\nCoach note: El squat va primero: es el que más se degrada con la fatiga lumbar del deadlift. Compara en vivo contra el ensayo del 21 de diciembre — si el socio está muy por debajo, casi siempre es fatiga o nervios, no pérdida de fuerza."
+       "notes": "0 · Salto largo — después de la rampa y antes de cargar la barra. Mejor de 3 intentos, en cm, desde la línea hasta el talón más atrasado; el aterrizaje se sostiene 2 s o el intento no cuenta. Quien entrena en bajo impacto no lo hace: se deja el campo vacío («no aplica»).\nA · Back squat 3RM — 2 a 3 intentos, subiendo 2.5-5 kg entre intentos. Se registra el último set de 3 limpio.\nB · Deadlift 3RM — misma lógica, con rampa propia corta (2 series de aproximación).\nEstándares:\n- Salto largo: despegue a dos pies sin paso previo, aterrizaje a dos pies y sostenido.\n- Squat: cadera por debajo de la rodilla, sin colapso de rodilla, sin rebote.\n- Deadlift: bloqueo completo arriba, espalda neutra, sin hitching.\n- Un intento fallido cierra el test. Se registra el último válido.\nScaling: N1 registra 3RM técnico con la carga que domina (trap bar en deadlift es registro válido, se anota la variante). N2/N3 estándar.\nCoach note: El squat va primero: es el que más se degrada con la fatiga lumbar del deadlift. Compara en vivo contra el ensayo del 28 de diciembre — si el socio está muy por debajo, casi siempre es fatiga o nervios, no pérdida de fuerza."
       },
       "acondicionamiento": {
        "duration_min": 8,
@@ -20987,7 +21615,7 @@
         "8 band pull-apart en Y"
        ],
        "exercises": [
-        "Rampa: barra vacía × 8 → 5 @55% → 3 @70% → 2 @80% del ensayo del 22 de diciembre."
+        "Rampa: barra vacía × 8 → 5 @55% → 3 @70% → 2 @80% del ensayo del 29 de diciembre."
        ]
       },
       "fuerza": {
@@ -21035,7 +21663,7 @@
        "exercises": [
         "Técnica con barra vacía (8 min, guiada, todos a la vez): 5 muscle clean · 5 front squat · 5 clean pull",
         "Técnica con barra vacía (8 min, guiada, todos a la vez): 5 push press · 5 push jerk · 5 split jerk (footwork)",
-        "Rampa: 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 23 de diciembre."
+        "Rampa: 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 30 de diciembre."
        ]
       },
       "fuerza": {
@@ -21083,7 +21711,7 @@
        "exercises": [
         "Técnica con barra vacía (8 min, guiada): 5 snatch grip deadlift · 5 high pull · 5 overhead squat",
         "Técnica con barra vacía (8 min, guiada): 5 hang power snatch · 3 snatch balance",
-        "Rampa: 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 24 de diciembre."
+        "Rampa: 3 @50% → 2 @65% → 1 @75% → 1 @85% del ensayo del 31 de diciembre."
        ]
       },
       "fuerza": {
